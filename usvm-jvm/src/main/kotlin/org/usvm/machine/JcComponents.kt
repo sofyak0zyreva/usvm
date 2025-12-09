@@ -14,7 +14,6 @@ import org.usvm.solver.UExprTranslator
 import org.usvm.solver.USoftConstraintsProvider
 import org.usvm.solver.USolverBase
 import org.usvm.solver.UTypeSolver
-import org.usvm.types.JcTypeSystem
 
 class JcComponents(
     private val typeSystem: JcTypeSystem,

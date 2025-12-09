@@ -785,13 +785,9 @@ open class JavaMethodTestRunner : TestRunner<JcTest, KFunction<*>, KClass<*>?, J
     protected open val classpath: List<File>
         get() = samplesClasspath
 
-    protected open val container by lazy {
-        JacoDBContainer(jacodbCpKey, classpath)
+    protected open val cp by lazy {
+        JacoDBContainer(jacodbCpKey, classpath).cp
     }
-
-    protected open val cp by lazy { container.cp }
-
-    protected open val db by lazy { container.db }
 
     protected open val resolverType: JcTestResolverType = JcTestResolverType.INTERPRETER
 
