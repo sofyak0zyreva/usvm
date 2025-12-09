@@ -2,6 +2,8 @@ package org.usvm.samples
 
 import org.jacodb.api.jvm.JcClassOrInterface
 import org.jacodb.api.jvm.JcClasspath
+import org.jacodb.api.jvm.cfg.JcInst
+import org.jacodb.api.jvm.cfg.JcReturnInst
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.extension.ExtendWith
 import org.usvm.CoverageZone
@@ -34,11 +36,12 @@ import kotlin.reflect.KFunction4
 import kotlin.reflect.full.instanceParameter
 import kotlin.reflect.jvm.javaConstructor
 import kotlin.time.Duration
-import kotlin.time.Duration.Companion.milliseconds
+
+class MocksTarget(override val location: JcInst) : JcTarget(location)
 
 @ExtendWith(UTestRunnerController::class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-open class JavaMethodTestRunner : TestRunner<JcTest, KFunction<*>, KClass<*>?, JcClassCoverage>() {
+open class MocksTestRunner : TestRunner<JcTest, KFunction<*>, KClass<*>?, JcClassCoverage>() {
 
     private var targets: List<JcTarget> = emptyList()
     private var interpreterObserver: JcInterpreterObserver? = null
@@ -803,9 +806,9 @@ open class JavaMethodTestRunner : TestRunner<JcTest, KFunction<*>, KClass<*>?, J
         { expected, actual -> actual == null || expected != null && expected.java.isAssignableFrom(actual.java) }
 
     override var options: UMachineOptions = UMachineOptions(
-        pathSelectionStrategies = listOf(PathSelectionStrategy.FORK_DEPTH),
+        pathSelectionStrategies = listOf(PathSelectionStrategy.TARGETED),
         coverageZone = CoverageZone.TRANSITIVE,
-        exceptionsPropagation = true,
+        exceptionsPropagation = false,
 //        timeout = 60_000.milliseconds,
         stepsFromLastCovered = 3500L,
         solverTimeout = Duration.INFINITE, // we do not need the timeout for a solver in tests
@@ -822,6 +825,15 @@ open class JavaMethodTestRunner : TestRunner<JcTest, KFunction<*>, KClass<*>?, J
 
     override val runner: (KFunction<*>, UMachineOptions) -> List<JcTest> = { method, options ->
         val jcMethod = cp.getJcMethodByName(method)
+        val instList = jcMethod.method.instList
+        val localTargets = mutableListOf<MocksTarget>()
+        for (inst in instList){
+            if (inst is JcReturnInst) {
+                val newTarget = MocksTarget(inst)
+                localTargets.add(newTarget)
+            }
+        }
+        targets = localTargets
 
         createMachine(cp, options, interpreterObserver).use { machine ->
             val states = machine.analyze(jcMethod.method, targets)

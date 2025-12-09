@@ -52,6 +52,7 @@ include("usvm-python:usvm-python-runner")
 findProject(":usvm-python:usvm-python-runner")?.name = "usvm-python-runner"
 include("usvm-python:usvm-python-commons")
 findProject(":usvm-python:usvm-python-commons")?.name = "usvm-python-commons"
+include("usvm-jvm-mocks")
 
 include("usvm-jvm-concrete")
 include("usvm-jvm-concrete:usvm-jvm-concrete-api")

@@ -87,7 +87,7 @@ typealias JcStepScope = StepScope<JcState, JcType, JcInst, JcContext>
  */
 open class JcInterpreter(
     protected val ctx: JcContext,
-    private val applicationGraph: JcApplicationGraph,
+    protected val applicationGraph: JcApplicationGraph,
     private val options: JcMachineOptions,
     private val observer: JcInterpreterObserver? = null,
     var forkBlackList: UForkBlackList<JcState, JcInst> = UForkBlackList.createDefault(),
@@ -246,12 +246,37 @@ open class JcInterpreter(
         val simpleValueResolver = exprResolver.simpleValueResolver
         val method = stmt.method
         when (stmt) {
-            is JcMethodCallSkipWithEnsureInst -> {
-                exprResolver.ensureExprCorrectness(stmt.returnExpr, stmt.type)
-                    ?: error("<clinit> for ${stmt.type} was not called before JcMethodCallSkipWithEnsureInst execution")
-                scope.calcOnState { skipMethodInvocationWithValue(stmt, stmt.returnExpr) }
-            }
+            is JcConcreteMethodCallInst -> {
+                observer?.onMethodCallWithResolvedArguments(simpleValueResolver, stmt, scope)
+                if (approximateMethod(scope, stmt)) {
+                    return
+                }
 
+                val entryPoint = applicationGraph.entryPoints(method).singleOrNull()
+
+                if (method.isNative || entryPoint == null) {
+                    mockMethod(scope, stmt, applicationGraph)
+                    return
+                }
+
+                handleInnerClassMethodCall(
+                    scope,
+                    method.enclosingClass.toType(),
+                    method,
+                    outerClassInstanceConstructorArgument = {
+                        // Implicit first argument is `this`, an instance of the outer class would be second
+                        stmt.arguments[1].asExpr(ctx.addressSort)
+                    },
+                    thisInstanceMethodArgument = {
+                        // For methods, we need to extract `this`
+                        stmt.arguments.first().asExpr(ctx.addressSort)
+                    },
+                )
+
+                scope.doWithState {
+                    addNewMethodCall(stmt, entryPoint)
+                }
+            }
             is JcMethodEntrypointInst -> {
                 observer?.onEntryPoint(simpleValueResolver, stmt, scope)
 
@@ -279,42 +304,6 @@ open class JcInterpreter(
 
                 scope.doWithState {
                     newStmt(entryPoint)
-                }
-            }
-
-            is JcConcreteMethodCallInst -> {
-                observer?.onMethodCallWithResolvedArguments(simpleValueResolver, stmt, scope)
-
-                if (approximateMethod(scope, stmt)) {
-                    println("\u001B[31m" + "Approximated ${stmt.method.humanReadableSignature}" + "\u001B[0m")
-                    return
-                }
-
-                println("\u001B[31m" + "Calling ${stmt.method.humanReadableSignature}" + "\u001B[0m")
-
-                val entryPoint = applicationGraph.entryPoints(method).singleOrNull()
-
-                if (method.isNative || entryPoint == null) {
-                    mockMethod(scope, stmt, applicationGraph)
-                    return
-                }
-
-                handleInnerClassMethodCall(
-                    scope,
-                    method.enclosingClass.toType(),
-                    method,
-                    outerClassInstanceConstructorArgument = {
-                        // Implicit first argument is `this`, an instance of the outer class would be second
-                        stmt.arguments[1].asExpr(ctx.addressSort)
-                    },
-                    thisInstanceMethodArgument = {
-                        // For methods, we need to extract `this`
-                        stmt.arguments.first().asExpr(ctx.addressSort)
-                    },
-                )
-
-                scope.doWithState {
-                    addNewMethodCall(stmt, entryPoint)
                 }
             }
 
