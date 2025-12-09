@@ -22,7 +22,7 @@ interface JcTransparentInstruction : JcInst {
 /**
  * Auxiliary instruction to handle method calls.
  * */
-sealed interface JcMethodCallBaseInst : JcTransparentInstruction {
+interface JcMethodCallBaseInst : JcTransparentInstruction {
     override val method: JcMethod
 
     override val operands: List<JcExpr>
@@ -32,7 +32,6 @@ sealed interface JcMethodCallBaseInst : JcTransparentInstruction {
         error("Auxiliary instruction")
     }
 }
-
 
 /**
  * Entrypoint method call instruction.
@@ -49,7 +48,7 @@ data class JcMethodEntrypointInst(
     override val originalInst: JcInst = method.instList.first()
 }
 
-sealed interface JcMethodCall {
+interface JcMethodCall {
     val location: JcInstLocation
     val method: JcMethod
     val arguments: List<UExpr<out USort>>

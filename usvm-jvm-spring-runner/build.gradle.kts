@@ -1,0 +1,398 @@
+//import org.gradle.kotlin.dsl.support.unzipTo
+//import kotlin.io.path.div
+//
+//plugins {
+//    id("usvm.kotlin-conventions")
+//}
+//
+//repositories {
+//    mavenLocal()
+//}
+//
+//dependencies {
+//    implementation(project(":usvm-jvm"))
+//    implementation(project(":usvm-jvm-instrumentation"))
+//    implementation(project(":usvm-jvm-concrete"))
+//    implementation(project(":usvm-jvm-concrete:agent"))
+//    implementation(project(":usvm-jvm-spring"))
+//    implementation(project(":usvm-jvm-spring:usvm-jvm-spring-util"))
+//    implementation(project(":usvm-jvm-spring:usvm-jvm-spring-test-api"))
+//    implementation(project(":usvm-jvm-rendering"))
+//    implementation(project(":usvm-core"))
+//
+//    implementation(project(":usvm-jvm-concrete:usvm-jvm-concrete-api"))
+//    implementation(project(":usvm-jvm:usvm-jvm-test-api"))
+//    implementation(project(":usvm-jvm:usvm-jvm-util"))
+//    implementation(project(":usvm-jvm:usvm-jvm-api"))
+//
+//    implementation(Libs.jacodb_api_jvm)
+//    implementation(Libs.jacodb_core)
+//    implementation(Libs.jacodb_approximations)
+//
+//    implementation(Libs.logback)
+//}
+//
+//val usvmApiJarConfiguration by configurations.creating
+//dependencies {
+//    usvmApiJarConfiguration(project(":usvm-jvm:usvm-jvm-api"))
+//}
+//
+//val usvmConcreteApiJarConfiguration by configurations.creating
+//dependencies {
+//    usvmConcreteApiJarConfiguration(project(":usvm-jvm-concrete:usvm-jvm-concrete-api"))
+//}
+//
+//val approximations by configurations.creating
+//val approximationsRepo = "org.usvm.approximations.java.stdlib"
+//val approximationsVersion = "0.0.0"
+//
+//dependencies {
+//    approximations(approximationsRepo, "approximations", approximationsVersion)
+//}
+//
+//val usvmSpringApiJarConfiguration by configurations.creating
+//dependencies {
+//    usvmSpringApiJarConfiguration(project(":usvm-jvm-spring:usvm-jvm-spring-api"))
+//}
+//
+//val springApproximations by configurations.creating
+//val springApproximationsRepo = "org.usvm.approximations.spring"
+//val springApproximationsVersion = "0.0.0"
+//
+//dependencies {
+//    springApproximations(springApproximationsRepo, "spring-approximations", springApproximationsVersion)
+//}
+//
+//val agentJarConfiguration by configurations.creating
+//dependencies {
+//    agentJarConfiguration(project(":usvm-jvm-concrete:agent"))
+//}
+//
+//fun createOrClear(file: File) {
+//    if (file.exists()) {
+//        file.listFiles()?.forEach { it.deleteRecursively() }
+//    } else {
+//        file.mkdirs()
+//    }
+//}
+//
+//fun configureSpringAnalysis(task: JavaExec) = with(task) {
+//    classpath = sourceSets.test.get().runtimeClasspath
+//
+//    systemProperty("jdk.util.jar.enableMultiRelease", false)
+//
+//    val currentDir = File(System.getProperty("user.dir"))
+//    val generatedDir = currentDir.resolve("generated")
+//    createOrClear(generatedDir)
+//
+//    val currentJavaVersion = JavaVersion.current()
+//
+//    val (lambdaDir, jvmLambdaArg) = if (currentJavaVersion <= JavaVersion.VERSION_20) {
+//        val dir = generatedDir.resolve("lambdas")
+//        val arg = "-Djdk.internal.lambda.dumpProxyClasses=${dir.absolutePath}"
+//        dir to arg
+//    } else {
+//        val dir = project.projectDir.resolve("DUMP_LAMBDA_PROXY_CLASS_FILES")
+//        val arg = "-Djdk.invoke.LambdaMetafactory.dumpProxyClassFiles"
+//        dir to arg
+//    }
+//    createOrClear(lambdaDir)
+//    environment("lambdaDir", lambdaDir.absolutePath)
+//
+//    val springDir = generatedDir.resolve("spring")
+//    createOrClear(springDir)
+//    environment("springDir", springDir.absolutePath)
+//
+//    val usvmApiJarPath = usvmApiJarConfiguration.resolvedConfiguration.files.singleOrNull()
+//        ?: error("Can't find JVM API project")
+//    environment("usvm.jvm.api.jar.path", usvmApiJarPath.absolutePath)
+//
+//    val usvmApproximationJarPath = approximations.resolvedConfiguration.files.singleOrNull()
+//        ?: error("Can't find base approximations")
+//    environment("usvm.jvm.approximations.jar.path", usvmApproximationJarPath.absolutePath)
+//
+//    val usvmConcreteApiJarPath = usvmConcreteApiJarConfiguration.resolvedConfiguration.files.singleOrNull()
+//        ?: error("Can't find concrete API project")
+//    environment("usvm.jvm.concrete.api.jar.path", usvmConcreteApiJarPath)
+//
+//    val usvmSpringApiJarPath = usvmSpringApiJarConfiguration.resolvedConfiguration.files.singleOrNull()
+//        ?: error("Can't find Spring API project")
+//    environment("usvm.jvm.spring.api.jar.path", usvmSpringApiJarPath.absolutePath)
+//
+//    val usvmSpringApproximationJarPath = springApproximations.resolvedConfiguration.files.singleOrNull()
+//        ?: error("Can't find Spring approximations")
+//    environment("usvm.jvm.spring.approximations.jar.path", usvmSpringApproximationJarPath.absolutePath)
+//
+//    environment(
+//        "usvm-jvm-instrumentation-jar",
+//        project(":usvm-jvm-instrumentation")
+//            .layout
+//            .buildDirectory
+//            .file("libs/usvm-jvm-instrumentation-runner.jar")
+//            .get().asFile.absolutePath
+//    )
+//
+//    environment(
+//        "usvm-jvm-collectors-jar",
+//        project(":usvm-jvm-instrumentation")
+//            .layout
+//            .buildDirectory
+//            .file("libs/usvm-jvm-instrumentation-collectors.jar")
+//            .get().asFile.absolutePath
+//    )
+//
+//    val agentJarPath = agentJarConfiguration.resolvedConfiguration.files.singleOrNull()
+//        ?: error("Can't find concrete agent project")
+//
+//    jvmArgs = listOf("-Xmx12g") + mutableListOf<String>().apply {
+//        add("-Djava.security.manager -Djava.security.policy=webExplorationPolicy.policy")
+//        add(jvmLambdaArg)
+//        add("-javaagent:${agentJarPath.absolutePath}")
+//        openPackage("java.base", "jdk.internal.misc")
+//        openPackage("java.base", "java.lang")
+//        openPackage("java.base", "java.lang.reflect")
+//        openPackage("java.base", "sun.security.provider")
+//        openPackage("java.base", "jdk.internal.event")
+//        openPackage("java.base", "jdk.internal.jimage")
+//        openPackage("java.base", "jdk.internal.jimage.decompressor")
+//        openPackage("java.base", "jdk.internal.jmod")
+//        openPackage("java.base", "jdk.internal.jtrfs")
+//        openPackage("java.base", "jdk.internal.loader")
+//        openPackage("java.base", "jdk.internal.logger")
+//        openPackage("java.base", "jdk.internal.math")
+//        openPackage("java.base", "jdk.internal.misc")
+//        openPackage("java.base", "jdk.internal.module")
+//        openPackage("java.base", "jdk.internal.org.objectweb.asm.commons")
+//        openPackage("java.base", "jdk.internal.org.objectweb.asm.signature")
+//        openPackage("java.base", "jdk.internal.org.objectweb.asm.tree")
+//        openPackage("java.base", "jdk.internal.org.objectweb.asm.tree.analysis")
+//        openPackage("java.base", "jdk.internal.org.objectweb.asm.util")
+//        openPackage("java.base", "jdk.internal.org.xml.sax")
+//        openPackage("java.base", "jdk.internal.org.xml.sax.helpers")
+//        openPackage("java.base", "jdk.internal.perf")
+//        openPackage("java.base", "jdk.internal.platform")
+//        openPackage("java.base", "jdk.internal.ref")
+//        openPackage("java.base", "jdk.internal.reflect")
+//        openPackage("java.base", "jdk.internal.util")
+//        openPackage("java.base", "jdk.internal.util.jar")
+//        openPackage("java.base", "jdk.internal.util.xml")
+//        openPackage("java.base", "jdk.internal.util.xml.impl")
+//        openPackage("java.base", "jdk.internal.vm")
+//        openPackage("java.base", "jdk.internal.vm.annotation")
+//        openPackage("java.base", "java.util.concurrent.atomic")
+//        openPackage("java.base", "java.io")
+//        openPackage("java.base", "java.util.zip")
+//        openPackage("java.base", "java.util.concurrent")
+//        openPackage("java.base", "sun.security.util")
+//        openPackage("java.base", "java.lang.invoke")
+//        openPackage("java.base", "java.lang.ref")
+//        openPackage("java.base", "java.lang.constant")
+//        openPackage("java.base", "java.util")
+//        openPackage("java.base", "java.util.concurrent.locks")
+//        openPackage("java.management", "javax.management")
+//        openPackage("java.base", "java.nio.charset")
+//        openPackage("java.base", "java.util.regex")
+//        openPackage("java.base", "java.net")
+//        openPackage("java.base", "sun.util.locale")
+//        openPackage("java.base", "java.util.stream")
+//        openPackage("java.base", "java.security")
+//        openPackage("java.base", "java.time")
+//        openPackage("java.base", "jdk.internal.access")
+//        openPackage("java.base", "sun.reflect.annotation")
+//        openPackage("java.base", "sun.reflect.generics.reflectiveObjects")
+//        openPackage("java.base", "sun.reflect.generics.factory")
+//        openPackage("java.base", "sun.reflect.generics.tree")
+//        openPackage("java.base", "sun.reflect.generics.scope")
+//        openPackage("java.base", "sun.invoke.util")
+//        openPackage("java.base", "sun.nio.cs")
+//        openPackage("java.base", "sun.nio.fs")
+//        openPackage("java.base", "java.nio")
+//        openPackage("java.logging", "java.util.logging")
+//        openPackage("java.base", "java.time.format")
+//        openPackage("java.base", "java.time.zone")
+//        openPackage("java.base", "java.time.temporal")
+//        openPackage("java.base", "java.text")
+//        openPackage("java.base", "sun.util.calendar")
+//        openPackage("java.base", "sun.net.www.protocol.jar")
+//        openPackage("java.base", "java.util.jar")
+//        openPackage("java.base", "java.nio.file.attribute")
+//        openPackage("java.base", "java.util.function")
+//        openPackage("java.desktop", "java.beans")
+//        openPackage("java.xml", "com.sun.org.apache.xerces.internal.impl.xs")
+//        openPackage("java.base", "java.math")
+//        openPackage("java.base", "java.nio.file")
+//        openPackage("java.base", "java.nio.channels")
+//        openPackage("java.base", "javax.net.ssl")
+//        openPackage("java.base", "java.lang.annotation")
+//        openPackage("java.base", "java.lang.runtime")
+//        openPackage("java.base", "javax.crypto")
+//        openPackage("jdk.zipfs", "jdk.nio.zipfs")
+//        openPackage("java.base", "java.nio.file.spi")
+//        openPackage("java.base", "jdk.internal.jrtfs")
+//        openPackage("java.instrument", "sun.instrument")
+//        openPackage("java.xml", "com.sun.xml.internal.stream")
+//        openPackage("java.xml", "com.sun.org.apache.xerces.internal.impl")
+//        openPackage("java.xml", "com.sun.org.apache.xerces.internal.utils")
+//        openPackage("java.sql", "java.sql")
+//        openPackage("java.base", "sun.nio.ch")
+//        openPackage("java.base", "sun.net.util")
+//        exportPackage("java.base", "jdk.internal.access.foreign")
+//        exportPackage("java.base", "sun.security.action")
+//        exportPackage("java.base", "sun.util.locale")
+//        exportPackage("java.base", "jdk.internal.misc")
+//        exportPackage("java.base", "jdk.internal.reflect")
+//        exportPackage("java.base", "sun.nio.cs")
+//        exportPackage("java.xml", "com.sun.org.apache.xerces.internal.impl.xs.util")
+//        exportPackage("java.base", "jdk.internal.loader")
+//        add("-XX:+UseParallelGC")
+//        if (currentJavaVersion < JavaVersion.VERSION_17) {
+//            add("--illegal-access=warn")
+//        }
+//        if (currentJavaVersion <= JavaVersion.VERSION_18) {
+//            addModule("jdk.incubator.foreign")
+//        }
+//    }
+//}
+//
+//tasks.register<JavaExec>("runWebBench") {
+//    mainClass.set("bench.WebBenchKt")
+//    configureSpringAnalysis(this)
+//}
+//
+//fun MutableList<String>.openPackage(module: String, pakage: String) {
+//    add("--add-opens")
+//    add("$module/$pakage=ALL-UNNAMED")
+//}
+//
+//fun MutableList<String>.exportPackage(module: String, pakage: String) {
+//    add("--add-exports")
+//    add("$module/$pakage=ALL-UNNAMED")
+//}
+//
+//fun MutableList<String>.addModule(module: String) {
+//    add("--add-modules")
+//    add(module)
+//}
+//
+//fun JavaExec.addEnvIfExists(envName: String, path: String) {
+//    val file = File(path)
+//    if (!file.exists()) {
+//        println("Not found $envName at $path")
+//        return
+//    }
+//
+//    environment(envName, file.absolutePath)
+//}
+//
+//val currentDir = getProjectDir().toPath()
+//val benchmarkFolder = currentDir / "bench-jars"
+//val benchmarkLogsFolder = currentDir / "bench-logs"
+//val benchmarkErrorsFolder = currentDir /  "bench-errors"
+//
+//fun loadBenchmark(jarName: String, propertiesPath: String? = null): Benchmark {
+//    val benchmark = benchmarkFolder.toFile().listFiles()?.firstOrNull { it.isFile && it.name == jarName }
+//        ?: error("Can't find benchmarking jar")
+//    val destinationFolder = benchmarkFolder / "unpacked"
+//    val libsFolder = benchmarkFolder / "bench-libs"
+//
+//    val benchmarkName = benchmark.name.removeSuffix(".jar")
+//    val destination = destinationFolder / benchmarkName
+//    createOrClear(destination.toFile())
+//
+//    val logFile = (benchmarkLogsFolder / "${benchmarkName}_log.ansi").toFile()
+//    val errorsFile = (benchmarkErrorsFolder / "${benchmarkName}_errors.ansi").toFile()
+//    unzipTo(destination.toFile(), benchmark)
+//
+//    val newLibs = (libsFolder / benchmarkName).toFile()
+//    val oldLibs = (destination / "BOOT-INF" / "lib").toFile()
+//
+//    newLibs.deleteRecursively()
+//    oldLibs.copyRecursively(newLibs)
+//    oldLibs.deleteRecursively()
+//
+//    val newClasses = destination.toFile()
+//    val oldClasses = (destination / "BOOT-INF" / "classes").toFile()
+//    oldClasses.copyRecursively(newClasses)
+//    (destination / "BOOT-INF").toFile().deleteRecursively()
+//
+//    return Benchmark(newClasses, newLibs, propertiesPath, logFile, errorsFile, benchmarkName)
+//}
+//
+//private fun fillProperties(benchmark: Benchmark, task: JavaExec) {
+//    task.systemProperty("usvm.benchmark", benchmark.jarPath.absolutePath)
+//    task.systemProperty("usvm.libs", benchmark.libsPath.absolutePath)
+//    task.systemProperty("usvm.log", benchmark.logPath.absolutePath)
+//    task.systemProperty("usvm.errors", benchmark.errorsPath.absolutePath)
+//    benchmark.propertiesPath?.also { task.systemProperty("usvm.properties", it) }
+//}
+//
+//tasks.register<JavaExec>("benchmarkPetClinic") {
+//    fillProperties(loadBenchmark("spring-petclinic-3.2.0.jar"), this)
+//    mainClass.set("benchmarking.BenchmarkingKt")
+//    configureSpringAnalysis(this)
+//}
+//
+//tasks.register<JavaExec>("benchmarkKlaw") {
+//    fillProperties(loadBenchmark("klaw-2.9.0.jar", "classpath:test/test-application-rdbms-ad-authorization.properties"), this)
+//    mainClass.set("benchmarking.BenchmarkingKt")
+//    configureSpringAnalysis(this)
+//}
+//
+//tasks.register<JavaExec>("benchmarkKomga") {
+//    fillProperties(loadBenchmark("komga-1.21.2.jar"), this)
+//    mainClass.set("benchmarking.BenchmarkingKt")
+//    configureSpringAnalysis(this)
+//}
+//
+//tasks.register<JavaExec>("benchmarkLicenceServer") {
+//    fillProperties(loadBenchmark("licence-server-yandex-cloud.jar"), this)
+//    mainClass.set("benchmarking.BenchmarkingKt")
+//    configureSpringAnalysis(this)
+//}
+//
+//tasks.register<JavaExec>("benchmarkBlogApi") {
+//    fillProperties(loadBenchmark("blogapi-0.0.1-SNAPSHOT.jar"), this)
+//    mainClass.set("benchmarking.BenchmarkingKt")
+//    configureSpringAnalysis(this)
+//}
+//
+//tasks.register<JavaExec>("benchmarkBenches") {
+//    fillProperties(loadBenchmark("usvm-spring-benchmarks.jar"), this)
+//    mainClass.set("benchmarking.BenchmarkingKt")
+//    configureSpringAnalysis(this)
+//}
+//
+//tasks.register<JavaExec>("benchmarkExplytAccount") {
+//    fillProperties(loadBenchmark("link-generator.jar"), this)
+//    mainClass.set("benchmarking.BenchmarkingKt")
+//    configureSpringAnalysis(this)
+//}
+//
+//tasks.register<JavaExec>("benchmarkExplytLicenseServer") {
+//    fillProperties(loadBenchmark("licence-server-yandex-cloud.jar"), this)
+//    mainClass.set("benchmarking.BenchmarkingKt")
+//    configureSpringAnalysis(this)
+//}
+//
+//tasks.register<JavaExec>("analyzeBenchmarks") {
+//    mainClass.set("benchmarking.BenchmarkingEvaluationKt")
+//    systemProperty("usvm.logs", benchmarkLogsFolder)
+//    configureSpringAnalysis(this)
+//}
+//
+//tasks.register("runBenchmarks") {
+//    createOrClear(benchmarkLogsFolder.toFile())
+//    createOrClear(benchmarkErrorsFolder.toFile())
+//    val usedBenches = listOf("benchmarkPetClinic", "benchmarkBlogApi", "benchmarkBenches")
+//    dependsOn(usedBenches)
+//    dependsOn("analyzeBenchmarks").mustRunAfter(usedBenches)
+//}
+//
+//data class Benchmark(
+//    val jarPath: File,
+//    val libsPath: File,
+//    val propertiesPath: String?,
+//    val logPath: File,
+//    val errorsPath: File,
+//    val name: String,
+//)

@@ -20,6 +20,7 @@ import org.usvm.constraints.UTypeConstraints
 import org.usvm.constraints.UTypeEvaluator
 import org.usvm.merging.MergeGuard
 import org.usvm.merging.UOwnedMergeable
+import org.usvm.util.Maybe
 
 interface UMemoryRegionId<Key, Sort : USort> {
     val sort: Sort
@@ -93,14 +94,14 @@ interface UWritableMemory<Type> : UReadOnlyMemory<Type> {
 }
 
 @Suppress("MemberVisibilityCanBePrivate")
-class UMemory<Type, Method>(
+open class UMemory<Type, Method>(
     internal val ctx: UContext<*>,
     override var ownership: MutabilityOwnership,
-    override val types: UTypeConstraints<Type>,
-    override val stack: URegistersStack = URegistersStack(),
-    private val mocks: UIndexedMocker<Method> = UIndexedMocker(),
-    private var regions: UPersistentHashMap<UMemoryRegionId<*, *>, UMemoryRegion<*, *>> = persistentHashMapOf(),
-) : UWritableMemory<Type>, UOwnedMergeable<UMemory<Type, Method>, MergeGuard> {
+    override var types: UTypeConstraints<Type>,
+    override var stack: URegistersStack = URegistersStack(),
+    protected var mocks: UIndexedMocker<Method> = UIndexedMocker(),
+    protected var regions: UPersistentHashMap<UMemoryRegionId<*, *>, UMemoryRegion<*, *>> = persistentHashMapOf(),
+) : UWritableMemory<Type>, UOwnedMergeable<UMemory<Type, Method>, MergeGuard>, Cloneable {
 
     override val mocker: UMocker<Method>
         get() = mocks
@@ -155,14 +156,22 @@ class UMemory<Type, Method>(
 
     override fun nullRef(): UHeapRef = ctx.nullRef
 
-    fun clone(
+    @Suppress("UNCHECKED_CAST")
+    open fun clone(
         typeConstraints: UTypeConstraints<Type>,
         thisOwnership: MutabilityOwnership,
         cloneOwnership: MutabilityOwnership,
-    ): UMemory<Type, Method> =
-        UMemory(
-            ctx, cloneOwnership, typeConstraints, stack.clone(), mocks.clone(), regions
-        ).also { ownership = thisOwnership }
+    ): UMemory<Type, Method> {
+        val clonedMemory = super.clone() as UMemory<Type, Method>
+        ownership = thisOwnership
+        clonedMemory.ownership = cloneOwnership
+        clonedMemory.types = typeConstraints
+        clonedMemory.stack = stack.clone()
+        clonedMemory.mocks = mocks.clone()
+
+        return clonedMemory
+    }
+
 
     override fun toWritableMemory(ownership: MutabilityOwnership) =
         /* NOTE 1: To be perfectly rigorous, we should clone stack and types here.

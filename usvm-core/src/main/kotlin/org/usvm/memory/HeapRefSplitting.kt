@@ -1,5 +1,6 @@
 package org.usvm.memory
 
+import org.usvm.NULL_ADDRESS
 import org.usvm.UAddressSort
 import org.usvm.UBoolExpr
 import org.usvm.UConcreteHeapRef
@@ -9,6 +10,7 @@ import org.usvm.UIteExpr
 import org.usvm.UNullRef
 import org.usvm.USort
 import org.usvm.USymbolicHeapRef
+import org.usvm.isAllocatedConcreteHeapRef
 import org.usvm.isFalse
 import org.usvm.isStaticHeapRef
 import org.usvm.uctx
@@ -61,7 +63,7 @@ fun splitUHeapRef(
         val expr = guarded.expr
 
         // Static refs may alias symbolic refs so they should be not filtered out
-        if (expr is UConcreteHeapRef && (staticIsConcrete || !isStaticHeapRef(expr))) {
+        if (expr is UConcreteHeapRef && (staticIsConcrete || isAllocatedConcreteHeapRef(expr))) {
             @Suppress("UNCHECKED_CAST")
             concreteHeapRefs += guarded as GuardedExpr<UConcreteHeapRef>
             false
@@ -163,6 +165,25 @@ inline fun <R> foldHeapRefWithStaticAsSymbolic(
     blockOnSymbolic = blockOnSymbolic
 )
 
+inline fun <R> foldHeapRefWithStaticAsConcrete(
+    ref: UHeapRef,
+    initial: R,
+    initialGuard: UBoolExpr,
+    ignoreNullRefs: Boolean = true,
+    collapseHeapRefs: Boolean = true,
+    blockOnConcrete: (R, GuardedExpr<UConcreteHeapRef>) -> R,
+    blockOnSymbolic: (R, GuardedExpr<UHeapRef>) -> R,
+): R = foldHeapRef(
+    ref,
+    initial,
+    initialGuard,
+    ignoreNullRefs,
+    collapseHeapRefs,
+    staticIsConcrete = true,
+    blockOnConcrete = blockOnConcrete,
+    blockOnSymbolic = blockOnSymbolic
+)
+
 inline fun <R> foldHeapRef2(
     ref0: UHeapRef,
     ref1: UHeapRef,
@@ -208,9 +229,9 @@ inline fun <R> foldHeapRef2(
     },
 )
 
-private const val LEFT_CHILD = 0
-private const val RIGHT_CHILD = 1
-private const val DONE = 2
+const val LEFT_CHILD = 0
+const val RIGHT_CHILD = 1
+const val DONE = 2
 
 
 /**
@@ -222,7 +243,7 @@ private const val DONE = 2
  * considered unsatisfiable, so we assume their guards equal to false. If [ignoreNullRefs] is true and [this] is
  * [UNullRef], throws an [IllegalArgumentException].
  */
-internal inline fun <Sort : USort> UHeapRef.map(
+inline fun <Sort : USort> UHeapRef.map(
     concreteMapper: (UConcreteHeapRef) -> UExpr<Sort>,
     staticMapper: (UConcreteHeapRef) -> UExpr<Sort>,
     symbolicMapper: (USymbolicHeapRef) -> UExpr<Sort>,
@@ -299,7 +320,7 @@ internal inline fun <Sort : USort> UHeapRef.map(
 /**
  * Executes [foldHeapRef] with passed [concreteMapper] as a staticMapper.
  */
-internal inline fun <Sort : USort> UHeapRef.mapWithStaticAsConcrete(
+inline fun <Sort : USort> UHeapRef.mapWithStaticAsConcrete(
     concreteMapper: (UConcreteHeapRef) -> UExpr<Sort>,
     symbolicMapper: (USymbolicHeapRef) -> UExpr<Sort>,
     ignoreNullRefs: Boolean = true,

@@ -120,6 +120,8 @@ abstract class JcTestStateResolver<T>(
         typesToScore = JcFixedInheritorsNumberTypeSelector.DEFAULT_INHERITORS_NUMBER_TO_SCORE
     )
 
+    protected open val shouldExtendMapWithObjects: Boolean = true
+
     fun resolveThisInstance(): T = if (method.isStatic) {
         decoderApi.createNullConst(method.enclosingType)
     } else {
@@ -296,23 +298,29 @@ abstract class JcTestStateResolver<T>(
 
     private val cpWithoutApproximations by lazy { ctx.cp.cpWithoutApproximations() }
 
-    private fun shouldIgnoreField(typedField: JcTypedField): Boolean {
+    private val JcField.isOriginal: Boolean get() =
+        with(cpWithoutApproximations) { isOriginalField }
+
+    open fun shouldIgnoreField(typedField: JcTypedField): Boolean {
         return typedField.isStatic
                 || typedField.field.annotations.any { it.name == DummyField::class.java.name }
-                || with(cpWithoutApproximations) { !typedField.field.isOriginalField }
+                || !typedField.field.isOriginal
     }
 
-    fun allocateAndInitializeObject(
+    open fun shouldSkipInitialization(type: JcClassType): Boolean {
+        // TODO skips throwable construction for now
+        val throwable = ctx.cp.findTypeOrNull<Throwable>()
+        return throwable != null && type.isAssignable(throwable)
+    }
+
+    open fun allocateAndInitializeObject(
         ref: UConcreteHeapRef, heapRef: UHeapRef, type: JcClassType
     ): T {
         val instance = allocateClassInstance(type)
         saveResolvedRef(ref.address, instance)
 
-        // TODO skips throwable construction for now
-        val throwable = ctx.cp.findTypeOrNull<Throwable>()
-        if (throwable != null && type.isAssignable(throwable)) {
+        if (shouldSkipInitialization(type))
             return instance
-        }
 
         val currentRef = if (resolveMode == ResolveMode.CURRENT) heapRef else ref
         for (cls in generateSequence(type.jcClass) { it.superClass }.map { it.toType() }) {
@@ -341,7 +349,7 @@ abstract class JcTestStateResolver<T>(
                 break
             } else {
                 for (field in cls.declaredFields.filterNot { shouldIgnoreField(it) }) {
-                    check(field.field !is JcEnrichedVirtualField) {
+                    check(field.field !is JcEnrichedVirtualField || field.field.isOriginal) {
                         "Class ${cls.jcClass.name} has approximated field ${field.field} but has no decoder"
                     }
 
@@ -514,12 +522,14 @@ abstract class JcTestStateResolver<T>(
         if (length > mapSize) {
             logger.warn { "Incorrect model: map length $length greater than resolved map size $mapSize" }
 
-            // fill map with new objects which are definitely unique
-            // note: may not satisfy map type constraints
-            val objectCtor = ctx.cp.objectType.constructors.single { it.parameters.isEmpty() }
-            while (length > resultMapSize()) {
-                val freshKey = decoderApi.invokeMethod(objectCtor.method, emptyList())
-                resultMapAddEntry(freshKey, freshKey)
+            if (shouldExtendMapWithObjects) {
+                // fill map with new objects which are definitely unique
+                // note: may not satisfy map type constraints
+                val objectCtor = ctx.cp.objectType.constructors.single { it.parameters.isEmpty() }
+                while (length > resultMapSize()) {
+                    val freshKey = decoderApi.invokeMethod(objectCtor.method, emptyList())
+                    resultMapAddEntry(freshKey, freshKey)
+                }
             }
         }
     }

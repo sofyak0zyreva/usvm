@@ -106,8 +106,8 @@ import org.usvm.machine.interpreter.statics.JcStaticFieldRegionId
 import org.usvm.machine.interpreter.statics.JcStaticFieldsMemoryRegion
 import org.usvm.machine.interpreter.statics.isInitialized
 import org.usvm.machine.interpreter.statics.markAsInitialized
-import org.usvm.machine.interpreter.transformers.JcMultiDimArrayAllocationTransformer
-import org.usvm.machine.interpreter.transformers.JcStringConcatTransformer
+import org.usvm.jvm.util.transformers.JcMultiDimArrayAllocationTransformer
+import org.usvm.jvm.util.transformers.JcStringConcatTransformer
 import org.usvm.machine.logger
 import org.usvm.machine.operator.JcBinaryOperator
 import org.usvm.machine.operator.JcUnaryOperator
@@ -134,10 +134,10 @@ import org.usvm.utils.logAssertFailure
  * An expression resolver based on JacoDb 3-address code. A result of resolving is `null`, iff
  * the original state is dead, as stated in [JcStepScope].
  */
-class JcExprResolver(
+open class JcExprResolver(
     private val ctx: JcContext,
-    private val scope: JcStepScope,
-    private val options: JcMachineOptions,
+    protected val scope: JcStepScope,
+    val options: JcMachineOptions,
     localToIdx: (JcMethod, JcImmediate) -> Int,
     mkTypeRef: (JcState, JcType) -> Pair<UConcreteHeapRef, Boolean>,
     mkStringConstRef: (JcState, String, Boolean) -> Pair<UConcreteHeapRef, Boolean>,
@@ -390,48 +390,57 @@ class JcExprResolver(
     // region invokes
 
     override fun visitJcSpecialCallExpr(expr: JcSpecialCallExpr): UExpr<out USort>? =
-        resolveInvoke(
-            expr.method,
-            instanceExpr = expr.instance,
-            argumentExprs = expr::args,
-            argumentTypes = { expr.method.parameters.map { it.type } }
-        ) { arguments ->
-            scope.doWithState { addConcreteMethodCallStmt(expr.method.method, arguments) }
+        ensureStaticFieldsInitialized(expr.method.enclosingType, classInitializerAnalysisRequired = true) {
+            resolveInvoke(
+                expr.method,
+                instanceExpr = expr.instance,
+                argumentExprs = expr::args,
+                argumentTypes = { expr.method.parameters.map { it.type } }
+            ) { arguments ->
+                scope.doWithState { addConcreteMethodCallStmt(expr.method.method, arguments) }
+            }
         }
 
     override fun visitJcVirtualCallExpr(expr: JcVirtualCallExpr): UExpr<out USort>? =
-        resolveInvoke(
-            expr.method,
-            instanceExpr = expr.instance,
-            argumentExprs = expr::args,
-            argumentTypes = { expr.method.parameters.map { it.type } }
-        ) { arguments ->
-            scope.doWithState { addVirtualMethodCallStmt(expr.method.method, arguments) }
+        ensureStaticFieldsInitialized(expr.method.enclosingType, classInitializerAnalysisRequired = true) {
+            resolveInvoke(
+                expr.method,
+                instanceExpr = expr.instance,
+                argumentExprs = expr::args,
+                argumentTypes = { expr.method.parameters.map { it.type } }
+            ) { arguments ->
+                scope.doWithState { addVirtualMethodCallStmt(expr.method.method, arguments) }
+            }
         }
 
     override fun visitJcStaticCallExpr(expr: JcStaticCallExpr): UExpr<out USort>? =
-        resolveInvoke(
-            expr.method,
-            instanceExpr = null,
-            argumentExprs = expr::args,
-            argumentTypes = { expr.method.parameters.map { it.type } }
-        ) { arguments ->
-            scope.doWithState { addConcreteMethodCallStmt(expr.method.method, arguments) }
+        ensureStaticFieldsInitialized(expr.method.enclosingType, classInitializerAnalysisRequired = true) {
+            resolveInvoke(
+                expr.method,
+                instanceExpr = null,
+                argumentExprs = expr::args,
+                argumentTypes = { expr.method.parameters.map { it.type } }
+            ) { arguments ->
+                scope.doWithState { addConcreteMethodCallStmt(expr.method.method, arguments) }
+            }
         }
 
-    override fun visitJcDynamicCallExpr(expr: JcDynamicCallExpr): UExpr<out USort>? =
-        apply {
-            if (JcStringConcatTransformer.methodIsStringConcat(expr.method.method)) {
-                logger.warn { "JcStringConcatTransformer should be used to process string concatenation" }
-            }
-        }.resolveInvoke(
-            expr.method,
-            instanceExpr = null,
-            argumentExprs = { expr.callSiteArgs },
-            argumentTypes = { expr.callSiteArgTypes }
-        ) { callSiteArguments ->
-            scope.doWithState { addDynamicCall(expr, callSiteArguments) }
+    override fun visitJcDynamicCallExpr(expr: JcDynamicCallExpr): UExpr<out USort>? {
+        if (JcStringConcatTransformer.methodIsStringConcat(expr.method.method)) {
+            logger.warn { "JcStringConcatTransformer should be used to process string concatenation" }
         }
+
+        return ensureStaticFieldsInitialized(expr.method.enclosingType, classInitializerAnalysisRequired = true) {
+            resolveInvoke(
+                expr.method,
+                instanceExpr = null,
+                argumentExprs = { expr.callSiteArgs },
+                argumentTypes = { expr.callSiteArgTypes }
+            ) { callSiteArguments ->
+                scope.doWithState { addDynamicCall(expr, callSiteArguments) }
+            }
+        }
+    }
 
     override fun visitJcLambdaExpr(expr: JcLambdaExpr): UExpr<out USort>? {
         val callSiteArgs = expr.callSiteArgs.zip(expr.callSiteArgTypes) { arg, type ->
@@ -534,13 +543,14 @@ class JcExprResolver(
         return expr
     }
 
-    private fun assertIsSubtype(expr: KExpr<out USort>, type: JcType): Boolean {
+    protected fun assertIsSubtype(expr: KExpr<out USort>, type: JcType): Boolean {
         if (type is JcRefType) {
             val heapRef = expr.asExpr(ctx.addressSort)
             val isExpr = scope.calcOnState { memory.types.evalIsSubtype(heapRef, type) }
             scope.assert(isExpr)
-                .logAssertFailure { "JcExprResolver: subtype constraint ${type.typeName}" }
-                ?: return false
+                .logAssertFailure {
+                    "JcExprResolver: subtype constraint ${type.typeName}"
+                } ?: return false
         }
 
         return true
@@ -550,7 +560,7 @@ class JcExprResolver(
 
     // region lvalue resolving
 
-    private fun resolveFieldRef(instance: JcValue?, field: JcTypedField): ULValue<*, *>? {
+    protected fun resolveFieldRef(instance: JcValue?, field: JcTypedField): ULValue<*, *>? {
         with(ctx) {
             val instanceRef = if (instance != null) {
                 resolveJcExpr(instance)?.asExpr(addressSort) ?: return null
@@ -880,7 +890,9 @@ class JcExprResolver(
                 blockOnFalseState = allocateException(nullPointerExceptionType)
             )
         } else {
-            scope.assert(neqNull).logAssertFailure { "Jc implicit exception: Check NPE" }
+            scope.assert(neqNull).logAssertFailure {
+                "Jc implicit exception: Check NPE"
+            }
         }
     }
 

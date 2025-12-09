@@ -1,7 +1,7 @@
-<?xml version="1.0" ?>
-<SmellBaseline>
-  <ManuallySuppressedIssues></ManuallySuppressedIssues>
-  <CurrentIssues>
+  <?xml version="1.0" ?>
+    <SmellBaseline>
+    <ManuallySuppressedIssues></ManuallySuppressedIssues>
+    <CurrentIssues>
     <ID>AnnotationOnSeparateLine:Classloader.kt$@file:Suppress("JAVA_MODULE_DOES_NOT_EXPORT_PACKAGE")</ID>
     <ID>AnnotationOnSeparateLine:InstrumentedProcessModel.Generated.kt$@Suppress("DEPRECATION") InstrumentedProcessModel.create(lifetime, this)</ID>
     <ID>AnnotationOnSeparateLine:InstrumentedProcessModel.Generated.kt$@file:Suppress("EXPERIMENTAL_API_USAGE","EXPERIMENTAL_UNSIGNED_LITERALS","PackageDirectoryMismatch","UnusedImport","unused","LocalVariableName","CanBeVal","PropertyName","EnumEntryName","ClassName","ObjectPropertyName","UnnecessaryVariable","SpellCheckingInspection")</ID>
@@ -78,7 +78,7 @@
     <ID>CommentSpacing:Constants.kt$InstrumentationModuleConstants$//Timeout for executor process waiting (should be in seconds)</ID>
     <ID>CommentSpacing:Constants.kt$InstrumentationModuleConstants$//Timeout for method execution</ID>
     <ID>CommentSpacing:Constants.kt$InstrumentationModuleConstants$//Timeout for test execution</ID>
-    <ID>CommentSpacing:Descriptor.kt$UTestObjectDescriptor$//TODO: Avoid recursion via DescriptorPrinter</ID>
+  <ID>CommentSpacing:Descriptor.kt$UTestObjectDescriptor$//TODO: Avoid recursion via DescriptorPrinter</ID>
     <ID>CommentSpacing:InstrumentationProcessRunner.kt$InstrumentationProcessRunner$//Proccess runner wrapper</ID>
     <ID>CommentSpacing:InstrumentedProcess.kt$InstrumentedProcess$//Main class for worker process</ID>
     <ID>CommentSpacing:InstrumentedProcess.kt$InstrumentedProcess$//TODO Return initial state with timeouts</ID>
@@ -207,9 +207,9 @@
     <ID>CommentSpacing:WorkerClassLoader.kt$WorkerClassLoader$//Using for static descriptor building after class initialization</ID>
     <ID>CommentSpacing:WorkerClassLoader.kt$WorkerClassLoader$//We can't build descriptors for static for some reason</ID>
     <ID>CommentSpacing:WorkerClassLoader.kt$WorkerClassLoader$//cannot access some classes, for example, enums</ID>
-    <ID>ConstructorParameterNaming:InstrumentedProcessModel.Generated.kt$InstrumentedProcessModel$private val _callUTest: RdCall&lt;SerializedUTest, ExecutionResult&gt;</ID>
-    <ID>ConstructorParameterNaming:SyncProtocolModel.Generated.kt$SyncProtocolModel$private val _synchronizationSignal: RdSignal&lt;String&gt;</ID>
-    <ID>DoubleMutabilityForCollection:Value2DescriptorConverter.kt$Value2DescriptorConverter$var uTestExecutorCache: MutableList&lt;Pair&lt;Any?, UTestInst&gt;&gt; = mutableListOf()</ID>
+  <ID>ConstructorParameterNaming:InstrumentedProcessModel.Generated.kt$InstrumentedProcessModel$private val _callUTest: RdCall&lt;SerializedUTest, ExecutionResult&gt;</ID>
+  <ID>ConstructorParameterNaming:SyncProtocolModel.Generated.kt$SyncProtocolModel$private val _synchronizationSignal: RdSignal&lt;String&gt;</ID>
+  <ID>DoubleMutabilityForCollection:Value2DescriptorConverter.kt$Value2DescriptorConverter$var uTestExecutorCache: MutableList&lt;Pair&lt;Any?, UTestInst&gt;&gt; = mutableListOf()</ID>
     <ID>EmptyElseBlock:Try.kt${}</ID>
     <ID>EmptyFunctionBlock:SyncProtocolModel.Generated.kt$SyncProtocolModel.Companion${ }</ID>
     <ID>Filename:Classloader.kt$org.usvm.instrumentation.util.Classloader.kt</ID>
@@ -250,70 +250,70 @@
     <ID>FinalNewline:Value2DescriptorConverter.kt$org.usvm.instrumentation.testcase.descriptor.Value2DescriptorConverter.kt</ID>
     <ID>FinalNewline:WorkerClassLoader.kt$org.usvm.instrumentation.classloader.WorkerClassLoader.kt</ID>
     <ID>ForbiddenMethodCall:UTestConcreteExecutor.kt$UTestConcreteExecutor$println("Cant init rdProcess")</ID>
-    <ID>FunctionNaming:Descriptor2ValueConverter.kt$Descriptor2ValueConverter$private fun `enum`(descriptor: UTestEnumValueDescriptor): Any</ID>
-    <ID>FunctionNaming:Descriptor2ValueConverter.kt$Descriptor2ValueConverter$private fun `exception`(descriptor: UTestExceptionDescriptor): Any</ID>
-    <ID>FunctionNaming:Descriptor2ValueConverter.kt$Descriptor2ValueConverter$private fun `object`(descriptor: UTestObjectDescriptor): Any</ID>
-    <ID>FunctionNaming:Try.kt$inline fun &lt;T&gt; `try`(body: () -&gt; T): Try&lt;T&gt;</ID>
-    <ID>FunctionNaming:Value2DescriptorConverter.kt$Value2DescriptorConverter$private fun `boolean array`(array: BooleanArray): UTestArrayDescriptor</ID>
-    <ID>FunctionNaming:Value2DescriptorConverter.kt$Value2DescriptorConverter$private fun `byte array`(array: ByteArray): UTestArrayDescriptor</ID>
-    <ID>FunctionNaming:Value2DescriptorConverter.kt$Value2DescriptorConverter$private fun `char array`(array: CharArray): UTestArrayDescriptor</ID>
-    <ID>FunctionNaming:Value2DescriptorConverter.kt$Value2DescriptorConverter$private fun `class`(value: Class&lt;*&gt;): UTestValueDescriptor</ID>
-    <ID>FunctionNaming:Value2DescriptorConverter.kt$Value2DescriptorConverter$private fun `double array`(array: DoubleArray): UTestArrayDescriptor</ID>
-    <ID>FunctionNaming:Value2DescriptorConverter.kt$Value2DescriptorConverter$private fun `enum`(value: Any, depth: Int): UTestEnumValueDescriptor</ID>
-    <ID>FunctionNaming:Value2DescriptorConverter.kt$Value2DescriptorConverter$private fun `exception`(exception: Throwable, depth: Int): UTestExceptionDescriptor</ID>
-    <ID>FunctionNaming:Value2DescriptorConverter.kt$Value2DescriptorConverter$private fun `float array`(array: FloatArray): UTestArrayDescriptor</ID>
-    <ID>FunctionNaming:Value2DescriptorConverter.kt$Value2DescriptorConverter$private fun `int array`(array: IntArray): UTestArrayDescriptor</ID>
-    <ID>FunctionNaming:Value2DescriptorConverter.kt$Value2DescriptorConverter$private fun `long array`(array: LongArray): UTestArrayDescriptor</ID>
-    <ID>FunctionNaming:Value2DescriptorConverter.kt$Value2DescriptorConverter$private fun `null`(type: JcType)</ID>
-    <ID>FunctionNaming:Value2DescriptorConverter.kt$Value2DescriptorConverter$private fun `object array`(array: Array&lt;*&gt;, depth: Int): UTestArrayDescriptor</ID>
-    <ID>FunctionNaming:Value2DescriptorConverter.kt$Value2DescriptorConverter$private fun `object`(value: Any, depth: Int): UTestValueDescriptor</ID>
-    <ID>FunctionNaming:Value2DescriptorConverter.kt$Value2DescriptorConverter$private fun `short array`(array: ShortArray): UTestArrayDescriptor</ID>
-    <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$ClassToId$override fun equals(other: Any?): Boolean</ID>
-    <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$ClassToId$override fun hashCode(): Int</ID>
-    <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$ClassToId$override fun print(printer: PrettyPrinter)</ID>
-    <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$ClassToId.Companion$@Suppress("UNCHECKED_CAST") override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): ClassToId</ID>
-    <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$ClassToId.Companion$override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: ClassToId)</ID>
-    <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$ExecuteParams$override fun equals(other: Any?): Boolean</ID>
-    <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$ExecuteParams$override fun hashCode(): Int</ID>
-    <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$ExecuteParams$override fun print(printer: PrettyPrinter)</ID>
-    <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$ExecuteParams.Companion$@Suppress("UNCHECKED_CAST") override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): ExecuteParams</ID>
-    <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$ExecuteParams.Companion$override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: ExecuteParams)</ID>
-    <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$ExecutionResult$override fun equals(other: Any?): Boolean</ID>
-    <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$ExecutionResult$override fun hashCode(): Int</ID>
-    <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$ExecutionResult$override fun print(printer: PrettyPrinter)</ID>
-    <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$ExecutionResult.Companion$@Suppress("UNCHECKED_CAST") override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): ExecutionResult</ID>
-    <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$ExecutionResult.Companion$override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: ExecutionResult)</ID>
-    <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$ExecutionStateSerialized$override fun equals(other: Any?): Boolean</ID>
-    <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$ExecutionStateSerialized$override fun hashCode(): Int</ID>
-    <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$ExecutionStateSerialized$override fun print(printer: PrettyPrinter)</ID>
-    <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$ExecutionStateSerialized.Companion$@Suppress("UNCHECKED_CAST") override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): ExecutionStateSerialized</ID>
-    <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$ExecutionStateSerialized.Companion$override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: ExecutionStateSerialized)</ID>
-    <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$InstrumentedProcessModel$override fun deepClone(): InstrumentedProcessModel</ID>
-    <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$InstrumentedProcessModel$override fun print(printer: PrettyPrinter)</ID>
-    <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$InstrumentedProcessModel.Companion$@JvmStatic @Deprecated("Use protocol.instrumentedProcessModel or revise the extension scope instead", ReplaceWith("protocol.instrumentedProcessModel")) fun create(lifetime: Lifetime, protocol: IProtocol): InstrumentedProcessModel</ID>
-    <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$InstrumentedProcessModel.Companion$@JvmStatic @JvmName("internalCreateModel") @Deprecated("Use create instead", ReplaceWith("create(lifetime, protocol)")) internal fun createModel(lifetime: Lifetime, protocol: IProtocol): InstrumentedProcessModel</ID>
-    <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$InstrumentedProcessModel.Companion$override fun registerSerializersCore(serializers: ISerializers)</ID>
-    <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$SerializedStaticField$override fun equals(other: Any?): Boolean</ID>
-    <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$SerializedStaticField$override fun hashCode(): Int</ID>
-    <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$SerializedStaticField$override fun print(printer: PrettyPrinter)</ID>
-    <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$SerializedStaticField.Companion$@Suppress("UNCHECKED_CAST") override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): SerializedStaticField</ID>
-    <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$SerializedStaticField.Companion$override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: SerializedStaticField)</ID>
-    <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$SerializedUTest$override fun equals(other: Any?): Boolean</ID>
-    <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$SerializedUTest$override fun hashCode(): Int</ID>
-    <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$SerializedUTest$override fun print(printer: PrettyPrinter)</ID>
-    <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$SerializedUTest.Companion$@Suppress("UNCHECKED_CAST") override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): SerializedUTest</ID>
-    <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$SerializedUTest.Companion$override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: SerializedUTest)</ID>
-    <ID>FunctionStartOfBodySpacing:InstrumentedProcessRoot.Generated.kt$InstrumentedProcessRoot$override fun deepClone(): InstrumentedProcessRoot</ID>
-    <ID>FunctionStartOfBodySpacing:InstrumentedProcessRoot.Generated.kt$InstrumentedProcessRoot$override fun print(printer: PrettyPrinter)</ID>
-    <ID>FunctionStartOfBodySpacing:InstrumentedProcessRoot.Generated.kt$InstrumentedProcessRoot.Companion$override fun registerSerializersCore(serializers: ISerializers)</ID>
-    <ID>FunctionStartOfBodySpacing:SyncProtocolModel.Generated.kt$SyncProtocolModel$override fun deepClone(): SyncProtocolModel</ID>
-    <ID>FunctionStartOfBodySpacing:SyncProtocolModel.Generated.kt$SyncProtocolModel$override fun print(printer: PrettyPrinter)</ID>
-    <ID>FunctionStartOfBodySpacing:SyncProtocolModel.Generated.kt$SyncProtocolModel.Companion$@JvmStatic @Deprecated("Use protocol.syncProtocolModel or revise the extension scope instead", ReplaceWith("protocol.syncProtocolModel")) fun create(lifetime: Lifetime, protocol: IProtocol): SyncProtocolModel</ID>
-    <ID>FunctionStartOfBodySpacing:SyncProtocolModel.Generated.kt$SyncProtocolModel.Companion$@JvmStatic @JvmName("internalCreateModel") @Deprecated("Use create instead", ReplaceWith("create(lifetime, protocol)")) internal fun createModel(lifetime: Lifetime, protocol: IProtocol): SyncProtocolModel</ID>
-    <ID>FunctionStartOfBodySpacing:SyncProtocolModel.Generated.kt$SyncProtocolModel.Companion$override fun registerSerializersCore(serializers: ISerializers)</ID>
-    <ID>FunctionStartOfBodySpacing:SyncProtocolRoot.Generated.kt$SyncProtocolRoot$override fun deepClone(): SyncProtocolRoot</ID>
-    <ID>FunctionStartOfBodySpacing:SyncProtocolRoot.Generated.kt$SyncProtocolRoot$override fun print(printer: PrettyPrinter)</ID>
-    <ID>FunctionStartOfBodySpacing:SyncProtocolRoot.Generated.kt$SyncProtocolRoot.Companion$override fun registerSerializersCore(serializers: ISerializers)</ID>
+  <ID>FunctionNaming:Descriptor2ValueConverter.kt$Descriptor2ValueConverter$private fun `enum`(descriptor: UTestEnumValueDescriptor): Any</ID>
+  <ID>FunctionNaming:Descriptor2ValueConverter.kt$Descriptor2ValueConverter$private fun `exception`(descriptor: UTestExceptionDescriptor): Any</ID>
+  <ID>FunctionNaming:Descriptor2ValueConverter.kt$Descriptor2ValueConverter$private fun `object`(descriptor: UTestObjectDescriptor): Any</ID>
+  <ID>FunctionNaming:Try.kt$inline fun &lt;T&gt; `try`(body: () -&gt; T): Try&lt;T&gt;</ID>
+  <ID>FunctionNaming:Value2DescriptorConverter.kt$Value2DescriptorConverter$private fun `boolean array`(array: BooleanArray): UTestArrayDescriptor</ID>
+  <ID>FunctionNaming:Value2DescriptorConverter.kt$Value2DescriptorConverter$private fun `byte array`(array: ByteArray): UTestArrayDescriptor</ID>
+  <ID>FunctionNaming:Value2DescriptorConverter.kt$Value2DescriptorConverter$private fun `char array`(array: CharArray): UTestArrayDescriptor</ID>
+  <ID>FunctionNaming:Value2DescriptorConverter.kt$Value2DescriptorConverter$private fun `class`(value: Class&lt;*&gt;): UTestValueDescriptor</ID>
+  <ID>FunctionNaming:Value2DescriptorConverter.kt$Value2DescriptorConverter$private fun `double array`(array: DoubleArray): UTestArrayDescriptor</ID>
+  <ID>FunctionNaming:Value2DescriptorConverter.kt$Value2DescriptorConverter$private fun `enum`(value: Any, depth: Int): UTestEnumValueDescriptor</ID>
+  <ID>FunctionNaming:Value2DescriptorConverter.kt$Value2DescriptorConverter$private fun `exception`(exception: Throwable, depth: Int): UTestExceptionDescriptor</ID>
+  <ID>FunctionNaming:Value2DescriptorConverter.kt$Value2DescriptorConverter$private fun `float array`(array: FloatArray): UTestArrayDescriptor</ID>
+  <ID>FunctionNaming:Value2DescriptorConverter.kt$Value2DescriptorConverter$private fun `int array`(array: IntArray): UTestArrayDescriptor</ID>
+  <ID>FunctionNaming:Value2DescriptorConverter.kt$Value2DescriptorConverter$private fun `long array`(array: LongArray): UTestArrayDescriptor</ID>
+  <ID>FunctionNaming:Value2DescriptorConverter.kt$Value2DescriptorConverter$private fun `null`(type: JcType)</ID>
+  <ID>FunctionNaming:Value2DescriptorConverter.kt$Value2DescriptorConverter$private fun `object array`(array: Array&lt;*&gt;, depth: Int): UTestArrayDescriptor</ID>
+  <ID>FunctionNaming:Value2DescriptorConverter.kt$Value2DescriptorConverter$private fun `object`(value: Any, depth: Int): UTestValueDescriptor</ID>
+  <ID>FunctionNaming:Value2DescriptorConverter.kt$Value2DescriptorConverter$private fun `short array`(array: ShortArray): UTestArrayDescriptor</ID>
+  <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$ClassToId$override fun equals(other: Any?): Boolean</ID>
+  <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$ClassToId$override fun hashCode(): Int</ID>
+  <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$ClassToId$override fun print(printer: PrettyPrinter)</ID>
+  <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$ClassToId.Companion$@Suppress("UNCHECKED_CAST") override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): ClassToId</ID>
+  <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$ClassToId.Companion$override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: ClassToId)</ID>
+  <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$ExecuteParams$override fun equals(other: Any?): Boolean</ID>
+  <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$ExecuteParams$override fun hashCode(): Int</ID>
+  <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$ExecuteParams$override fun print(printer: PrettyPrinter)</ID>
+  <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$ExecuteParams.Companion$@Suppress("UNCHECKED_CAST") override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): ExecuteParams</ID>
+  <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$ExecuteParams.Companion$override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: ExecuteParams)</ID>
+  <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$ExecutionResult$override fun equals(other: Any?): Boolean</ID>
+  <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$ExecutionResult$override fun hashCode(): Int</ID>
+  <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$ExecutionResult$override fun print(printer: PrettyPrinter)</ID>
+  <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$ExecutionResult.Companion$@Suppress("UNCHECKED_CAST") override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): ExecutionResult</ID>
+  <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$ExecutionResult.Companion$override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: ExecutionResult)</ID>
+  <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$ExecutionStateSerialized$override fun equals(other: Any?): Boolean</ID>
+  <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$ExecutionStateSerialized$override fun hashCode(): Int</ID>
+  <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$ExecutionStateSerialized$override fun print(printer: PrettyPrinter)</ID>
+  <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$ExecutionStateSerialized.Companion$@Suppress("UNCHECKED_CAST") override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): ExecutionStateSerialized</ID>
+  <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$ExecutionStateSerialized.Companion$override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: ExecutionStateSerialized)</ID>
+  <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$InstrumentedProcessModel$override fun deepClone(): InstrumentedProcessModel</ID>
+  <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$InstrumentedProcessModel$override fun print(printer: PrettyPrinter)</ID>
+  <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$InstrumentedProcessModel.Companion$@JvmStatic @Deprecated("Use protocol.instrumentedProcessModel or revise the extension scope instead", ReplaceWith("protocol.instrumentedProcessModel")) fun create(lifetime: Lifetime, protocol: IProtocol): InstrumentedProcessModel</ID>
+  <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$InstrumentedProcessModel.Companion$@JvmStatic @JvmName("internalCreateModel") @Deprecated("Use create instead", ReplaceWith("create(lifetime, protocol)")) internal fun createModel(lifetime: Lifetime, protocol: IProtocol): InstrumentedProcessModel</ID>
+  <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$InstrumentedProcessModel.Companion$override fun registerSerializersCore(serializers: ISerializers)</ID>
+  <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$SerializedStaticField$override fun equals(other: Any?): Boolean</ID>
+  <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$SerializedStaticField$override fun hashCode(): Int</ID>
+  <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$SerializedStaticField$override fun print(printer: PrettyPrinter)</ID>
+  <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$SerializedStaticField.Companion$@Suppress("UNCHECKED_CAST") override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): SerializedStaticField</ID>
+  <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$SerializedStaticField.Companion$override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: SerializedStaticField)</ID>
+  <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$SerializedUTest$override fun equals(other: Any?): Boolean</ID>
+  <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$SerializedUTest$override fun hashCode(): Int</ID>
+  <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$SerializedUTest$override fun print(printer: PrettyPrinter)</ID>
+  <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$SerializedUTest.Companion$@Suppress("UNCHECKED_CAST") override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): SerializedUTest</ID>
+  <ID>FunctionStartOfBodySpacing:InstrumentedProcessModel.Generated.kt$SerializedUTest.Companion$override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: SerializedUTest)</ID>
+  <ID>FunctionStartOfBodySpacing:InstrumentedProcessRoot.Generated.kt$InstrumentedProcessRoot$override fun deepClone(): InstrumentedProcessRoot</ID>
+  <ID>FunctionStartOfBodySpacing:InstrumentedProcessRoot.Generated.kt$InstrumentedProcessRoot$override fun print(printer: PrettyPrinter)</ID>
+  <ID>FunctionStartOfBodySpacing:InstrumentedProcessRoot.Generated.kt$InstrumentedProcessRoot.Companion$override fun registerSerializersCore(serializers: ISerializers)</ID>
+  <ID>FunctionStartOfBodySpacing:SyncProtocolModel.Generated.kt$SyncProtocolModel$override fun deepClone(): SyncProtocolModel</ID>
+  <ID>FunctionStartOfBodySpacing:SyncProtocolModel.Generated.kt$SyncProtocolModel$override fun print(printer: PrettyPrinter)</ID>
+  <ID>FunctionStartOfBodySpacing:SyncProtocolModel.Generated.kt$SyncProtocolModel.Companion$@JvmStatic @Deprecated("Use protocol.syncProtocolModel or revise the extension scope instead", ReplaceWith("protocol.syncProtocolModel")) fun create(lifetime: Lifetime, protocol: IProtocol): SyncProtocolModel</ID>
+  <ID>FunctionStartOfBodySpacing:SyncProtocolModel.Generated.kt$SyncProtocolModel.Companion$@JvmStatic @JvmName("internalCreateModel") @Deprecated("Use create instead", ReplaceWith("create(lifetime, protocol)")) internal fun createModel(lifetime: Lifetime, protocol: IProtocol): SyncProtocolModel</ID>
+  <ID>FunctionStartOfBodySpacing:SyncProtocolModel.Generated.kt$SyncProtocolModel.Companion$override fun registerSerializersCore(serializers: ISerializers)</ID>
+  <ID>FunctionStartOfBodySpacing:SyncProtocolRoot.Generated.kt$SyncProtocolRoot$override fun deepClone(): SyncProtocolRoot</ID>
+  <ID>FunctionStartOfBodySpacing:SyncProtocolRoot.Generated.kt$SyncProtocolRoot$override fun print(printer: PrettyPrinter)</ID>
+  <ID>FunctionStartOfBodySpacing:SyncProtocolRoot.Generated.kt$SyncProtocolRoot.Companion$override fun registerSerializersCore(serializers: ISerializers)</ID>
     <ID>ImportOrdering:Classloader.kt$import jdk.internal.loader.URLClassPath import jdk.internal.loader.Resource as InternalResource import java.io.File import java.io.InputStream import java.net.URL import java.security.AccessController import java.security.CodeSigner</ID>
     <ID>ImportOrdering:InstrumentedProcessModel.Generated.kt$import com.jetbrains.rd.framework.* import com.jetbrains.rd.framework.base.* import com.jetbrains.rd.framework.impl.* import com.jetbrains.rd.util.lifetime.* import com.jetbrains.rd.util.reactive.* import com.jetbrains.rd.util.string.* import com.jetbrains.rd.util.* import kotlin.time.Duration import kotlin.reflect.KClass import kotlin.jvm.JvmStatic</ID>
     <ID>ImportOrdering:InstrumentedProcessRoot.Generated.kt$import com.jetbrains.rd.framework.* import com.jetbrains.rd.framework.base.* import com.jetbrains.rd.framework.impl.* import com.jetbrains.rd.util.lifetime.* import com.jetbrains.rd.util.reactive.* import com.jetbrains.rd.util.string.* import com.jetbrains.rd.util.* import kotlin.time.Duration import kotlin.reflect.KClass import kotlin.jvm.JvmStatic</ID>
@@ -338,11 +338,11 @@
     <ID>MandatoryBracesLoops:Jar.kt$LabelFilterer$actualPrev = replacementsList[actualPrev]</ID>
     <ID>MatchingDeclarationName:Classloader.kt$URLClassPathLoader</ID>
     <ID>MatchingDeclarationName:Constants.kt$InstrumentationModuleConstants</ID>
-    <ID>MatchingDeclarationName:InstrumentedProcessRoot.Generated.kt$InstrumentedProcessRoot : RdExtBase</ID>
+  <ID>MatchingDeclarationName:InstrumentedProcessRoot.Generated.kt$InstrumentedProcessRoot : RdExtBase</ID>
     <ID>MatchingDeclarationName:Printer.kt$TracePrinter</ID>
     <ID>MatchingDeclarationName:Reflection.kt$ReflectionUtils</ID>
-    <ID>MatchingDeclarationName:SyncProtocolModel.Generated.kt$SyncProtocolModel : RdExtBase</ID>
-    <ID>MatchingDeclarationName:SyncProtocolRoot.Generated.kt$SyncProtocolRoot : RdExtBase</ID>
+  <ID>MatchingDeclarationName:SyncProtocolModel.Generated.kt$SyncProtocolModel : RdExtBase</ID>
+  <ID>MatchingDeclarationName:SyncProtocolRoot.Generated.kt$SyncProtocolRoot : RdExtBase</ID>
     <ID>MaxChainedCallsOnSameLine:Printer.kt$TracePrinter$element.location.method.enclosingClass.name.padStart(maxLengthClass)</ID>
     <ID>MaxChainedCallsOnSameLine:Printer.kt$TracePrinter$it.location.method.enclosingClass.name.length</ID>
     <ID>MaxLineLength:Api.kt$UTestBinaryConditionExpression$//TODO!! What if trueBranch and elseBranch have different types of the last instruction? Shouldn't we find their LCA?</ID>
@@ -379,9 +379,9 @@
     <ID>MaxLineLength:UTestConcreteExecutor.kt$UTestConcreteExecutor$)</ID>
     <ID>MaxLineLength:UTestExecutor.kt$UTestExecutor$staticDescriptorsBuilder.buildDescriptorsForExecutedStatics(accessedStatics, descriptorBuilder).getOrThrow()</ID>
     <ID>MaxLineLength:UTestExecutor.kt$UTestExecutor$}</ID>
-    <ID>MaxLineLength:UTestExpressionExecutor.kt$UTestExpressionExecutor$ArithmeticOperationType.AND -&gt; lhvAsDouble?.let { error("Bit operation on double impossible") } ?: (lhvAsLong and rhvAsLong)</ID>
-    <ID>MaxLineLength:UTestExpressionExecutor.kt$UTestExpressionExecutor$ArithmeticOperationType.OR -&gt; lhvAsDouble?.let { error("Bit operation on double impossible") } ?: (lhvAsLong or rhvAsLong)</ID>
-    <ID>MaxLineLength:UTestExpressionExecutor.kt$UTestExpressionExecutor$ArithmeticOperationType.XOR -&gt; lhvAsDouble?.let { error("Bit operation on double impossible") } ?: (lhvAsLong xor rhvAsLong)</ID>
+  <ID>MaxLineLength:UTestExpressionExecutor.kt$UTestExpressionExecutor$ArithmeticOperationType.AND -&gt; lhvAsDouble?.let { error("Bit operation on double impossible") } ?: (lhvAsLong and rhvAsLong)</ID>
+  <ID>MaxLineLength:UTestExpressionExecutor.kt$UTestExpressionExecutor$ArithmeticOperationType.OR -&gt; lhvAsDouble?.let { error("Bit operation on double impossible") } ?: (lhvAsLong or rhvAsLong)</ID>
+  <ID>MaxLineLength:UTestExpressionExecutor.kt$UTestExpressionExecutor$ArithmeticOperationType.XOR -&gt; lhvAsDouble?.let { error("Bit operation on double impossible") } ?: (lhvAsLong xor rhvAsLong)</ID>
     <ID>MaxLineLength:UTestExpressionExecutor.kt$UTestExpressionExecutor$private</ID>
     <ID>MaxLineLength:UTestExpressionExecutor.kt$UTestExpressionExecutor$throw TestExecutorException("Cant cast object of type ${uTestCastExpression.expr.type} to ${uTestCastExpression.type}")</ID>
     <ID>MaximumLineLength:Classloader.kt$URLClassPathLoader$ </ID>
@@ -604,17 +604,17 @@
     <ID>NoWildcardImports:Value2DescriptorConverter.kt$import org.jacodb.api.ext.*</ID>
     <ID>NoWildcardImports:Value2DescriptorConverter.kt$import org.usvm.instrumentation.util.*</ID>
     <ID>NoWildcardImports:WorkerClassLoader.kt$import org.usvm.instrumentation.util.*</ID>
-    <ID>ObjectPropertyNaming:InstrumentedProcessModel.Generated.kt$ClassToId.Companion$override val _type: KClass&lt;ClassToId&gt; = ClassToId::class</ID>
-    <ID>ObjectPropertyNaming:InstrumentedProcessModel.Generated.kt$ExecuteParams.Companion$override val _type: KClass&lt;ExecuteParams&gt; = ExecuteParams::class</ID>
-    <ID>ObjectPropertyNaming:InstrumentedProcessModel.Generated.kt$ExecutionResult.Companion$override val _type: KClass&lt;ExecutionResult&gt; = ExecutionResult::class</ID>
-    <ID>ObjectPropertyNaming:InstrumentedProcessModel.Generated.kt$ExecutionStateSerialized.Companion$override val _type: KClass&lt;ExecutionStateSerialized&gt; = ExecutionStateSerialized::class</ID>
-    <ID>ObjectPropertyNaming:InstrumentedProcessModel.Generated.kt$SerializedStaticField.Companion$override val _type: KClass&lt;SerializedStaticField&gt; = SerializedStaticField::class</ID>
-    <ID>ObjectPropertyNaming:InstrumentedProcessModel.Generated.kt$SerializedUTest.Companion$override val _type: KClass&lt;SerializedUTest&gt; = SerializedUTest::class</ID>
-    <ID>ParameterListWrapping:Descriptor.kt$UTestClassDescriptor$( val classType: JcType, override val type: JcType )</ID>
-    <ID>ParameterListWrapping:MockHelper.kt$MockHelper$( jcClass: JcClassOrInterface, methods: List&lt;JcMethod&gt; )</ID>
-    <ID>ParameterListWrapping:MockHelper.kt$MockHelper$( jcClass: JcClassOrInterface, methods: List&lt;JcMethod&gt;, isGlobalMock: Boolean )</ID>
-    <ID>ParameterListWrapping:MockHelper.kt$MockHelper$( jcConstructor: JcMethod, methodRebuilder: MockClassRebuilder )</ID>
-    <ID>ParameterListWrapping:RdProcessRunner.kt$RdProcessRunner$( lifetime: Lifetime, request: TReq, timeout: Duration )</ID>
+  <ID>ObjectPropertyNaming:InstrumentedProcessModel.Generated.kt$ClassToId.Companion$override val _type: KClass&lt;ClassToId&gt; = ClassToId::class</ID>
+  <ID>ObjectPropertyNaming:InstrumentedProcessModel.Generated.kt$ExecuteParams.Companion$override val _type: KClass&lt;ExecuteParams&gt; = ExecuteParams::class</ID>
+  <ID>ObjectPropertyNaming:InstrumentedProcessModel.Generated.kt$ExecutionResult.Companion$override val _type: KClass&lt;ExecutionResult&gt; = ExecutionResult::class</ID>
+  <ID>ObjectPropertyNaming:InstrumentedProcessModel.Generated.kt$ExecutionStateSerialized.Companion$override val _type: KClass&lt;ExecutionStateSerialized&gt; = ExecutionStateSerialized::class</ID>
+  <ID>ObjectPropertyNaming:InstrumentedProcessModel.Generated.kt$SerializedStaticField.Companion$override val _type: KClass&lt;SerializedStaticField&gt; = SerializedStaticField::class</ID>
+  <ID>ObjectPropertyNaming:InstrumentedProcessModel.Generated.kt$SerializedUTest.Companion$override val _type: KClass&lt;SerializedUTest&gt; = SerializedUTest::class</ID>
+  <ID>ParameterListWrapping:Descriptor.kt$UTestClassDescriptor$( val classType: JcType, override val type: JcType )</ID>
+  <ID>ParameterListWrapping:MockHelper.kt$MockHelper$( jcClass: JcClassOrInterface, methods: List&lt;JcMethod&gt; )</ID>
+  <ID>ParameterListWrapping:MockHelper.kt$MockHelper$( jcClass: JcClassOrInterface, methods: List&lt;JcMethod&gt;, isGlobalMock: Boolean )</ID>
+  <ID>ParameterListWrapping:MockHelper.kt$MockHelper$( jcConstructor: JcMethod, methodRebuilder: MockClassRebuilder )</ID>
+  <ID>ParameterListWrapping:RdProcessRunner.kt$RdProcessRunner$( lifetime: Lifetime, request: TReq, timeout: Duration )</ID>
     <ID>PropertyWrapping:Classloader.kt$URLClassPathLoader$private val urlClassPath = URLClassPath(classPath.map { it.toURI().toURL() }.toTypedArray(), AccessController.getContext())</ID>
     <ID>SpacingAroundColon:Api.kt$UTestClassExpression$:</ID>
     <ID>SpacingAroundColon:Api.kt$UTestExpression$:</ID>
@@ -687,117 +687,117 @@
     <ID>SpacingBetweenDeclarationsWithComments:SyncProtocolModel.Generated.kt$SyncProtocolModel$//deepClone</ID>
     <ID>SpacingBetweenDeclarationsWithComments:SyncProtocolModel.Generated.kt$SyncProtocolModel$//methods</ID>
     <ID>SpacingBetweenDeclarationsWithComments:SyncProtocolRoot.Generated.kt$SyncProtocolRoot$//deepClone</ID>
-    <ID>SwallowedException:Jar.kt$UsvmClassWriter$e: Throwable</ID>
-    <ID>SwallowedException:MockHelper.kt$MockHelper$e: Throwable</ID>
-    <ID>SwallowedException:Reflection.kt$ReflectionUtils$e: Throwable</ID>
-    <ID>SwallowedException:UTestConcreteExecutor.kt$UTestConcreteExecutor$e: Throwable</ID>
-    <ID>SwallowedException:UTestExpressionExecutor.kt$UTestExpressionExecutor$e: ClassCastException</ID>
-    <ID>SwallowedException:Value2DescriptorConverter.kt$Value2DescriptorConverter$e: Throwable</ID>
-    <ID>SwallowedException:WorkerClassLoader.kt$WorkerClassLoader$e: Throwable</ID>
+  <ID>SwallowedException:Jar.kt$UsvmClassWriter$e: Throwable</ID>
+  <ID>SwallowedException:MockHelper.kt$MockHelper$e: Throwable</ID>
+  <ID>SwallowedException:Reflection.kt$ReflectionUtils$e: Throwable</ID>
+  <ID>SwallowedException:UTestConcreteExecutor.kt$UTestConcreteExecutor$e: Throwable</ID>
+  <ID>SwallowedException:UTestExpressionExecutor.kt$UTestExpressionExecutor$e: ClassCastException</ID>
+  <ID>SwallowedException:Value2DescriptorConverter.kt$Value2DescriptorConverter$e: Throwable</ID>
+  <ID>SwallowedException:WorkerClassLoader.kt$WorkerClassLoader$e: Throwable</ID>
     <ID>ThrowingExceptionsWithoutMessageOrCause:Reflection.kt$ReflectionUtils$RuntimeException()</ID>
-    <ID>TooGenericExceptionCaught:Jacodb.kt$e: Throwable</ID>
-    <ID>TooGenericExceptionCaught:Jar.kt$UsvmClassWriter$e: Throwable</ID>
-    <ID>TooGenericExceptionCaught:MockHelper.kt$MockHelper$e: Throwable</ID>
-    <ID>TooGenericExceptionCaught:Reflection.kt$ReflectionUtils$e: Throwable</ID>
-    <ID>TooGenericExceptionCaught:Reflection.kt$e: Throwable</ID>
-    <ID>TooGenericExceptionCaught:Try.kt$e: Throwable</ID>
-    <ID>TooGenericExceptionCaught:UTestConcreteExecutor.kt$UTestConcreteExecutor$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:UTestConcreteExecutor.kt$UTestConcreteExecutor$e: Throwable</ID>
-    <ID>TooGenericExceptionCaught:UTestExpressionExecutor.kt$UTestExpressionExecutor$e: Throwable</ID>
-    <ID>TooGenericExceptionCaught:Value2DescriptorConverter.kt$Value2DescriptorConverter$e: Throwable</ID>
-    <ID>TooGenericExceptionCaught:WorkerClassLoader.kt$WorkerClassLoader$e: Throwable</ID>
+  <ID>TooGenericExceptionCaught:Jacodb.kt$e: Throwable</ID>
+  <ID>TooGenericExceptionCaught:Jar.kt$UsvmClassWriter$e: Throwable</ID>
+  <ID>TooGenericExceptionCaught:MockHelper.kt$MockHelper$e: Throwable</ID>
+  <ID>TooGenericExceptionCaught:Reflection.kt$ReflectionUtils$e: Throwable</ID>
+  <ID>TooGenericExceptionCaught:Reflection.kt$e: Throwable</ID>
+  <ID>TooGenericExceptionCaught:Try.kt$e: Throwable</ID>
+  <ID>TooGenericExceptionCaught:UTestConcreteExecutor.kt$UTestConcreteExecutor$e: Exception</ID>
+  <ID>TooGenericExceptionCaught:UTestConcreteExecutor.kt$UTestConcreteExecutor$e: Throwable</ID>
+  <ID>TooGenericExceptionCaught:UTestExpressionExecutor.kt$UTestExpressionExecutor$e: Throwable</ID>
+  <ID>TooGenericExceptionCaught:Value2DescriptorConverter.kt$Value2DescriptorConverter$e: Throwable</ID>
+  <ID>TooGenericExceptionCaught:WorkerClassLoader.kt$WorkerClassLoader$e: Throwable</ID>
     <ID>TooGenericExceptionThrown:Reflection.kt$ReflectionUtils$throw RuntimeException()</ID>
-    <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestAllocateMemoryCall$( val clazz: JcClassOrInterface )</ID>
-    <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestArithmeticExpression$( val operationType: ArithmeticOperationType, val lhv: UTestExpression, val rhv: UTestExpression, override val type: JcType )</ID>
-    <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestArrayGetExpression$( val arrayInstance: UTestExpression, val index: UTestExpression )</ID>
-    <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestArrayLengthExpression$( val arrayInstance: UTestExpression )</ID>
-    <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestArraySetStatement$( val arrayInstance: UTestExpression, val index: UTestExpression, val setValueExpression: UTestExpression )</ID>
-    <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestBinaryConditionExpression$( val conditionType: ConditionType, val lhv: UTestExpression, val rhv: UTestExpression, val trueBranch: UTestExpression, val elseBranch: UTestExpression )</ID>
-    <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestBinaryConditionStatement$( val conditionType: ConditionType, val lhv: UTestExpression, val rhv: UTestExpression, val trueBranch: List&lt;UTestStatement&gt;, val elseBranch: List&lt;UTestStatement&gt; )</ID>
-    <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestBooleanExpression$( override val value: Boolean, override val type: JcType )</ID>
-    <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestByteExpression$( override val value: Byte, override val type: JcType )</ID>
-    <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestCastExpression$( val expr: UTestExpression, override val type: JcType )</ID>
-    <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestCharExpression$( override val value: Char, override val type: JcType )</ID>
-    <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestClassExpression$( override val type: JcType )</ID>
-    <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestConstructorCall$( override val method: JcMethod, override val args: List&lt;UTestExpression&gt; )</ID>
-    <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestCreateArrayExpression$( val elementType: JcType, val size: UTestExpression )</ID>
-    <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestDoubleExpression$( override val value: Double, override val type: JcType )</ID>
-    <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestFloatExpression$( override val value: Float, override val type: JcType )</ID>
-    <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestGetFieldExpression$( val instance: UTestExpression, val field: JcField )</ID>
-    <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestGetStaticFieldExpression$( val field: JcField )</ID>
-    <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestGlobalMock$( override val type: JcType, override val fields: Map&lt;JcField, UTestExpression&gt;, override val methods: Map&lt;JcMethod, List&lt;UTestExpression&gt;&gt; )</ID>
-    <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestIntExpression$( override val value: Int, override val type: JcType )</ID>
-    <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestLongExpression$( override val value: Long, override val type: JcType )</ID>
-    <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestMethodCall$( override val instance: UTestExpression, override val method: JcMethod, override val args: List&lt;UTestExpression&gt; )</ID>
-    <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestMock$( override val type: JcType, open val fields: Map&lt;JcField, UTestExpression&gt;, open val methods: Map&lt;JcMethod, List&lt;UTestExpression&gt;&gt; )</ID>
-    <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestMockObject$( override val type: JcType, override val fields: Map&lt;JcField, UTestExpression&gt;, override val methods: Map&lt;JcMethod, List&lt;UTestExpression&gt;&gt; )</ID>
-    <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestNullExpression$( override val type: JcType )</ID>
-    <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestSetFieldStatement$( val instance: UTestExpression, val field: JcField, val value: UTestExpression )</ID>
-    <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestSetStaticFieldStatement$( val field: JcField, val value: UTestExpression )</ID>
-    <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestShortExpression$( override val value: Short, override val type: JcType )</ID>
-    <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestStaticMethodCall$( override val method: JcMethod, override val args: List&lt;UTestExpression&gt; )</ID>
-    <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestStringExpression$( override val value: String, override val type: JcType )</ID>
-    <ID>TrailingCommaOnDeclarationSite:ClassTransformer.kt$ClassTransformer$( instrumenterFactoryClassName: String, val instrumentation: Instrumentation )</ID>
-    <ID>TrailingCommaOnDeclarationSite:ClassTransformer.kt$ClassTransformer$( loader: ClassLoader?, className: String?, classBeingRedefined: Class&lt;*&gt;?, protectionDomain: ProtectionDomain?, classfileBuffer: ByteArray )</ID>
-    <ID>TrailingCommaOnDeclarationSite:Collection.kt$( result: R, body: (Int, A) -&gt; Pair&lt;K, V&gt;? )</ID>
-    <ID>TrailingCommaOnDeclarationSite:Collection.kt$( that: Iterable&lt;B&gt;, result: R, transform: (A, B) -&gt; Pair&lt;C, D&gt; )</ID>
-    <ID>TrailingCommaOnDeclarationSite:Descriptor.kt$UTestArrayDescriptor$( val elementType: JcType, val length: Int, val value: List&lt;UTestValueDescriptor&gt;, override val refId: Int )</ID>
-    <ID>TrailingCommaOnDeclarationSite:Descriptor.kt$UTestClassDescriptor$( val classType: JcType, override val type: JcType )</ID>
-    <ID>TrailingCommaOnDeclarationSite:Descriptor.kt$UTestCyclicReferenceDescriptor$( val refId: Int, override val type: JcType )</ID>
-    <ID>TrailingCommaOnDeclarationSite:Descriptor.kt$UTestEnumValueDescriptor$( override val type: JcType, val enumValueName: String, val fields: Map&lt;JcField, UTestValueDescriptor&gt;, override val refId: Int )</ID>
-    <ID>TrailingCommaOnDeclarationSite:Descriptor.kt$UTestExceptionDescriptor$( override val type: JcType, val message: String, val stackTrace: List&lt;UTestValueDescriptor&gt;, var raisedByUserCode: Boolean )</ID>
-    <ID>TrailingCommaOnDeclarationSite:Descriptor.kt$UTestObjectDescriptor$( override val type: JcType, val fields: Map&lt;JcField, UTestValueDescriptor&gt;, val originUTestExpr: UTestInst?, override val refId: Int )</ID>
-    <ID>TrailingCommaOnDeclarationSite:Instrumentation.kt$JdkInfo$( val path: Path, val version: Int )</ID>
-    <ID>TrailingCommaOnDeclarationSite:InstrumentationProcessRunner.kt$InstrumentationProcessRunner$( private val testingProjectClasspath: String, private val jcClasspath: JcClasspath, private val instrumentationClassFactory: KClass&lt;out JcInstrumenterFactory&lt;out JcInstrumenter&gt;&gt; )</ID>
-    <ID>TrailingCommaOnDeclarationSite:InstrumentationProcessRunner.kt$InstrumentationProcessRunner$( testingProjectClasspath: List&lt;String&gt;, jcClasspath: JcClasspath, instrumentationClassFactory: KClass&lt;JcInstrumenterFactory&lt;out JcInstrumenter&gt;&gt; )</ID>
+  <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestAllocateMemoryCall$( val clazz: JcClassOrInterface )</ID>
+  <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestArithmeticExpression$( val operationType: ArithmeticOperationType, val lhv: UTestExpression, val rhv: UTestExpression, override val type: JcType )</ID>
+  <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestArrayGetExpression$( val arrayInstance: UTestExpression, val index: UTestExpression )</ID>
+  <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestArrayLengthExpression$( val arrayInstance: UTestExpression )</ID>
+  <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestArraySetStatement$( val arrayInstance: UTestExpression, val index: UTestExpression, val setValueExpression: UTestExpression )</ID>
+  <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestBinaryConditionExpression$( val conditionType: ConditionType, val lhv: UTestExpression, val rhv: UTestExpression, val trueBranch: UTestExpression, val elseBranch: UTestExpression )</ID>
+  <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestBinaryConditionStatement$( val conditionType: ConditionType, val lhv: UTestExpression, val rhv: UTestExpression, val trueBranch: List&lt;UTestStatement&gt;, val elseBranch: List&lt;UTestStatement&gt; )</ID>
+  <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestBooleanExpression$( override val value: Boolean, override val type: JcType )</ID>
+  <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestByteExpression$( override val value: Byte, override val type: JcType )</ID>
+  <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestCastExpression$( val expr: UTestExpression, override val type: JcType )</ID>
+  <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestCharExpression$( override val value: Char, override val type: JcType )</ID>
+  <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestClassExpression$( override val type: JcType )</ID>
+  <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestConstructorCall$( override val method: JcMethod, override val args: List&lt;UTestExpression&gt; )</ID>
+  <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestCreateArrayExpression$( val elementType: JcType, val size: UTestExpression )</ID>
+  <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestDoubleExpression$( override val value: Double, override val type: JcType )</ID>
+  <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestFloatExpression$( override val value: Float, override val type: JcType )</ID>
+  <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestGetFieldExpression$( val instance: UTestExpression, val field: JcField )</ID>
+  <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestGetStaticFieldExpression$( val field: JcField )</ID>
+  <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestGlobalMock$( override val type: JcType, override val fields: Map&lt;JcField, UTestExpression&gt;, override val methods: Map&lt;JcMethod, List&lt;UTestExpression&gt;&gt; )</ID>
+  <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestIntExpression$( override val value: Int, override val type: JcType )</ID>
+  <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestLongExpression$( override val value: Long, override val type: JcType )</ID>
+  <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestMethodCall$( override val instance: UTestExpression, override val method: JcMethod, override val args: List&lt;UTestExpression&gt; )</ID>
+  <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestMock$( override val type: JcType, open val fields: Map&lt;JcField, UTestExpression&gt;, open val methods: Map&lt;JcMethod, List&lt;UTestExpression&gt;&gt; )</ID>
+  <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestMockObject$( override val type: JcType, override val fields: Map&lt;JcField, UTestExpression&gt;, override val methods: Map&lt;JcMethod, List&lt;UTestExpression&gt;&gt; )</ID>
+  <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestNullExpression$( override val type: JcType )</ID>
+  <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestSetFieldStatement$( val instance: UTestExpression, val field: JcField, val value: UTestExpression )</ID>
+  <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestSetStaticFieldStatement$( val field: JcField, val value: UTestExpression )</ID>
+  <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestShortExpression$( override val value: Short, override val type: JcType )</ID>
+  <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestStaticMethodCall$( override val method: JcMethod, override val args: List&lt;UTestExpression&gt; )</ID>
+  <ID>TrailingCommaOnDeclarationSite:Api.kt$UTestStringExpression$( override val value: String, override val type: JcType )</ID>
+  <ID>TrailingCommaOnDeclarationSite:ClassTransformer.kt$ClassTransformer$( instrumenterFactoryClassName: String, val instrumentation: Instrumentation )</ID>
+  <ID>TrailingCommaOnDeclarationSite:ClassTransformer.kt$ClassTransformer$( loader: ClassLoader?, className: String?, classBeingRedefined: Class&lt;*&gt;?, protectionDomain: ProtectionDomain?, classfileBuffer: ByteArray )</ID>
+  <ID>TrailingCommaOnDeclarationSite:Collection.kt$( result: R, body: (Int, A) -&gt; Pair&lt;K, V&gt;? )</ID>
+  <ID>TrailingCommaOnDeclarationSite:Collection.kt$( that: Iterable&lt;B&gt;, result: R, transform: (A, B) -&gt; Pair&lt;C, D&gt; )</ID>
+  <ID>TrailingCommaOnDeclarationSite:Descriptor.kt$UTestArrayDescriptor$( val elementType: JcType, val length: Int, val value: List&lt;UTestValueDescriptor&gt;, override val refId: Int )</ID>
+  <ID>TrailingCommaOnDeclarationSite:Descriptor.kt$UTestClassDescriptor$( val classType: JcType, override val type: JcType )</ID>
+  <ID>TrailingCommaOnDeclarationSite:Descriptor.kt$UTestCyclicReferenceDescriptor$( val refId: Int, override val type: JcType )</ID>
+  <ID>TrailingCommaOnDeclarationSite:Descriptor.kt$UTestEnumValueDescriptor$( override val type: JcType, val enumValueName: String, val fields: Map&lt;JcField, UTestValueDescriptor&gt;, override val refId: Int )</ID>
+  <ID>TrailingCommaOnDeclarationSite:Descriptor.kt$UTestExceptionDescriptor$( override val type: JcType, val message: String, val stackTrace: List&lt;UTestValueDescriptor&gt;, var raisedByUserCode: Boolean )</ID>
+  <ID>TrailingCommaOnDeclarationSite:Descriptor.kt$UTestObjectDescriptor$( override val type: JcType, val fields: Map&lt;JcField, UTestValueDescriptor&gt;, val originUTestExpr: UTestInst?, override val refId: Int )</ID>
+  <ID>TrailingCommaOnDeclarationSite:Instrumentation.kt$JdkInfo$( val path: Path, val version: Int )</ID>
+  <ID>TrailingCommaOnDeclarationSite:InstrumentationProcessRunner.kt$InstrumentationProcessRunner$( private val testingProjectClasspath: String, private val jcClasspath: JcClasspath, private val instrumentationClassFactory: KClass&lt;out JcInstrumenterFactory&lt;out JcInstrumenter&gt;&gt; )</ID>
+  <ID>TrailingCommaOnDeclarationSite:InstrumentationProcessRunner.kt$InstrumentationProcessRunner$( testingProjectClasspath: List&lt;String&gt;, jcClasspath: JcClasspath, instrumentationClassFactory: KClass&lt;JcInstrumenterFactory&lt;out JcInstrumenter&gt;&gt; )</ID>
     <ID>TrailingCommaOnDeclarationSite:InstrumentedProcess.kt$StaticsRollbackStrategy</ID>
-    <ID>TrailingCommaOnDeclarationSite:InstrumentedProcessModel.Generated.kt$ClassToId$( val className: String, val classId: Long )</ID>
-    <ID>TrailingCommaOnDeclarationSite:InstrumentedProcessModel.Generated.kt$ExecuteParams$( val classname: String, val signature: String, val classpath: String )</ID>
-    <ID>TrailingCommaOnDeclarationSite:InstrumentedProcessModel.Generated.kt$ExecutionResult$( val type: ExecutionResultType, val classes: List&lt;ClassToId&gt;?, val trace: List&lt;Long&gt;?, val cause: org.usvm.instrumentation.testcase.descriptor.UTestValueDescriptor?, val result: org.usvm.instrumentation.testcase.descriptor.UTestValueDescriptor?, val initialState: ExecutionStateSerialized?, val resultState: ExecutionStateSerialized? )</ID>
+  <ID>TrailingCommaOnDeclarationSite:InstrumentedProcessModel.Generated.kt$ClassToId$( val className: String, val classId: Long )</ID>
+  <ID>TrailingCommaOnDeclarationSite:InstrumentedProcessModel.Generated.kt$ExecuteParams$( val classname: String, val signature: String, val classpath: String )</ID>
+  <ID>TrailingCommaOnDeclarationSite:InstrumentedProcessModel.Generated.kt$ExecutionResult$( val type: ExecutionResultType, val classes: List&lt;ClassToId&gt;?, val trace: List&lt;Long&gt;?, val cause: org.usvm.instrumentation.testcase.descriptor.UTestValueDescriptor?, val result: org.usvm.instrumentation.testcase.descriptor.UTestValueDescriptor?, val initialState: ExecutionStateSerialized?, val resultState: ExecutionStateSerialized? )</ID>
     <ID>TrailingCommaOnDeclarationSite:InstrumentedProcessModel.Generated.kt$ExecutionResultType</ID>
-    <ID>TrailingCommaOnDeclarationSite:InstrumentedProcessModel.Generated.kt$ExecutionStateSerialized$( val instanceDescriptor: org.usvm.instrumentation.testcase.descriptor.UTestValueDescriptor?, val argsDescriptors: List&lt;org.usvm.instrumentation.testcase.descriptor.UTestValueDescriptor?&gt;, val statics: List&lt;SerializedStaticField&gt;? )</ID>
-    <ID>TrailingCommaOnDeclarationSite:InstrumentedProcessModel.Generated.kt$InstrumentedProcessModel$( private val _callUTest: RdCall&lt;SerializedUTest, ExecutionResult&gt; )</ID>
-    <ID>TrailingCommaOnDeclarationSite:InstrumentedProcessModel.Generated.kt$SerializedStaticField$( val fieldName: String, val fieldDescriptor: org.usvm.instrumentation.testcase.descriptor.UTestValueDescriptor )</ID>
-    <ID>TrailingCommaOnDeclarationSite:InstrumentedProcessModel.Generated.kt$SerializedUTest$( val initStatements: List&lt;org.usvm.instrumentation.testcase.api.UTestInst&gt;, val callMethodExpression: org.usvm.instrumentation.testcase.api.UTestInst )</ID>
-    <ID>TrailingCommaOnDeclarationSite:Jar.kt$( jcClassPath: JcClasspath, flags: Flags = Flags.writeComputeAll, checkClass: Boolean = false )</ID>
-    <ID>TrailingCommaOnDeclarationSite:Jar.kt$( jcClassPath: JcClasspath, path: Path, flags: Flags = Flags.writeComputeAll, checkClass: Boolean = false )</ID>
-    <ID>TrailingCommaOnDeclarationSite:JcInstructionTracer.kt$JcInstructionTracer$( jcRawFieldRef: JcRawFieldRef, accessType: StaticFieldAccessType, jcClasspath: JcClasspath )</ID>
-    <ID>TrailingCommaOnDeclarationSite:JcRuntimeTraceInstrumenter.kt$JcRuntimeTraceInstrumenter$( override val jcClasspath: JcClasspath )</ID>
-    <ID>TrailingCommaOnDeclarationSite:MockClassRebuilder.kt$MockClassRebuilder$( jcMethod: JcMethod, makeNotAbstract: Boolean )</ID>
-    <ID>TrailingCommaOnDeclarationSite:MockClassRebuilder.kt$MockClassRebuilder$( val jcClass: JcClassOrInterface, mockedClassName: String )</ID>
-    <ID>TrailingCommaOnDeclarationSite:MockHelper.kt$MockHelper$( jcClass: JcClassOrInterface, jcMethod: JcMethod, mockedMethodId: Long, isGlobalMock: Boolean )</ID>
-    <ID>TrailingCommaOnDeclarationSite:MockHelper.kt$MockHelper$( jcClass: JcClassOrInterface, methods: List&lt;JcMethod&gt; )</ID>
-    <ID>TrailingCommaOnDeclarationSite:MockHelper.kt$MockHelper$( jcClass: JcClassOrInterface, methods: List&lt;JcMethod&gt;, isGlobalMock: Boolean )</ID>
-    <ID>TrailingCommaOnDeclarationSite:MockHelper.kt$MockHelper$( jcConstructor: JcMethod, methodRebuilder: MockClassRebuilder )</ID>
-    <ID>TrailingCommaOnDeclarationSite:MockHelper.kt$MockHelper$( jcMethod: JcMethod, mockedMethodId: Long, classRebuilder: MockClassRebuilder )</ID>
-    <ID>TrailingCommaOnDeclarationSite:NoInstrumentation.kt$NoInstrumentation$( override val jcClasspath: JcClasspath )</ID>
-    <ID>TrailingCommaOnDeclarationSite:RdProcessRunner.kt$RdProcessRunner$( lifetime: Lifetime, request: TReq, timeout: Duration )</ID>
-    <ID>TrailingCommaOnDeclarationSite:RdProcessRunner.kt$RdProcessRunner$( private val process: Process, private val checkProcessAliveDelay: Duration = 1.seconds, private val rdPort: Int, private val jcClasspath: JcClasspath, private val lifetime: LifetimeDefinition )</ID>
-    <ID>TrailingCommaOnDeclarationSite:RdServerProcess.kt$RdServerProcess$( private val process: Process, override val lifetime: LifetimeDefinition, override val protocol: Protocol, val model: InstrumentedProcessModel )</ID>
-    <ID>TrailingCommaOnDeclarationSite:Response.kt$UTestExecutionExceptionResult$( val cause: UTestExceptionDescriptor, val trace: List&lt;JcInst&gt;?, val initialState: UTestExecutionState, val resultState: UTestExecutionState )</ID>
-    <ID>TrailingCommaOnDeclarationSite:Response.kt$UTestExecutionFailedResult$( val cause: UTestExceptionDescriptor )</ID>
-    <ID>TrailingCommaOnDeclarationSite:Response.kt$UTestExecutionInitFailedResult$( val cause: UTestExceptionDescriptor, val trace: List&lt;JcInst&gt;? )</ID>
-    <ID>TrailingCommaOnDeclarationSite:Response.kt$UTestExecutionState$( val instanceDescriptor: UTestValueDescriptor?, val argsDescriptors: List&lt;UTestValueDescriptor?&gt;, val statics: MutableMap&lt;JcField, UTestValueDescriptor&gt; )</ID>
-    <ID>TrailingCommaOnDeclarationSite:Response.kt$UTestExecutionSuccessResult$( val trace: List&lt;JcInst&gt;?, val result: UTestValueDescriptor?, val initialState: UTestExecutionState, val resultState: UTestExecutionState )</ID>
-    <ID>TrailingCommaOnDeclarationSite:Response.kt$UTestExecutionTimedOutResult$( val cause: UTestExceptionDescriptor )</ID>
-    <ID>TrailingCommaOnDeclarationSite:StaticDescriptorsBuilder.kt$StaticDescriptorsBuilder$( fields: Set&lt;Pair&lt;JcField, StaticFieldAccessType&gt;&gt;, resultValue2DescriptorConverter: Value2DescriptorConverter )</ID>
-    <ID>TrailingCommaOnDeclarationSite:StaticDescriptorsBuilder.kt$StaticDescriptorsBuilder$( private var workerClassLoader: WorkerClassLoader, private var initialValue2DescriptorConverter: Value2DescriptorConverter )</ID>
-    <ID>TrailingCommaOnDeclarationSite:SyncProtocolModel.Generated.kt$SyncProtocolModel$( private val _synchronizationSignal: RdSignal&lt;String&gt; )</ID>
-    <ID>TrailingCommaOnDeclarationSite:TraceHelper.kt$TraceHelper$( private val jcClasspath: JcClasspath, globalObjectJClass: Class&lt;*&gt; )</ID>
-    <ID>TrailingCommaOnDeclarationSite:UTest.kt$UTest$( val initStatements: List&lt;UTestInst&gt;, val callMethodExpression: UTestCall )</ID>
-    <ID>TrailingCommaOnDeclarationSite:UTestConcreteExecutor.kt$UTestConcreteExecutor$( instrumentationClassFactory: KClass&lt;out JcInstrumenterFactory&lt;*&gt;&gt;, testingProjectClasspath: List&lt;String&gt;, jcClasspath: JcClasspath, timeout: Duration )</ID>
-    <ID>TrailingCommaOnDeclarationSite:UTestConcreteExecutor.kt$UTestConcreteExecutor$( instrumentationClassFactory: KClass&lt;out JcInstrumenterFactory&lt;*&gt;&gt;, testingProjectClasspath: String, private val jcClasspath: JcClasspath, private val timeout: Duration )</ID>
-    <ID>TrailingCommaOnDeclarationSite:UTestExecutor.kt$UTestExecutor$( builder: Value2DescriptorConverter, exception: Throwable, raisedByUserCode: Boolean )</ID>
-    <ID>TrailingCommaOnDeclarationSite:UTestExecutor.kt$UTestExecutor$( callMethodExpr: UTestCall, executor: UTestExpressionExecutor, descriptorBuilder: Value2DescriptorConverter, accessedStatics: MutableSet&lt;Pair&lt;JcField, JcInstructionTracer.StaticFieldAccessType&gt;&gt; )</ID>
-    <ID>TrailingCommaOnDeclarationSite:UTestExecutor.kt$UTestExecutor$( private val jcClasspath: JcClasspath, private val ucp: URLClassPathLoader )</ID>
-    <ID>TrailingCommaOnDeclarationSite:UTestExpressionExecutor.kt$UTestExpressionExecutor$( private val workerClassLoader: WorkerClassLoader, private val accessedStatics: MutableSet&lt;Pair&lt;JcField, StaticFieldAccessType&gt;&gt;, private val mockHelper: MockHelper )</ID>
-    <ID>TrailingCommaOnDeclarationSite:UTestInstSerializer.kt$UTestInstSerializer$( uTestExpression: T, kind: UTestExpressionKind, serializeInternals: T.() -&gt; Unit, serialize: T.() -&gt; Unit )</ID>
+  <ID>TrailingCommaOnDeclarationSite:InstrumentedProcessModel.Generated.kt$ExecutionStateSerialized$( val instanceDescriptor: org.usvm.instrumentation.testcase.descriptor.UTestValueDescriptor?, val argsDescriptors: List&lt;org.usvm.instrumentation.testcase.descriptor.UTestValueDescriptor?&gt;, val statics: List&lt;SerializedStaticField&gt;? )</ID>
+  <ID>TrailingCommaOnDeclarationSite:InstrumentedProcessModel.Generated.kt$InstrumentedProcessModel$( private val _callUTest: RdCall&lt;SerializedUTest, ExecutionResult&gt; )</ID>
+  <ID>TrailingCommaOnDeclarationSite:InstrumentedProcessModel.Generated.kt$SerializedStaticField$( val fieldName: String, val fieldDescriptor: org.usvm.instrumentation.testcase.descriptor.UTestValueDescriptor )</ID>
+  <ID>TrailingCommaOnDeclarationSite:InstrumentedProcessModel.Generated.kt$SerializedUTest$( val initStatements: List&lt;org.usvm.instrumentation.testcase.api.UTestInst&gt;, val callMethodExpression: org.usvm.instrumentation.testcase.api.UTestInst )</ID>
+  <ID>TrailingCommaOnDeclarationSite:Jar.kt$( jcClassPath: JcClasspath, flags: Flags = Flags.writeComputeAll, checkClass: Boolean = false )</ID>
+  <ID>TrailingCommaOnDeclarationSite:Jar.kt$( jcClassPath: JcClasspath, path: Path, flags: Flags = Flags.writeComputeAll, checkClass: Boolean = false )</ID>
+  <ID>TrailingCommaOnDeclarationSite:JcInstructionTracer.kt$JcInstructionTracer$( jcRawFieldRef: JcRawFieldRef, accessType: StaticFieldAccessType, jcClasspath: JcClasspath )</ID>
+  <ID>TrailingCommaOnDeclarationSite:JcRuntimeTraceInstrumenter.kt$JcRuntimeTraceInstrumenter$( override val jcClasspath: JcClasspath )</ID>
+  <ID>TrailingCommaOnDeclarationSite:MockClassRebuilder.kt$MockClassRebuilder$( jcMethod: JcMethod, makeNotAbstract: Boolean )</ID>
+  <ID>TrailingCommaOnDeclarationSite:MockClassRebuilder.kt$MockClassRebuilder$( val jcClass: JcClassOrInterface, mockedClassName: String )</ID>
+  <ID>TrailingCommaOnDeclarationSite:MockHelper.kt$MockHelper$( jcClass: JcClassOrInterface, jcMethod: JcMethod, mockedMethodId: Long, isGlobalMock: Boolean )</ID>
+  <ID>TrailingCommaOnDeclarationSite:MockHelper.kt$MockHelper$( jcClass: JcClassOrInterface, methods: List&lt;JcMethod&gt; )</ID>
+  <ID>TrailingCommaOnDeclarationSite:MockHelper.kt$MockHelper$( jcClass: JcClassOrInterface, methods: List&lt;JcMethod&gt;, isGlobalMock: Boolean )</ID>
+  <ID>TrailingCommaOnDeclarationSite:MockHelper.kt$MockHelper$( jcConstructor: JcMethod, methodRebuilder: MockClassRebuilder )</ID>
+  <ID>TrailingCommaOnDeclarationSite:MockHelper.kt$MockHelper$( jcMethod: JcMethod, mockedMethodId: Long, classRebuilder: MockClassRebuilder )</ID>
+  <ID>TrailingCommaOnDeclarationSite:NoInstrumentation.kt$NoInstrumentation$( override val jcClasspath: JcClasspath )</ID>
+  <ID>TrailingCommaOnDeclarationSite:RdProcessRunner.kt$RdProcessRunner$( lifetime: Lifetime, request: TReq, timeout: Duration )</ID>
+  <ID>TrailingCommaOnDeclarationSite:RdProcessRunner.kt$RdProcessRunner$( private val process: Process, private val checkProcessAliveDelay: Duration = 1.seconds, private val rdPort: Int, private val jcClasspath: JcClasspath, private val lifetime: LifetimeDefinition )</ID>
+  <ID>TrailingCommaOnDeclarationSite:RdServerProcess.kt$RdServerProcess$( private val process: Process, override val lifetime: LifetimeDefinition, override val protocol: Protocol, val model: InstrumentedProcessModel )</ID>
+  <ID>TrailingCommaOnDeclarationSite:Response.kt$UTestExecutionExceptionResult$( val cause: UTestExceptionDescriptor, val trace: List&lt;JcInst&gt;?, val initialState: UTestExecutionState, val resultState: UTestExecutionState )</ID>
+  <ID>TrailingCommaOnDeclarationSite:Response.kt$UTestExecutionFailedResult$( val cause: UTestExceptionDescriptor )</ID>
+  <ID>TrailingCommaOnDeclarationSite:Response.kt$UTestExecutionInitFailedResult$( val cause: UTestExceptionDescriptor, val trace: List&lt;JcInst&gt;? )</ID>
+  <ID>TrailingCommaOnDeclarationSite:Response.kt$UTestExecutionState$( val instanceDescriptor: UTestValueDescriptor?, val argsDescriptors: List&lt;UTestValueDescriptor?&gt;, val statics: MutableMap&lt;JcField, UTestValueDescriptor&gt; )</ID>
+  <ID>TrailingCommaOnDeclarationSite:Response.kt$UTestExecutionSuccessResult$( val trace: List&lt;JcInst&gt;?, val result: UTestValueDescriptor?, val initialState: UTestExecutionState, val resultState: UTestExecutionState )</ID>
+  <ID>TrailingCommaOnDeclarationSite:Response.kt$UTestExecutionTimedOutResult$( val cause: UTestExceptionDescriptor )</ID>
+  <ID>TrailingCommaOnDeclarationSite:StaticDescriptorsBuilder.kt$StaticDescriptorsBuilder$( fields: Set&lt;Pair&lt;JcField, StaticFieldAccessType&gt;&gt;, resultValue2DescriptorConverter: Value2DescriptorConverter )</ID>
+  <ID>TrailingCommaOnDeclarationSite:StaticDescriptorsBuilder.kt$StaticDescriptorsBuilder$( private var workerClassLoader: WorkerClassLoader, private var initialValue2DescriptorConverter: Value2DescriptorConverter )</ID>
+  <ID>TrailingCommaOnDeclarationSite:SyncProtocolModel.Generated.kt$SyncProtocolModel$( private val _synchronizationSignal: RdSignal&lt;String&gt; )</ID>
+  <ID>TrailingCommaOnDeclarationSite:TraceHelper.kt$TraceHelper$( private val jcClasspath: JcClasspath, globalObjectJClass: Class&lt;*&gt; )</ID>
+  <ID>TrailingCommaOnDeclarationSite:UTest.kt$UTest$( val initStatements: List&lt;UTestInst&gt;, val callMethodExpression: UTestCall )</ID>
+  <ID>TrailingCommaOnDeclarationSite:UTestConcreteExecutor.kt$UTestConcreteExecutor$( instrumentationClassFactory: KClass&lt;out JcInstrumenterFactory&lt;*&gt;&gt;, testingProjectClasspath: List&lt;String&gt;, jcClasspath: JcClasspath, timeout: Duration )</ID>
+  <ID>TrailingCommaOnDeclarationSite:UTestConcreteExecutor.kt$UTestConcreteExecutor$( instrumentationClassFactory: KClass&lt;out JcInstrumenterFactory&lt;*&gt;&gt;, testingProjectClasspath: String, private val jcClasspath: JcClasspath, private val timeout: Duration )</ID>
+  <ID>TrailingCommaOnDeclarationSite:UTestExecutor.kt$UTestExecutor$( builder: Value2DescriptorConverter, exception: Throwable, raisedByUserCode: Boolean )</ID>
+  <ID>TrailingCommaOnDeclarationSite:UTestExecutor.kt$UTestExecutor$( callMethodExpr: UTestCall, executor: UTestExpressionExecutor, descriptorBuilder: Value2DescriptorConverter, accessedStatics: MutableSet&lt;Pair&lt;JcField, JcInstructionTracer.StaticFieldAccessType&gt;&gt; )</ID>
+  <ID>TrailingCommaOnDeclarationSite:UTestExecutor.kt$UTestExecutor$( private val jcClasspath: JcClasspath, private val ucp: URLClassPathLoader )</ID>
+  <ID>TrailingCommaOnDeclarationSite:UTestExpressionExecutor.kt$UTestExpressionExecutor$( private val workerClassLoader: WorkerClassLoader, private val accessedStatics: MutableSet&lt;Pair&lt;JcField, StaticFieldAccessType&gt;&gt;, private val mockHelper: MockHelper )</ID>
+  <ID>TrailingCommaOnDeclarationSite:UTestInstSerializer.kt$UTestInstSerializer$( uTestExpression: T, kind: UTestExpressionKind, serializeInternals: T.() -&gt; Unit, serialize: T.() -&gt; Unit )</ID>
     <ID>TrailingCommaOnDeclarationSite:UTestInstSerializer.kt$UTestInstSerializer$UTestExpressionKind</ID>
-    <ID>TrailingCommaOnDeclarationSite:UTestUnexpectedExecutionBuilder.kt$UTestUnexpectedExecutionBuilder$( jcClasspath: JcClasspath )</ID>
-    <ID>TrailingCommaOnDeclarationSite:UTestValueDescriptorSerializer.kt$UTestValueDescriptorSerializer$( uTestValueDescriptor: T, kind: UTestValueDescriptorKind, serializeInternals: T.() -&gt; Unit, serialize: T.() -&gt; Unit )</ID>
-    <ID>TrailingCommaOnDeclarationSite:UsvmRdCoroutineScope.kt$UsvmRdCoroutineScope$( lifetime: Lifetime, scheduler: SingleThreadScheduler )</ID>
-    <ID>TrailingCommaOnDeclarationSite:Value2DescriptorConverter.kt$Value2DescriptorConverter$( valueDescriptor: T, value: Any?, body: T.() -&gt; Unit )</ID>
-    <ID>TrailingCommaOnDeclarationSite:WorkerClassLoader.kt$WorkerClassLoader$( private val urlClassPath: URLClassPathLoader, private val traceCollectorClassLoader: ClassLoader, private val traceCollectorClassName: String, private val mockCollectorClassName: String, val jcClasspath: JcClasspath )</ID>
+  <ID>TrailingCommaOnDeclarationSite:UTestUnexpectedExecutionBuilder.kt$UTestUnexpectedExecutionBuilder$( jcClasspath: JcClasspath )</ID>
+  <ID>TrailingCommaOnDeclarationSite:UTestValueDescriptorSerializer.kt$UTestValueDescriptorSerializer$( uTestValueDescriptor: T, kind: UTestValueDescriptorKind, serializeInternals: T.() -&gt; Unit, serialize: T.() -&gt; Unit )</ID>
+  <ID>TrailingCommaOnDeclarationSite:UsvmRdCoroutineScope.kt$UsvmRdCoroutineScope$( lifetime: Lifetime, scheduler: SingleThreadScheduler )</ID>
+  <ID>TrailingCommaOnDeclarationSite:Value2DescriptorConverter.kt$Value2DescriptorConverter$( valueDescriptor: T, value: Any?, body: T.() -&gt; Unit )</ID>
+  <ID>TrailingCommaOnDeclarationSite:WorkerClassLoader.kt$WorkerClassLoader$( private val urlClassPath: URLClassPathLoader, private val traceCollectorClassLoader: ClassLoader, private val traceCollectorClassName: String, private val mockCollectorClassName: String, val jcClasspath: JcClasspath )</ID>
     <ID>UnderscoresInNumericLiterals:InstrumentedProcessModel.Generated.kt$InstrumentedProcessModel.Companion$1434578686845984847L</ID>
     <ID>UnderscoresInNumericLiterals:InstrumentedProcessRoot.Generated.kt$InstrumentedProcessRoot.Companion$7874463878801458679L</ID>
     <ID>UnderscoresInNumericLiterals:SyncProtocolModel.Generated.kt$SyncProtocolModel.Companion$5176282966920202414L</ID>
@@ -825,11 +825,11 @@
     <ID>UnsafeCallOnNullableType:Value2DescriptorConverter.kt$Value2DescriptorConverter$enumValueJcClass.superClass!!</ID>
     <ID>UnsafeCallOnNullableType:Value2DescriptorConverter.kt$Value2DescriptorConverter$jcClasspath.findTypeOrNull&lt;Class&lt;*&gt;&gt;()!!</ID>
     <ID>UnusedPrivateProperty:UTestConcreteExecutor.kt$UTestConcreteExecutor$i</ID>
-    <ID>UseOrEmpty:File.kt$current.listFiles() ?: arrayOf()</ID>
-    <ID>UseOrEmpty:Instrumentation.kt$OpenModulesContainer$modulesContainer .takeIf { JdkInfoService.provide().version &gt; 8 } ?: emptyList()</ID>
-    <ID>UseOrEmpty:RdProcessRunner.kt$RdProcessRunner$executionResult.classes ?: listOf()</ID>
-    <ID>UseOrEmpty:RdProcessRunner.kt$RdProcessRunner$state.statics?.associate { val jcField = jcClasspath.findFieldByFullNameOrNull(it.fieldName) ?: error("deserialization failed") val jcFieldDescriptor = it.fieldDescriptor jcField to jcFieldDescriptor } ?: mapOf()</ID>
-    <ID>UseOrEmpty:Value2DescriptorConverter.kt$Value2DescriptorConverter$exception.message ?: ""</ID>
+  <ID>UseOrEmpty:File.kt$current.listFiles() ?: arrayOf()</ID>
+  <ID>UseOrEmpty:Instrumentation.kt$OpenModulesContainer$modulesContainer .takeIf { JdkInfoService.provide().version &gt; 8 } ?: emptyList()</ID>
+  <ID>UseOrEmpty:RdProcessRunner.kt$RdProcessRunner$executionResult.classes ?: listOf()</ID>
+  <ID>UseOrEmpty:RdProcessRunner.kt$RdProcessRunner$state.statics?.associate { val jcField = jcClasspath.findFieldByFullNameOrNull(it.fieldName) ?: error("deserialization failed") val jcFieldDescriptor = it.fieldDescriptor jcField to jcFieldDescriptor } ?: mapOf()</ID>
+  <ID>UseOrEmpty:Value2DescriptorConverter.kt$Value2DescriptorConverter$exception.message ?: ""</ID>
     <ID>UseRequire:UTestExpressionExecutor.kt$UTestExpressionExecutor$throw IllegalArgumentException("Wrong argument types for arithmetic operation")</ID>
     <ID>UtilityClassWithPublicConstructor:Agent.kt$Agent</ID>
     <ID>VarCouldBeVal:UTestExecutor.kt$UTestExecutor$private var mockHelper = MockHelper( jcClasspath = jcClasspath, classLoader = workerClassLoader )</ID>
@@ -863,5 +863,5 @@
     <ID>Wrapping:SyncProtocolModel.Generated.kt$SyncProtocolModel$;</ID>
     <ID>Wrapping:UTestExpressionExecutor.kt$UTestExpressionExecutor$( uTestCreateArrayExpression.elementType.toJavaClass( workerClassLoader ), size )</ID>
     <ID>Wrapping:UTestExpressionExecutor.kt$UTestExpressionExecutor$error("Bit operation on double impossible")</ID>
-  </CurrentIssues>
-</SmellBaseline>
+    </CurrentIssues>
+    </SmellBaseline>

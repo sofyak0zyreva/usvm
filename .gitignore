@@ -1,5 +1,6 @@
 # Ignore Gradle project-specific cache directory
 .gradle
+*.DS_Store
 
 # Ignore Gradle build output directory
 build
@@ -18,3 +19,19 @@ run_python_with_gdb.sh
 
 # Ignore Kotlin build directory
 .kotlin/
+
+# Ignoring generated files
+generated/*
+usvm-jvm-spring-runner/generatedTests/
+usvm-jvm-spring-runner/generated/*
+usvm-jvm-spring-runner/DUMP_LAMBDA_PROXY_CLASS_FILES
+
+# Benchmark-related folder contents
+usvm-jvm-spring-runner/bench-errors/*
+usvm-jvm-spring-runner/bench-logs/*
+usvm-jvm-spring-runner/bench-jars/unpacked/
+usvm-jvm-spring-runner/bench-jars/klaw-2.9.0.jar
+usvm-jvm-spring-runner/bench-jars/bench-libs/
+
+*.ansi
+.profileconfig.json

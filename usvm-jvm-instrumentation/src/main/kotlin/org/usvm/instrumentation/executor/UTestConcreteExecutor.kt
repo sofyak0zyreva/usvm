@@ -5,6 +5,7 @@ import com.jetbrains.rd.util.lifetime.isAlive
 import kotlinx.coroutines.withTimeout
 import org.jacodb.api.jvm.JcClasspath
 import org.usvm.instrumentation.instrumentation.JcInstrumenterFactory
+import org.usvm.instrumentation.rd.InstrumentedProcess
 import org.usvm.instrumentation.testcase.api.UTestExecutionResult
 import org.usvm.instrumentation.testcase.descriptor.UTestUnexpectedExecutionBuilder
 import org.usvm.instrumentation.util.InstrumentationModuleConstants
@@ -14,11 +15,19 @@ import java.io.File
 import kotlin.reflect.KClass
 import kotlin.time.Duration
 
+data class UTestExecutionOptions(
+    val instrumentedClasses: List<String> = emptyList(),
+    val execMode: InstrumentedProcess.UTestExecMode = InstrumentedProcess.UTestExecMode.STATE
+)
+
 class UTestConcreteExecutor(
     instrumentationClassFactory: KClass<out JcInstrumenterFactory<*>>,
     testingProjectClasspath: String,
     private val jcClasspath: JcClasspath,
-    private val timeout: Duration
+    private val timeout: Duration,
+    private val opts: UTestExecutionOptions = UTestExecutionOptions(),
+    memoryLimit: Int = 1,
+    allowForDebugger: Boolean = false
 ) : AutoCloseable {
 
     constructor(
@@ -26,12 +35,25 @@ class UTestConcreteExecutor(
         testingProjectClasspath: List<String>,
         jcClasspath: JcClasspath,
         timeout: Duration
-    ) : this(instrumentationClassFactory, testingProjectClasspath.joinToString(File.pathSeparator), jcClasspath, timeout)
+    ) : this(
+        instrumentationClassFactory,
+        testingProjectClasspath.joinToString(File.pathSeparator),
+        jcClasspath,
+        timeout
+    )
 
     private val lifetime = LifetimeDefinition()
 
     private val instrumentationProcessRunner =
-        InstrumentationProcessRunner(testingProjectClasspath, jcClasspath, instrumentationClassFactory)
+        InstrumentationProcessRunner(
+            testingProjectClasspath,
+            jcClasspath,
+            instrumentationClassFactory,
+            opts.instrumentedClasses,
+            opts.execMode,
+            memoryLimit,
+            allowForDebugger
+        )
     private val uTestUnexpectedExecutionBuilder = UTestUnexpectedExecutionBuilder(jcClasspath)
 
     suspend fun ensureRunnerAlive() {

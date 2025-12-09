@@ -42,7 +42,7 @@ val logger = object : KLogging() {}.logger
 
 open class JcMachine(
     cp: JcClasspath,
-    private val options: UMachineOptions,
+    override val options: UMachineOptions,
     protected val jcMachineOptions: JcMachineOptions = JcMachineOptions(),
     protected val interpreterObserver: JcInterpreterObserver? = null,
 ) : UMachine<JcState>() {

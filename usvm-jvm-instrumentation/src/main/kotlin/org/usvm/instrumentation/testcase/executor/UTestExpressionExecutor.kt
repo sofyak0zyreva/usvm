@@ -34,6 +34,8 @@ import org.usvm.test.api.UTestArithmeticExpression
 import org.usvm.test.api.UTestArrayGetExpression
 import org.usvm.test.api.UTestArrayLengthExpression
 import org.usvm.test.api.UTestArraySetStatement
+import org.usvm.test.api.UTestAssertEqualsCall
+import org.usvm.test.api.UTestAssertThrowsCall
 import org.usvm.test.api.UTestBinaryConditionExpression
 import org.usvm.test.api.UTestBinaryConditionStatement
 import org.usvm.test.api.UTestCastExpression
@@ -45,6 +47,7 @@ import org.usvm.test.api.UTestGetFieldExpression
 import org.usvm.test.api.UTestGetStaticFieldExpression
 import org.usvm.test.api.UTestGlobalMock
 import org.usvm.test.api.UTestInst
+import org.usvm.test.api.UTestInstList
 import org.usvm.test.api.UTestMethodCall
 import org.usvm.test.api.UTestMock
 import org.usvm.test.api.UTestSetFieldStatement
@@ -59,7 +62,6 @@ class UTestExpressionExecutor(
 ) {
 
     private val jcClasspath = workerClassLoader.jcClasspath
-
 
     private val executedUTestInstructions: MutableMap<UTestInst, Any?> = hashMapOf()
     val objectToInstructionsCache: MutableList<Pair<Any?, UTestInst>> = mutableListOf()
@@ -102,6 +104,8 @@ class UTestExpressionExecutor(
             is UTestConstructorCall -> executeConstructorCall(uTestExpression)
             is UTestMethodCall -> executeMethodCall(uTestExpression)
             is UTestStaticMethodCall -> executeUTestStaticMethodCall(uTestExpression)
+            is UTestAssertThrowsCall -> executeUTestAssertThrowsCall(uTestExpression)
+            is UTestAssertEqualsCall -> executeUTestAssertEqualsCall(uTestExpression)
             is UTestCastExpression -> executeUTestCastExpression(uTestExpression)
             is UTestGetFieldExpression -> executeUTestGetFieldExpression(uTestExpression)
             is UTestGetStaticFieldExpression -> executeUTestGetStaticFieldExpression(uTestExpression)
@@ -112,6 +116,7 @@ class UTestExpressionExecutor(
             is UTestSetStaticFieldStatement -> executeUTestSetStaticFieldStatement(uTestExpression)
             is UTestArithmeticExpression -> executeUTestArithmeticExpression(uTestExpression)
             is UTestClassExpression -> executeUTestClassExpression(uTestExpression)
+            is UTestInstList -> error("UTestInst should not be executed")
         }
     }.also {
         it?.let {
@@ -330,7 +335,34 @@ class UTestExpressionExecutor(
     private fun executeUTestStaticMethodCall(uTestStaticMethodCall: UTestStaticMethodCall): Any? {
         val jMethod = uTestStaticMethodCall.method.toJavaMethod(workerClassLoader)
         val args = uTestStaticMethodCall.args.map { exec(it) }
+
         return jMethod.invokeWithAccessibility(null, args, taskExecutor)
+    }
+
+    private fun executeUTestAssertThrowsCall(uTestAssertThrowsCall: UTestAssertThrowsCall): Any? {
+        val expectedExceptionType = uTestAssertThrowsCall.exceptionClass
+        try {
+            uTestAssertThrowsCall.instList.forEach { inst -> exec(inst) }
+        } catch (t: Throwable) {
+            val exceptionType = expectedExceptionType.classpath.findClassOrNull(t.javaClass.typeName)
+            if (expectedExceptionType != exceptionType) {
+                val msg = "Throwable type mismatch, expected: $expectedExceptionType, but got: $exceptionType"
+                throw AssertionError(msg)
+            }
+            return null
+        }
+        throw AssertionError("Method did not throw")
+    }
+
+    private fun executeUTestAssertEqualsCall(uTestAssertEqualsCall: UTestAssertEqualsCall): Any? {
+        val lhs = exec(uTestAssertEqualsCall.expected)
+        val rhs = exec(uTestAssertEqualsCall.actual)
+
+        if (lhs != rhs) {
+            throw AssertionError("Assert equals fail on $lhs == $rhs")
+        }
+
+        return null
     }
 
     private fun executeUTestCastExpression(uTestCastExpression: UTestCastExpression): Any? {
@@ -363,7 +395,6 @@ class UTestExpressionExecutor(
             }
         }
     }
-
 }
 
 class TestExecutorException(msg: String) : Exception(msg)

@@ -24,75 +24,49 @@ import org.usvm.jvm.util.JcExecutor
 import org.usvm.test.api.UTest
 import org.usvm.test.api.UTestCall
 
-class UTestExecutor(
-    private val jcClasspath: JcClasspath,
+abstract class UTestExecutor(
+    protected val jcClasspath: JcClasspath,
     private val ucp: URLClassPathLoader
 ) {
 
-    private var workerClassLoader = createWorkerClassLoader()
-    private var initStateDescriptorBuilder = Value2DescriptorConverter(
-        workerClassLoader = workerClassLoader,
-        previousState = null
-    )
-    private var staticDescriptorsBuilder = StaticDescriptorsBuilder(
-        workerClassLoader = workerClassLoader,
-        initialValue2DescriptorConverter = initStateDescriptorBuilder
-    )
-    private var mockHelper = MockHelper(
-        jcClasspath = jcClasspath,
-        classLoader = workerClassLoader
-    )
-
-    init {
-        workerClassLoader.setStaticDescriptorsBuilder(staticDescriptorsBuilder)
+    private fun getAccessedStatics(): Set<Pair<JcField, JcInstructionTracer. StaticFieldAccessType>> {
+        return JcInstructionTracer.getTrace().statics.toSet()
     }
 
-    private fun createWorkerClassLoader() =
-        WorkerClassLoader(
-            urlClassPath = ucp,
-            traceCollectorClassLoader = this::class.java.classLoader,
-            traceCollectorClassName = TraceCollector::class.java.name,
-            mockCollectorClassName = MockCollector::class.java.name,
-            jcClasspath = jcClasspath
-        )
-
-    private fun reset() {
-        initStateDescriptorBuilder = Value2DescriptorConverter(
-            workerClassLoader = workerClassLoader,
-            previousState = null
-        )
-        staticDescriptorsBuilder.setClassLoader(workerClassLoader)
-        staticDescriptorsBuilder.setInitialValue2DescriptorConverter(initStateDescriptorBuilder)
-        //In case of new worker classloader
-        workerClassLoader.setStaticDescriptorsBuilder(staticDescriptorsBuilder)
-        JcInstructionTracer.reset()
-        MockCollector.mocks.clear()
+    private fun resetStatics(
+        accessedStatics: Set<Pair<JcField, *>>,
+        taskExecutor: JcExecutor
+    ) {
+        val accessedStaticsFields = accessedStatics.map { it.first }
+        when (InstrumentationModuleConstants.testExecutorStaticsRollbackStrategy) {
+            StaticsRollbackStrategy.ROLLBACK -> staticDescriptorsBuilder!!.rollBackStatics()
+            StaticsRollbackStrategy.REINIT -> workerClassLoader.reset(accessedStaticsFields, taskExecutor)
+            else -> Unit
+        }
     }
 
     fun executeUTest(uTest: UTest): UTestExecutionResult {
-        when (InstrumentationModuleConstants.testExecutorStaticsRollbackStrategy) {
-            StaticsRollbackStrategy.HARD -> workerClassLoader = createWorkerClassLoader()
-            else -> {}
-        }
         reset()
         val taskExecutor = JcExecutor(workerClassLoader)
         val accessedStatics = mutableSetOf<Pair<JcField, JcInstructionTracer.StaticFieldAccessType>>()
         val callMethodExpr = uTest.callMethodExpression
 
         val executor = UTestExpressionExecutor(workerClassLoader, accessedStatics, mockHelper, taskExecutor)
-        val initStmts = (uTest.initStatements + listOf(callMethodExpr.instance) + callMethodExpr.args).filterNotNull()
-        executor.executeUTestInsts(initStmts)
-            ?.onFailure {
-                return UTestExecutionInitFailedResult(
-                    cause = buildExceptionDescriptor(
-                        builder = initStateDescriptorBuilder,
-                        exception = it,
-                        raisedByUserCode = false
-                    ),
-                    trace = JcInstructionTracer.getTrace().trace
-                )
-            }
-        accessedStatics.addAll(JcInstructionTracer.getTrace().statics.toSet())
+        // TODO: Think about commented code #AA
+        val initStmts = uTest.initStatements // (uTest.initStatements + listOf(callMethodExpr.instance) + callMethodExpr.args).filterNotNull()
+        executor.executeUTestInsts(initStmts)?.onFailure {
+            resetStatics(accessedStatics, taskExecutor)
+            return UTestExecutionInitFailedResult(
+                cause = buildExceptionDescriptor(
+                    builder = initStateDescriptorBuilder,
+                    exception = it,
+                    raisedByUserCode = false
+                ),
+                trace = JcInstructionTracer.getTrace().trace
+            )
+        }
+        accessedStatics.addAll(getAccessedStatics())
+
         val initExecutionState = buildExecutionState(
             callMethodExpr = callMethodExpr,
             executor = executor,
@@ -116,6 +90,8 @@ class UTestExecutor(
         if (unpackedInvocationResult is Throwable) {
             val resultExecutionState =
                 buildExecutionState(callMethodExpr, executor, resultStateDescriptorBuilder, accessedStatics)
+
+            resetStatics(accessedStatics, taskExecutor)
             return UTestExecutionExceptionResult(
                 cause = buildExceptionDescriptor(
                     builder = resultStateDescriptorBuilder,
@@ -137,16 +113,66 @@ class UTestExecutor(
         val accessedStaticsFields = accessedStatics.map { it.first }
         val staticsToRemoveFromInitState = initExecutionState.statics.keys.filter { it !in accessedStaticsFields }
         staticsToRemoveFromInitState.forEach { initExecutionState.statics.remove(it) }
-        if (InstrumentationModuleConstants.testExecutorStaticsRollbackStrategy == StaticsRollbackStrategy.ROLLBACK) {
-            staticDescriptorsBuilder.rollBackStatics()
-        } else if (InstrumentationModuleConstants.testExecutorStaticsRollbackStrategy == StaticsRollbackStrategy.REINIT) {
-            workerClassLoader.reset(accessedStaticsFields, taskExecutor)
+
+        resetStatics(accessedStatics, taskExecutor)
+        return UTestExecutionSuccessResult(
+            trace.trace,
+            methodInvocationResultDescriptor,
+            initExecutionState,
+            resultExecutionState
+        )
+    }
+
+    protected abstract fun buildExecutionState(
+        callMethodExpr: UTestCall,
+        executor: UTestExpressionExecutor,
+        descriptorBuilder: Value2DescriptorConverter,
+        accessedStatics: MutableSet<Pair<JcField, JcInstructionTracer.StaticFieldAccessType>>
+    ): UTestExecutionState
+
+    private fun createWorkerClassLoader() =
+        WorkerClassLoader(
+            urlClassPath = ucp,
+            traceCollectorClassLoader = this::class.java.classLoader,
+            traceCollectorClassName = TraceCollector::class.java.name,
+            mockCollectorClassName = MockCollector::class.java.name,
+            jcClasspath = jcClasspath
+        )
+
+    protected var workerClassLoader = createWorkerClassLoader()
+    protected var initStateDescriptorBuilder = Value2DescriptorConverter(
+        workerClassLoader = workerClassLoader,
+        previousState = null
+    )
+
+    protected abstract val staticDescriptorsBuilder: StaticDescriptorsBuilder?
+
+    private val mockHelper = MockHelper(
+        jcClasspath = jcClasspath,
+        classLoader = workerClassLoader
+    )
+
+    private fun reset() {
+        when (InstrumentationModuleConstants.testExecutorStaticsRollbackStrategy) {
+            StaticsRollbackStrategy.HARD -> workerClassLoader = createWorkerClassLoader()
+            else -> Unit
         }
 
-
-        return UTestExecutionSuccessResult(
-            trace.trace, methodInvocationResultDescriptor, initExecutionState, resultExecutionState
+        initStateDescriptorBuilder = Value2DescriptorConverter(
+            workerClassLoader = workerClassLoader,
+            previousState = null
         )
+
+        if (staticDescriptorsBuilder != null) {
+            val staticDescBuilder = staticDescriptorsBuilder!!
+            staticDescBuilder.setClassLoader(workerClassLoader)
+            staticDescBuilder.setInitialValue2DescriptorConverter(initStateDescriptorBuilder)
+            // In case of new worker classloader
+            workerClassLoader.setStaticDescriptorsBuilder(staticDescBuilder)
+        }
+
+        JcInstructionTracer.reset()
+        MockCollector.mocks.clear()
     }
 
     private fun buildExceptionDescriptor(
@@ -165,31 +191,5 @@ class UTestExecutor(
                 stackTrace = listOf(),
                 raisedByUserCode = raisedByUserCode
             )
-    }
-
-    private fun buildExecutionState(
-        callMethodExpr: UTestCall,
-        executor: UTestExpressionExecutor,
-        descriptorBuilder: Value2DescriptorConverter,
-        accessedStatics: MutableSet<Pair<JcField, JcInstructionTracer.StaticFieldAccessType>>
-    ): UTestExecutionState = with(descriptorBuilder) {
-        uTestExecutorCache.addAll(executor.objectToInstructionsCache)
-        val instanceDescriptor = callMethodExpr.instance?.let {
-            buildDescriptorFromUTestExpr(it, executor).getOrNull()
-        }
-        val argsDescriptors = callMethodExpr.args.map {
-            buildDescriptorFromUTestExpr(it, executor).getOrNull()
-        }
-        val isInit = previousState == null
-        val statics = if (isInit) {
-            val descriptorsForInitializedStatics =
-                staticDescriptorsBuilder.buildDescriptorsForExecutedStatics(accessedStatics, descriptorBuilder).getOrThrow()
-            staticDescriptorsBuilder.builtInitialDescriptors.plus(descriptorsForInitializedStatics)
-                .filter { it.value != null }
-                .mapValues { it.value!! }
-        } else {
-            staticDescriptorsBuilder.buildDescriptorsForExecutedStatics(accessedStatics, descriptorBuilder).getOrThrow()
-        }
-        return UTestExecutionState(instanceDescriptor, argsDescriptors, statics.toMutableMap())
     }
 }

@@ -18,11 +18,15 @@ import java.nio.file.Paths
 import kotlin.reflect.KClass
 import kotlin.time.Duration
 
-//Proccess runner wrapper
+//Process runner wrapper
 class InstrumentationProcessRunner(
     private val testingProjectClasspath: String,
     private val jcClasspath: JcClasspath,
-    private val instrumentationClassFactory: KClass<out JcInstrumenterFactory<out JcInstrumenter>>
+    private val instrumentationClassFactory: KClass<out JcInstrumenterFactory<out JcInstrumenter>>,
+    private val instrumentedClasses: List<String> = listOf(),
+    private val executionMode: InstrumentedProcess.UTestExecMode = InstrumentedProcess.UTestExecMode.STATE,
+    memoryLimit: Int = 1,
+    allowForDebugger: Boolean = false,
 ) {
 
     private lateinit var rdProcessRunner: RdProcessRunner
@@ -38,25 +42,30 @@ class InstrumentationProcessRunner(
 
     private val jvmArgs: List<String> by lazy {
         val instrumentationClassNameFactoryName = instrumentationClassFactory.java.name
-        val memoryLimit = listOf("-Xmx1g")
+        val memoryLimitOption = listOf("-Xmx${memoryLimit}g")
         val pathToJava = Paths.get(InstrumentationModuleConstants.pathToJava)
         val usvmClasspath = System.getProperty("java.class.path")
         val javaVersionSpecificArguments = OpenModulesContainer.javaVersionSpecificArguments
         val instrumentedProcessClassName =
-            InstrumentedProcess::class.qualifiedName ?: error("Can't find instumented process")
+            InstrumentedProcess::class.qualifiedName ?: error("Can't find instrumented process")
+        val debuggingOption =
+            if (allowForDebugger) listOf("-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:${NetUtils.findFreePort(0)}")
+            else emptyList()
         listOf(pathToJava.resolve("bin${File.separatorChar}${osSpecificJavaExecutable()}").toString()) +
                 listOf("-ea") +
                 listOf("-javaagent:${InstrumentationModuleConstants.pathToUsvmInstrumentationJar}=$instrumentationClassNameFactoryName") +
-                memoryLimit +
+                memoryLimitOption +
+                debuggingOption +
                 javaVersionSpecificArguments +
                 listOf("-classpath", usvmClasspath) +
                 listOf(instrumentedProcessClassName)
     }
 
     private fun createWorkerProcessArgs(rdPort: Int): List<String> =
-        listOf("-cp", testingProjectClasspath) +
-        listOf("-t", "${InstrumentationModuleConstants.concreteExecutorProcessTimeout}") +
-        listOf("-p", "$rdPort")
+        listOf("-ic", instrumentedClasses.joinToString(" ")) +
+                listOf("-em", executionMode.id) +
+                listOf("-t", "${InstrumentationModuleConstants.concreteExecutorProcessTimeout}") +
+                listOf("-p", "$rdPort")
 
     suspend fun init(parentLifetime: Lifetime) {
         val processLifetime = LifetimeDefinition(parentLifetime)
@@ -64,6 +73,7 @@ class InstrumentationProcessRunner(
         val rdPort = NetUtils.findFreePort(0)
         val workerCommand = jvmArgs + createWorkerProcessArgs(rdPort)
         val pb = ProcessBuilder(workerCommand).inheritIO()
+        pb.environment()["usvm.jvm.instrumentation.rd.InstrumentedProcess.cp"] = testingProjectClasspath
         val process = pb.start()
         rdProcessRunner =
             RdProcessRunner(process = process, rdPort = rdPort, jcClasspath = jcClasspath, lifetime = processLifetime)

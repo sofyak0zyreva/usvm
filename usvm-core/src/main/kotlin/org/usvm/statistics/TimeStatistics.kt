@@ -8,9 +8,9 @@ import kotlin.time.Duration.Companion.seconds
 /**
  * Maintains information about time spent on machine processes.
  */
-class TimeStatistics<Method, State : UState<*, Method, *, *, *, State>> : UMachineObserver<State> {
+open class TimeStatistics<Method, State : UState<*, Method, *, *, *, State>> : UMachineObserver<State> {
     private val stopwatch = RealTimeStopwatch()
-    private val methodStopwatch = RealTimeStopwatch()
+    protected val methodStopwatch = RealTimeStopwatch()
 
     private val methodTimes = mutableMapOf<Method, Duration>()
 
@@ -40,12 +40,16 @@ class TimeStatistics<Method, State : UState<*, Method, *, *, *, State>> : UMachi
         methodStopwatch.start()
     }
 
-    override fun onState(parent: State, forks: Sequence<State>) {
-        check(methodStopwatch.isRunning) { "Method stopwatch was not running after machine step" }
-        methodStopwatch.stop()
+    protected open fun onMethodStopwatchStopped(parent: State) {
         // TODO: measure time for all visited methods, not only for entrypoints
         val entrypoint = parent.entrypoint
         methodTimes.merge(entrypoint, methodStopwatch.elapsed) { current, elapsed -> current + elapsed }
+    }
+
+    override fun onState(parent: State, forks: Sequence<State>) {
+        check(methodStopwatch.isRunning) { "Method stopwatch was not running after machine step" }
+        methodStopwatch.stop()
+        onMethodStopwatchStopped(parent)
         methodStopwatch.reset()
     }
 }

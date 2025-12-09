@@ -1,0 +1,116 @@
+package util
+
+import org.jacodb.api.jvm.JcClassOrInterface
+import org.jacodb.api.jvm.JcMethod
+import org.jacodb.api.jvm.ext.isSubClassOf
+import org.usvm.spring.api.SpringEngine
+
+internal val JcClassOrInterface.isSpringEngine: Boolean
+    get() = name == SpringEngine::class.java.name
+
+internal val JcClassOrInterface.isSpringFilter: Boolean
+    get() {
+        val filterType = classpath.findClassOrNull("jakarta.servlet.Filter")
+            ?: return false
+        return isSubClassOf(filterType)
+    }
+
+internal val JcClassOrInterface.isSpringFilterChain: Boolean
+    get() {
+        val filterType = classpath.findClassOrNull("jakarta.servlet.FilterChain")
+            ?: return false
+        return isSubClassOf(filterType)
+    }
+
+internal val JcClassOrInterface.isFilterObservation: Boolean
+    get() = classpath.findClassOrNull(
+        "org.springframework.security.web.ObservationFilterChainDecorator\$FilterObservation"
+    )?.let { isSubClassOf(it) } ?: false
+
+internal val JcClassOrInterface.isObservationContext: Boolean
+    get() = classpath.findClassOrNull(
+        "io.micrometer.observation.Observation\$Context"
+    )?.let { isSubClassOf(it) } ?: false
+
+internal val JcClassOrInterface.isFilterChainDecorator: Boolean
+    get() = classpath.findClassOrNull(
+        "org.springframework.security.web.FilterChainProxy\$FilterChainDecorator"
+    )?.let { isSubClassOf(it) } ?: false
+
+internal val JcClassOrInterface.isSpringHandlerInterceptor: Boolean
+    get() {
+        val filterType = classpath.findClassOrNull("org.springframework.web.servlet.HandlerInterceptor")
+            ?: return false
+        return isSubClassOf(filterType)
+    }
+
+internal val JcClassOrInterface.isSpringController: Boolean
+    get() = annotations.any {
+        it.name == "org.springframework.stereotype.Controller"
+                || it.name == "org.springframework.web.bind.annotation.RestController"
+    }
+
+internal val JcClassOrInterface.isArgumentResolver: Boolean
+    get() {
+        val argumentResolverType =
+            classpath.findClassOrNull("org.springframework.web.method.support.HandlerMethodArgumentResolver")
+                ?: return false
+        return isSubClassOf(argumentResolverType)
+    }
+
+internal val JcClassOrInterface.isSpringRepository: Boolean
+    get() = this.annotations.any { it.name == "org.springframework.stereotype.Repository" }
+            || classpath.findClassOrNull("org.springframework.data.repository.Repository")
+                ?.let { isSubClassOf(it) } ?: false
+
+internal val JcClassOrInterface.isDatabaseApproximation: Boolean
+    get() = name.startsWith("generated.org.springframework.boot.databases")
+
+internal val JcClassOrInterface.isGrantedAuthority: Boolean
+    get() = classpath.findClassOrNull("org.springframework.security.core.GrantedAuthority")
+        ?.let{ isSubClassOf(it) } ?: false
+
+internal val JcClassOrInterface.isSpringRequest: Boolean
+    get() = classpath.findClassOrNull("jakarta.servlet.http.HttpServletRequest")
+        ?.let { this.isSubClassOf(it) } ?: false
+
+internal val JcClassOrInterface.isServletWebRequest: Boolean
+    get() = classpath.findClassOrNull("org.springframework.web.context.request.ServletWebRequest")
+        ?.let { this.isSubClassOf(it) } ?: false
+
+internal val JcMethod.isSpringEngineMethod: Boolean
+    get() = enclosingClass.isSpringEngine
+
+internal val JcMethod.isSpringFilterMethod: Boolean
+    get() = enclosingClass.isSpringFilter
+
+internal val JcMethod.isSpringFilterChainMethod: Boolean
+    get() = enclosingClass.isSpringFilterChain
+
+internal val JcMethod.isFilterObservationMethod: Boolean
+    get() = enclosingClass.isFilterObservation
+
+internal val JcMethod.isObservationContextMethod: Boolean
+    get() = enclosingClass.isObservationContext
+
+internal val JcMethod.isFilterChainDecoratorMethod: Boolean
+    get() = enclosingClass.isFilterChainDecorator
+
+private val argumentResolverMethods = setOf("convertIfNecessary", "resolveArgument", "resolveName", "handleNullValue")
+
+internal val JcMethod.isArgumentResolverMethod: Boolean
+    get() = enclosingClass.isArgumentResolver && argumentResolverMethods.contains(name)
+
+internal val JcMethod.isHttpRequestMethod: Boolean
+    get() = enclosingClass.isSpringRequest
+
+internal val JcMethod.isServletRequestMethod: Boolean
+    get() = enclosingClass.isServletWebRequest
+
+internal val JcMethod.isDeserializationMethod: Boolean
+    get() = name == "readWithMessageConverters"
+            && enclosingClass.isArgumentResolver
+
+internal val JcMethod.isSecurityExpressionRootMethod: Boolean
+    get() = enclosingClass.classpath.findClassOrNull("org.springframework.security.access.expression.SecurityExpressionRoot")
+        ?.let{ enclosingClass.isSubClassOf(it) } ?: false

@@ -7,16 +7,12 @@ import org.jacodb.api.jvm.JcClassOrInterface
 import org.jacodb.api.jvm.JcRefType
 import org.jacodb.api.jvm.JcType
 import org.jacodb.api.jvm.ext.enumValues
+import org.jacodb.api.jvm.ext.humanReadableSignature
 import org.jacodb.api.jvm.ext.isEnum
 import org.jacodb.api.jvm.ext.toType
-import org.usvm.UBoolExpr
-import org.usvm.UConcreteHeapRef
-import org.usvm.UHeapRef
-import org.usvm.USymbolicHeapRef
+import org.usvm.*
 import org.usvm.api.evalTypeEquals
 import org.usvm.api.typeStreamOf
-import org.usvm.isAllocatedConcreteHeapRef
-import org.usvm.isStaticHeapRef
 import org.usvm.machine.JcConcreteMethodCallInst
 import org.usvm.machine.JcContext
 import org.usvm.machine.JcVirtualMethodCallInst
@@ -292,7 +288,7 @@ private fun JcVirtualMethodCallInst.makeConcreteCallsForPossibleTypes(
     return typeConstraintsWithBlockOnStates
 }
 
-private fun findLambdaCallSite(
+fun findLambdaCallSite(
     methodCall: JcVirtualMethodCallInst,
     scope: JcStepScope,
     ref: UConcreteHeapRef,
@@ -312,7 +308,7 @@ private fun findLambdaCallSite(
     return callSite
 }
 
-private fun JcVirtualMethodCallInst.makeLambdaCallSiteCall(
+fun JcVirtualMethodCallInst.makeLambdaCallSiteCall(
     scope: JcStepScope,
     callSite: JcLambdaCallSite,
 ): JcConcreteMethodCallInst {

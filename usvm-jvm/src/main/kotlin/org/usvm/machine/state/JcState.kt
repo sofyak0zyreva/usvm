@@ -15,7 +15,7 @@ import org.usvm.merging.MutableMergeGuard
 import org.usvm.model.UModelBase
 import org.usvm.targets.UTargetsSet
 
-class JcState(
+open class JcState(
     ctx: JcContext,
     ownership: MutabilityOwnership,
     override val entrypoint: JcMethod,
@@ -38,35 +38,13 @@ class JcState(
     forkPoints,
     targets
 ) {
-    override fun clone(newConstraints: UPathConstraints<JcType>?): JcState {
-        val newThisOwnership = MutabilityOwnership()
-        val cloneOwnership = MutabilityOwnership()
-        val clonedConstraints = newConstraints?.also {
-            this.pathConstraints.changeOwnership(newThisOwnership)
-            it.changeOwnership(cloneOwnership)
-        } ?: pathConstraints.clone(newThisOwnership, cloneOwnership)
-        this.ownership = newThisOwnership
-        return JcState(
-            ctx,
-            cloneOwnership,
-            entrypoint,
-            callStack.clone(),
-            clonedConstraints,
-            memory.clone(clonedConstraints.typeConstraints, newThisOwnership, cloneOwnership),
-            models,
-            pathNode,
-            forkPoints,
-            methodResult,
-            targets.clone(),
-        )
-    }
-
     /**
      * Check if this [JcState] can be merged with [other] state.
      *
      * @return the merged state. TODO: Now it may reuse some of the internal components of the former states.
      */
     override fun mergeWith(other: JcState, by: Unit): JcState? {
+        check(this::class == other::class && this::class == JcState::class)
         val newThisOwnership = MutabilityOwnership()
         val newOtherOwnership = MutabilityOwnership()
         val mergedOwnership = MutabilityOwnership()

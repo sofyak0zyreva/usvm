@@ -29,6 +29,8 @@ class UCallStack<Method, Statement> private constructor(
 
     fun penultimateMethod(): Method = stack[stack.lastIndex - 1].method
 
+    fun firstMethod(): Method = stack.first().method
+
     fun push(method: Method, returnSite: Statement?) {
         stack.add(UCallStackFrame(method, returnSite))
     }

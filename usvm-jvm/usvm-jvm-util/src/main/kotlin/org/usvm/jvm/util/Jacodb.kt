@@ -1,6 +1,7 @@
 package org.usvm.jvm.util
 
 import org.jacodb.api.jvm.JcArrayType
+import org.jacodb.api.jvm.JcByteCodeLocation
 import org.jacodb.api.jvm.JcClassOrInterface
 import org.jacodb.api.jvm.JcClassType
 import org.jacodb.api.jvm.JcClasspath
@@ -17,6 +18,9 @@ import org.jacodb.api.jvm.MethodNotFoundException
 import org.jacodb.api.jvm.TypeName
 import org.jacodb.api.jvm.cfg.JcInst
 import org.jacodb.api.jvm.ext.findFieldOrNull
+import org.jacodb.api.jvm.ext.humanReadableSignature
+import org.jacodb.api.jvm.ext.isSubClassOf
+import org.jacodb.api.jvm.ext.jcdbName
 import org.jacodb.api.jvm.ext.jcdbSignature
 import org.jacodb.api.jvm.ext.toType
 import org.jacodb.approximation.Approximations
@@ -28,6 +32,7 @@ import org.jacodb.impl.bytecode.joinFeatureMethods
 import org.jacodb.impl.bytecode.toJcMethod
 import org.jacodb.impl.features.JcFeaturesChain
 import org.jacodb.impl.features.classpaths.ClasspathCache
+import org.jacodb.impl.features.classpaths.JcUnknownClass
 import org.jacodb.impl.types.JcClassTypeImpl
 import org.jacodb.impl.types.TypeNameImpl
 import org.objectweb.asm.tree.MethodNode
@@ -60,6 +65,18 @@ fun JcType.toStringType(): String =
         is JcArrayType -> "${elementType.toStringType()}[]"
         else -> typeName
     }
+
+val JcClassOrInterface.isThrowable: Boolean get() {
+    val throwable = classpath.findClassOrNull("java.lang.Throwable")
+    return throwable != null && isSubClassOf(throwable)
+}
+
+val JcRefType.isThrowable: Boolean get() {
+    if (this !is JcClassType)
+        return false
+
+    return jcClass.isThrowable
+}
 
 fun JcType.getTypename() = TypeNameImpl.fromTypeName(this.typeName)
 
@@ -160,8 +177,11 @@ fun Constructor<*>.isSameSignatures(jcMethod: JcMethod) =
 fun JcMethod.isSameSignature(mn: MethodNode): Boolean =
     withAsmNode { it.isSameSignature(mn) }
 
-val JcMethod.toTypedMethod: JcTypedMethod
-    get() = this.enclosingClass.toType().declaredMethods.first { typed -> typed.method == this }
+val JcMethod.toTypedMethod: JcTypedMethod get() {
+    return this.enclosingClass.toType().declaredMethods.find { typed ->
+        typed.method.name == this.name && typed.method.description == this.description
+    } ?: error("unable to find typed method for ${this.humanReadableSignature}")
+}
 
 val JcClassOrInterface.enumValuesField: JcTypedField
     get() = toType().findFieldOrNull("\$VALUES") ?: error("No \$VALUES field found for the enum type $this")
@@ -189,9 +209,58 @@ val kotlin.reflect.KProperty<*>.javaName: String
 val kotlin.reflect.KFunction<*>.javaName: String
     get() = this.javaMethod?.name ?: error("No java name for method $this")
 
+val JcField.typedField: JcTypedField
+    get() =
+        enclosingClass.toType().findFieldOrNull(name)
+            ?: error("Could not find field $this in type $enclosingClass")
+
+fun JcMethod.isSame(other: JcMethod) =
+    this.name == other.name && this.description == other.description && this.signature == other.signature
+
+val JcMethod.isVoid: Boolean get() = returnType.typeName == "void"
+
+val String.typeName: TypeName
+    get() = TypeNameImpl.fromTypeName(this)
+
+val JcClassOrInterface.jvmDescriptor : String get() = "L${name.replace('.','/')};"
+
+val String.genericTypesFromSignature : List<String> get() {
+    val str = this.substringAfter("<").substringBefore(">")
+    val res = mutableListOf<String>()
+
+    var startIx = 0
+    var nextIx: Int
+    while (startIx < str.length) {
+        nextIx = str.indexOf(";", startIx)
+
+        if (nextIx == -1) {
+            res.add(str.substring(startIx))
+            break
+        } else {
+            res.add(str.substring(startIx, nextIx + 1))
+            startIx = nextIx + 1
+        }
+    }
+
+    return res.map { it.substringAfter(":").jcdbName() }
+}
+
+fun JcClasspath.classesOfLocations(locations: List<JcByteCodeLocation>): Sequence<JcClassOrInterface> =
+    locations
+        .asSequence()
+        .flatMap { it.classNames ?: emptySet() }
+        .mapNotNull(::findClassOrNull)
+        .filterNot { it is JcUnknownClass }
+
+fun JcClasspath.nonAbstractClasses(locations: List<JcByteCodeLocation>): Sequence<JcClassOrInterface> =
+    classesOfLocations(locations)
+        .filterNot { it.isAbstract || it.isInterface || it.isAnonymous }
+        .sortedBy { it.name }
+
 class JcCpWithoutApproximations(val cp: JcClasspath) : JcClasspath by cp {
     init {
         check(cp !is JcCpWithoutApproximations)
+        // TODO: try to set via reflection new featureChain
     }
 
     override val features: List<JcClasspathFeature> by lazy {
@@ -235,7 +304,7 @@ class JcCpWithoutApproximations(val cp: JcClasspath) : JcClasspath by cp {
 
     private val classWithoutApproximationsCache = hashMapOf<JcClassOrInterface, JcClassWithoutApproximations>()
 
-    private val JcClassOrInterface.withoutApproximations: JcClassOrInterface get() {
+    val JcClassOrInterface.withoutApproximations: JcClassOrInterface get() {
         if (this is JcClassWithoutApproximations) return this
 
         check(classpath === cp)
@@ -245,7 +314,13 @@ class JcCpWithoutApproximations(val cp: JcClasspath) : JcClasspath by cp {
         }
     }
 
-    private val JcField.withoutApproximations: JcField? get() {
+    val JcMethod.withoutApproximations: JcMethod? get() {
+        return this.enclosingClass.withoutApproximations.declaredMethods.find {
+            this.name == it.name && this.description == it.description
+        }
+    }
+
+    val JcField.withoutApproximations: JcField? get() {
         return this.enclosingClass.withoutApproximations.declaredFields.find {
             it.name == this.name && it.isStatic == this.isStatic
         }
@@ -254,7 +329,10 @@ class JcCpWithoutApproximations(val cp: JcClasspath) : JcClasspath by cp {
     val JcField.isOriginalField: Boolean get() = withoutApproximations != null
 }
 
+// TODO: remove global cache someday #Valya
+private val cpWithoutApproximationsCache = HashMap<JcClasspath, JcCpWithoutApproximations>()
+
 fun JcClasspath.cpWithoutApproximations(): JcCpWithoutApproximations {
     if (this is JcCpWithoutApproximations) return this
-    return JcCpWithoutApproximations(this)
+    return cpWithoutApproximationsCache.getOrPut(this) { JcCpWithoutApproximations(this) }
 }

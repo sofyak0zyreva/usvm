@@ -5,10 +5,19 @@ import org.usvm.api.internal.SymbolicListImpl;
 import org.usvm.api.internal.SymbolicMapImpl;
 
 import java.lang.reflect.Array;
+import java.util.Arrays;
 
 public class Engine {
 
     public static void assume(boolean expr) {
+        assert expr;
+    }
+
+    public static void assumeSymbolic(Object instance, boolean expr) {
+        assert expr;
+    }
+
+    public static void assumeSoft(boolean expr) {
         assert expr;
     }
 
@@ -65,11 +74,10 @@ public class Engine {
     }
 
     @SuppressWarnings("unchecked")
-    public static <T> T[] makeSymbolicArray(Class<T> clazz, int size) {
-        assert clazz.isArray();
+    public static <T> T[] makeSymbolicArray(Class<T> clazz, int size) { return (T[]) Array.newInstance(clazz, size); }
 
-        return (T[]) Array.newInstance(clazz, size);
-    }
+    @SuppressWarnings("unchecked")
+    public static <T> T[] makeConcreteArray(Class<T> clazz, int size) { return (T[]) Array.newInstance(clazz, size); }
 
     public static boolean[] makeSymbolicBooleanArray(int size) {
         return new boolean[size];
@@ -103,6 +111,28 @@ public class Engine {
         return new double[size];
     }
 
+    public static Boolean arrayEquals(Object first, Object second) {
+        if (first instanceof byte[] && second instanceof byte[])
+            return Arrays.equals((byte[])first, (byte[])second);
+        if (first instanceof char[] && second instanceof char[])
+            return Arrays.equals((char[])first, (char[])second);
+        if (first instanceof int[] && second instanceof int[])
+            return Arrays.equals((int[])first, (int[])second);
+        if (first instanceof long[] && second instanceof long[])
+            return Arrays.equals((long[])first, (long[])second);
+        if (first instanceof boolean[] && second instanceof boolean[])
+            return Arrays.equals((boolean[])first, (boolean[])second);
+        if (first instanceof float[] && second instanceof float[])
+            return Arrays.equals((float[])first, (float[])second);
+        if (first instanceof double[] && second instanceof double[])
+            return Arrays.equals((double[])first, (double[])second);
+        if (first instanceof short[] && second instanceof short[])
+            return Arrays.equals((short[])first, (short[])second);
+        if (first instanceof Object[] && second instanceof Object[])
+            return Arrays.equals((Object[])first, (Object[])second);
+        return false;
+    }
+
     public static <T> SymbolicList<T> makeSymbolicList() {
         return new SymbolicListImpl<>();
     }
@@ -133,6 +163,10 @@ public class Engine {
 
     public static boolean typeIsArray(Object a) {
         return a.getClass().isArray();
+    }
+
+    public static boolean typeIsPrimitiveWrapper(Object a) {
+        return false;
     }
 
     public static Class<?> arrayElementType(Object a) {

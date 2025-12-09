@@ -1,6 +1,5 @@
 package org.usvm.jvm.util
 
-import java.lang.reflect.InvocationTargetException
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
@@ -77,8 +76,7 @@ open class JcExecutor(customClassLoader: ClassLoader? = null) {
 
     private fun unfoldException(e: Throwable): Throwable {
         return when {
-            e is ExecutionException && e.cause != null -> unfoldException(e.cause!!)
-            e is InvocationTargetException -> e.targetException
+            e is ExecutionException && e.cause != null -> e.cause!!
             else -> e
         }
     }

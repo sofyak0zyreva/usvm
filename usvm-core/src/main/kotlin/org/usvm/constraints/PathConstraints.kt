@@ -11,7 +11,9 @@ import org.usvm.UIsSupertypeExpr
 import org.usvm.UNotExpr
 import org.usvm.UOrExpr
 import org.usvm.USymbolicHeapRef
+import org.usvm.collections.immutable.implementations.immutableSet.UPersistentHashSet
 import org.usvm.collections.immutable.internal.MutabilityOwnership
+import org.usvm.collections.immutable.persistentHashSetOf
 import org.usvm.isStaticHeapRef
 import org.usvm.isSymbolicHeapRef
 import org.usvm.merging.MutableMergeGuard
@@ -42,12 +44,17 @@ open class UPathConstraints<Type>(
      * Specially represented numeric constraints (e.g. >, <, >=, ...).
      */
     protected val numericConstraints: UNumericConstraints<UBv32Sort> =
-        UNumericConstraints(ctx, sort = ctx.bv32Sort, ownership)
+        UNumericConstraints(ctx, sort = ctx.bv32Sort, ownership),
+
+    softConstraints: UPersistentHashSet<UBoolExpr> = persistentHashSetOf(),
 ) : UOwnedMergeable<UPathConstraints<Type>, MutableMergeGuard> {
     init {
         // Use the information from the type constraints to check whether any static ref is assignable to any symbolic ref
         equalityConstraints.setTypesCheck(typeConstraints::canStaticRefBeEqualToSymbolic)
     }
+
+    var softConstraints: UPersistentHashSet<UBoolExpr> = softConstraints
+        private set
 
     /**
      * Recursively changes ownership for all nested data structures that use persistent maps.
@@ -90,6 +97,16 @@ open class UPathConstraints<Type>(
         }
         return logicalConstraints.asSequence() +
                 equalityConstraints.constraints() +
+                numericConstraints.constraints() +
+                typeConstraints.constraints()
+    }
+
+    fun allConstraints(): Sequence<UBoolExpr> {
+        if (isFalse)
+            return sequenceOf(ctx.falseExpr)
+
+        return logicalConstraints.asSequence() +
+                equalityConstraints.allConstraints() +
                 numericConstraints.constraints() +
                 typeConstraints.constraints()
     }
@@ -184,6 +201,10 @@ open class UPathConstraints<Type>(
             }
         }
 
+    fun addSoftConstraint(constraint: UBoolExpr) {
+        softConstraints = softConstraints.add(constraint, ownership)
+    }
+
     open fun clone(
         thisOwnership: MutabilityOwnership = MutabilityOwnership(),
         cloneOwnership: MutabilityOwnership = MutabilityOwnership(), // ownerships must be fresh new because of plus assign operations
@@ -200,6 +221,7 @@ open class UPathConstraints<Type>(
             equalityConstraints = clonedEqualityConstraints,
             typeConstraints = clonedTypeConstraints,
             numericConstraints = clonedNumericConstraints,
+            softConstraints = this.softConstraints
         )
     }
 
@@ -240,6 +262,8 @@ open class UPathConstraints<Type>(
         val mergedNumericConstraints =
             numericConstraints.mergeWith(other.numericConstraints, by, thisOwnership, otherOwnership, mergedOwnership)
 
+        val mergedSoftConstraints = softConstraints.addAll(other.softConstraints, mergedOwnership)
+
         this.changeOwnership(thisOwnership)
         other.changeOwnership(otherOwnership)
         return UPathConstraints(
@@ -249,6 +273,7 @@ open class UPathConstraints<Type>(
             mergedEqualityConstraints,
             mergedTypeConstraints,
             mergedNumericConstraints,
+            mergedSoftConstraints
         )
     }
 }

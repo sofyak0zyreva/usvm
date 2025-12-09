@@ -1,0 +1,654 @@
+package utils
+
+import features.JcGeneratedTypesFeature
+import features.LambdaBytecodeProvider
+import machine.JcConcreteMemoryClassLoader
+import org.jacodb.api.jvm.JcArrayType
+import org.jacodb.api.jvm.JcClassOrInterface
+import org.jacodb.api.jvm.JcClassType
+import org.jacodb.api.jvm.JcClasspath
+import org.jacodb.api.jvm.JcField
+import org.jacodb.api.jvm.JcMethod
+import org.jacodb.api.jvm.JcPrimitiveType
+import org.jacodb.api.jvm.JcType
+import org.jacodb.api.jvm.JcTypedField
+import org.jacodb.api.jvm.cfg.JcRawAssignInst
+import org.jacodb.api.jvm.cfg.JcRawCallInst
+import org.jacodb.api.jvm.cfg.JcRawStaticCallExpr
+import org.jacodb.api.jvm.ext.allSuperHierarchy
+import org.jacodb.api.jvm.ext.isEnum
+import org.jacodb.api.jvm.ext.packageName
+import org.jacodb.api.jvm.ext.toType
+import org.jacodb.approximation.Approximations
+import org.jacodb.approximation.JcEnrichedVirtualField
+import org.jacodb.approximation.JcEnrichedVirtualMethod
+import org.jacodb.approximation.OriginalClassName
+import org.usvm.concrete.api.internal.ClassLoaderGetHelper
+import org.usvm.jvm.util.allocateInstance
+import org.usvm.jvm.util.toJavaExecutable
+import org.usvm.concrete.api.internal.InitHelper
+import org.usvm.jvm.util.getFieldValue as getFieldValueUnsafe
+import org.usvm.jvm.util.setFieldValue as setFieldValueUnsafe
+import org.usvm.jvm.util.allFields
+import org.usvm.jvm.util.isStatic
+import org.usvm.jvm.util.allInstanceFields
+import org.usvm.jvm.util.isThrowable
+import org.usvm.jvm.util.javaName
+import org.usvm.jvm.util.name
+import org.usvm.jvm.util.staticFields
+import org.usvm.jvm.util.toJavaField
+import java.lang.reflect.Executable
+import java.lang.reflect.Field
+import java.lang.reflect.Modifier
+import java.lang.reflect.Proxy
+import java.nio.ByteBuffer
+
+internal val JcClassType.declaredInstanceFields: List<JcTypedField>
+    get() = declaredFields.filter { !it.isStatic }
+
+internal val JcClassOrInterface.staticFields: List<JcField>
+    get() = declaredFields.filter { it.isStatic }
+
+internal fun Field.getFieldValue(obj: Any): Any? {
+    check(!isStatic)
+    check(this.declaringClass.isAssignableFrom(obj.javaClass)) {
+        "field $this cannot be red from object of ${obj.javaClass}"
+    }
+
+    return try {
+        isAccessible = true
+        get(obj)
+    } catch (_: Throwable) {
+        getFieldValueUnsafe(obj)
+    }
+}
+
+private val forbiddenModificationClasses = setOf<Class<*>>(
+    java.lang.Class::class.java,
+    java.lang.reflect.Field::class.java,
+    java.lang.reflect.Method::class.java,
+    java.lang.Thread::class.java,
+    java.lang.String::class.java,
+    java.lang.Integer::class.java,
+    java.lang.Long::class.java,
+    java.lang.Float::class.java,
+    java.lang.Double::class.java,
+    java.lang.Boolean::class.java,
+    java.lang.Byte::class.java,
+    java.lang.Short::class.java,
+    java.lang.Character::class.java,
+    java.lang.Void::class.java,
+)
+
+private val Class<*>.isForbiddenToModify: Boolean
+    get() = forbiddenModificationClasses.any { it.isAssignableFrom(this) }
+
+class ForbiddenModificationException(msg: String) : Exception(msg)
+
+internal fun Field.setFieldValue(obj: Any, value: Any?) {
+    check(!isStatic)
+    check(declaringClass.isAssignableFrom(obj.javaClass)) {
+        "field $this cannot be written to object of ${obj.javaClass}"
+    }
+
+    if (declaringClass.isLambda && isFinal) {
+        isAccessible = true
+        if (get(obj) == value)
+            return
+    }
+
+    if (declaringClass.isForbiddenToModify)
+        throw ForbiddenModificationException(declaringClass.typeName)
+
+    try {
+        isAccessible = true
+        set(obj, value)
+    } catch (_: Throwable) {
+        setFieldValueUnsafe(obj, value)
+    }
+}
+
+internal fun Field.getStaticFieldValue(): Any? {
+    check(isStatic)
+    return try {
+        isAccessible = true
+        get(null)
+    } catch (_: Throwable) {
+        getFieldValueUnsafe(null)
+    }
+}
+
+internal fun Field.setStaticFieldValue(value: Any?) {
+    check(isStatic)
+    try {
+        isAccessible = true
+        set(null, value)
+    } catch (_: Throwable) {
+        setFieldValueUnsafe(null, value)
+    }
+}
+
+internal val Field.isFinal: Boolean
+    get() = Modifier.isFinal(modifiers)
+
+@Suppress("UNCHECKED_CAST")
+internal fun <Value> Any.getArrayValue(index: Int): Value {
+    return when (this) {
+        is IntArray -> this[index] as Value
+        is ByteArray -> this[index] as Value
+        is CharArray -> this[index] as Value
+        is LongArray -> this[index] as Value
+        is FloatArray -> this[index] as Value
+        is ShortArray -> this[index] as Value
+        is DoubleArray -> this[index] as Value
+        is BooleanArray -> this[index] as Value
+        is Array<*> -> this[index] as Value
+        else -> error("getArrayValue: unexpected array $this")
+    }
+}
+
+@Suppress("UNCHECKED_CAST")
+internal fun <Value> Any.setArrayValue(index: Int, value: Value) {
+    when (this) {
+        is IntArray -> this[index] = value as Int
+        is ByteArray -> this[index] = value as Byte
+        is CharArray -> this[index] = value as Char
+        is LongArray -> this[index] = value as Long
+        is FloatArray -> this[index] = value as Float
+        is ShortArray -> this[index] = value as Short
+        is DoubleArray -> this[index] = value as Double
+        is BooleanArray -> this[index] = value as Boolean
+        is Array<*> -> (this as Array<Value>)[index] = value
+        else -> error("setArrayValue: unexpected array $this")
+    }
+}
+
+internal val JcField.toJavaField: Field? get() = toJavaField(JcConcreteMemoryClassLoader)
+
+internal val JcMethod.toJavaMethod: Executable?
+    get() = this.toJavaExecutable(JcConcreteMemoryClassLoader)
+
+internal val JcEnrichedVirtualMethod.approximationMethod: JcMethod?
+    get() {
+        val originalClassName = OriginalClassName(enclosingClass.name)
+        val approximations = this.enclosingClass.classpath.features?.filterIsInstance<Approximations>()?.singleOrNull()
+        val approximationClassName =
+            approximations?.findApproximationByOriginOrNull(originalClassName)
+                ?: return null
+        return enclosingClass.classpath.findClassOrNull(approximationClassName)
+            ?.declaredMethods
+            ?.find { it.name == this.name }
+    }
+
+internal val JcType.isInstanceApproximation: Boolean
+    get() {
+        if (this !is JcClassType)
+            return false
+
+        // TODO: check field or method exists in bytecode via classNode
+        val originalType = JcConcreteMemoryClassLoader.loadClass(jcClass)
+        val originalFieldNames = originalType.allInstanceFields.map { it.name }
+        return this.allInstanceFields.any {
+            it.field is JcEnrichedVirtualField
+                    && !originalFieldNames.contains(it.field.name)
+        }
+    }
+
+internal val JcType.isStaticApproximation: Boolean
+    get() {
+        if (this !is JcClassType)
+            return false
+
+        val originalType = JcConcreteMemoryClassLoader.loadClass(jcClass)
+        val originalFieldNames = originalType.staticFields.map { it.name }
+        // TODO: check approximated static constructor?
+        return this.jcClass.staticFields.any { !originalFieldNames.contains(it.name) }
+    }
+
+@Suppress("RecursivePropertyAccessor")
+internal val JcType.isEnum: Boolean
+    get() = this is JcClassType && (this.jcClass.isEnum || this.superType?.isEnum == true)
+
+internal val JcType.isEnumArray: Boolean
+    get() = this is JcArrayType && this.elementType.let { it is JcClassType && it.jcClass.isEnum }
+
+internal val JcType.internalName: String
+    get() = if (this is JcClassType) this.name else this.typeName
+
+internal val Class<*>.isProxy: Boolean
+    get() = Proxy.isProxyClass(this)
+
+internal val String.isLambdaTypeName: Boolean
+    get() = contains(LambdaBytecodeProvider.lambdaTypeNameIdentifier)
+
+internal val String.isLambdaRealName: Boolean
+    get() = isLambdaTypeName && substringAfterLast(LambdaBytecodeProvider.lambdaTypeNameIdentifier).contains('.')
+
+internal val Class<*>.isLambda: Boolean
+    get() = typeName.isLambdaTypeName
+
+internal val Class<*>.isThreadLocal: Boolean
+    get() = ThreadLocal::class.java.isAssignableFrom(this)
+
+internal val JcClassOrInterface.isThreadLocal: Boolean
+    get() = allSuperHierarchyWithThis.any { it.name == "java.lang.ThreadLocal" }
+
+internal val Class<*>.isByteBuffer: Boolean
+    get() = ByteBuffer::class.java.isAssignableFrom(this)
+
+internal val Class<*>.hasStatics: Boolean
+    get() = staticFields.isNotEmpty()
+
+internal val JcClassOrInterface.isLambda: Boolean
+    get() = name.contains("\$\$Lambda\$")
+
+internal val JcMethod.isExceptionCtor: Boolean
+    get() = isConstructor && enclosingClass.isThrowable
+
+internal val JcMethod.isInstrumentedClinit: Boolean
+    get() = isClassInitializer && rawInstList.any {
+        it is JcRawCallInst && it.callExpr is JcRawStaticCallExpr
+                && it.callExpr.methodName == InitHelper::afterClinit.javaName
+    }
+
+internal val JcMethod.isInstrumentedInit: Boolean
+    get() = isConstructor && rawInstList.any {
+        it is JcRawCallInst && it.callExpr is JcRawStaticCallExpr
+                && it.callExpr.methodName == InitHelper::afterInit.javaName
+    }
+
+internal val JcMethod.isInstrumentedInternalInit: Boolean
+    get() = isConstructor && rawInstList.any {
+        it is JcRawCallInst && it.callExpr is JcRawStaticCallExpr
+                && it.callExpr.methodName == InitHelper::afterInternalInit.javaName
+    }
+
+internal val JcMethod.isInstrumentedGetClassLoader: Boolean
+    get() = rawInstList.any {
+        it is JcRawAssignInst && it.rhv is JcRawStaticCallExpr
+                && (it.rhv as JcRawStaticCallExpr).methodName == ClassLoaderGetHelper::replaceGetClassLoader.javaName
+    }
+
+// TODO: cache?
+internal val Class<*>.notTracked: Boolean
+    get() = this.isPrimitive || this.isEnum || isImmutable
+
+internal val Class<*>.notTrackedWithSubtypes: Boolean
+    get() = this.isPrimitive || this.isEnum || isImmutableWithSubtypes
+
+internal val JcClassOrInterface.notTracked: Boolean
+    get() = this.isEnum || isImmutable
+
+private val immutableTypes = setOf<Class<*>>(
+    java.lang.String::class.java,
+    java.lang.Integer::class.java,
+    java.lang.Long::class.java,
+    java.lang.Float::class.java,
+    java.lang.Double::class.java,
+    java.lang.Boolean::class.java,
+    java.lang.Byte::class.java,
+    java.lang.Short::class.java,
+    java.lang.Character::class.java,
+    java.lang.StackTraceElement::class.java,
+    java.lang.Void::class.java,
+    java.lang.System::class.java,
+    java.lang.Math::class.java,
+    java.lang.reflect.Array::class.java,
+    java.lang.Class::class.java,
+    java.lang.Package::class.java,
+    java.lang.Module::class.java,
+    java.lang.Thread::class.java,
+    java.lang.ThreadGroup::class.java,
+    java.lang.Process::class.java,
+    java.lang.ProcessHandle::class.java,
+    java.math.BigInteger::class.java,
+    java.math.BigDecimal::class.java,
+    java.lang.Runtime.Version::class.java,
+    java.lang.System::class.java,
+    java.lang.ModuleLayer::class.java,
+    java.lang.Runtime::class.java,
+
+    java.lang.ref.WeakReference::class.java,
+    java.lang.ref.SoftReference::class.java,
+    java.lang.ref.PhantomReference::class.java,
+    java.lang.ref.ReferenceQueue::class.java,
+
+    java.awt.Color::class.java,
+    java.awt.Font::class.java,
+    java.awt.BasicStroke::class.java,
+    java.awt.Paint::class.java,
+    java.awt.GradientPaint::class.java,
+    java.awt.LinearGradientPaint::class.java,
+    java.awt.RadialGradientPaint::class.java,
+    java.awt.Cursor::class.java,
+
+    java.security.Permission::class.java,
+    java.security.PublicKey::class.java,
+    java.security.PrivateKey::class.java,
+    javax.security.auth.x500.X500Principal::class.java,
+
+    java.util.Locale::class.java,
+    java.util.UUID::class.java,
+    java.util.Collections::class.java,
+    java.util.Arrays::class.java,
+    java.util.Timer::class.java,
+    java.util.OptionalInt::class.java,
+    java.util.OptionalLong::class.java,
+    java.util.OptionalDouble::class.java,
+    java.util.Currency::class.java,
+    java.util.ResourceBundle::class.java,
+
+    java.util.Base64.Encoder::class.java,
+    java.util.Base64.Decoder::class.java,
+
+    java.util.zip.ZipFile::class.java,
+    java.util.jar.JarFile::class.java,
+    java.util.jar.JarInputStream::class.java,
+    java.util.zip.ZipInputStream::class.java,
+
+    java.util.logging.Logger::class.java,
+    java.util.logging.Handler::class.java,
+    java.util.logging.LogManager::class.java,
+
+    // Must not backtrack
+    java.util.concurrent.ExecutorService::class.java,
+    java.util.concurrent.ThreadPoolExecutor::class.java,
+    java.util.concurrent.locks.Lock::class.java,
+    java.util.concurrent.locks.Condition::class.java,
+    java.util.concurrent.Semaphore::class.java,
+    java.util.concurrent.CountDownLatch::class.java,
+    java.util.concurrent.CyclicBarrier::class.java,
+    java.util.concurrent.SynchronousQueue::class.java,
+    java.util.concurrent.BlockingQueue::class.java,
+    java.util.concurrent.Future::class.java,
+
+    // Immutable
+    java.util.concurrent.CopyOnWriteArrayList::class.java,
+    java.util.concurrent.CopyOnWriteArraySet::class.java,
+    java.util.concurrent.ThreadLocalRandom::class.java,
+    java.util.concurrent.ConcurrentHashMap.KeySetView::class.java,
+
+    java.net.URL::class.java,
+    java.net.URI::class.java,
+    java.net.Inet4Address::class.java,
+    java.net.Inet6Address::class.java,
+    java.net.InetSocketAddress::class.java,
+    java.net.NetPermission::class.java,
+    java.net.Socket::class.java,
+    java.net.ServerSocket::class.java,
+    java.net.DatagramSocket::class.java,
+    java.net.MulticastSocket::class.java,
+    java.net.URLConnection::class.java,
+    java.net.HttpURLConnection::class.java,
+
+    java.io.File::class.java,
+    java.io.InputStream::class.java,
+    java.io.OutputStream::class.java,
+    java.io.Reader::class.java,
+    java.io.Writer::class.java,
+    java.io.RandomAccessFile::class.java,
+
+    java.nio.file.Path::class.java,
+    java.nio.charset.Charset::class.java,
+    java.nio.charset.StandardCharsets::class.java,
+    java.nio.file.attribute.FileTime::class.java,
+    java.nio.file.attribute.BasicFileAttributes::class.java,
+    java.nio.MappedByteBuffer::class.java,
+
+    Pair::class.java,
+    Result::class.java,
+    Unit::class.java,
+    Lazy::class.java,
+    Regex::class.java,
+    kotlin.properties.Delegates::class.java,
+    kotlin.properties.ObservableProperty::class.java,
+)
+
+// TODO: make whitelist of mutable types instead of blacklist of immutable (check all packages of corretto-17) #Valya
+private val packagesWithImmutableTypes = setOf(
+    "java.lang.reflect",
+    "java.lang.invoke",
+    "java.lang.ref",
+    "java.lang.annotation",
+    "java.lang.constant",
+    "java.lang.module",
+    "java.lang.runtime",
+    "java.time",
+    "sun.reflect",
+    "sun.instrument",
+    "org.mockito.internal",
+    "java.util.zip",
+    "java.nio.channels",
+    "java.lang.management",
+    "java.util.prefs",
+    "java.awt",
+    "javax.swing",
+    "kotlinx.coroutines",
+    "kotlin.coroutines",
+    "kotlin.reflect",
+    "kotlin.ranges",
+    "kotlin.time",
+    "kotlinx.datetime",
+    "kotlin.jvm.functions",
+    "kotlinx.collections.immutable",
+    "kotlinx.serialization",
+)
+
+private val immutableTypeNames = setOf(
+    "org.springframework.core.ResolvableType",
+    "org.springframework.core.type.classreading.SimpleMethodMetadataReadingVisitor\$Source",
+    "org.springframework.core.annotation.TypeMappedAnnotation",
+    "sun.security.x509.RDN",
+    "org.springframework.context.annotation.ConfigurationClassBeanDefinitionReader\$ConfigurationClassBeanDefinition",
+    "com.fasterxml.jackson.databind.type.ClassKey",
+)
+
+internal val Class<*>.isClassLoader: Boolean
+    get() = ClassLoader::class.java.isAssignableFrom(this)
+
+private fun typeNameIsInternal(name: String): Boolean {
+    return name.startsWith("org.usvm.") && !name.startsWith("org.usvm.samples") ||
+            name.startsWith("runtime.LibSLRuntime") ||
+            name.startsWith("runtime.LibSLGlobals") ||
+            name.startsWith("generated.") ||
+            name.startsWith("stub.") ||
+            name.startsWith("org.jacodb.")
+}
+
+internal val Class<*>.isInternalType: Boolean
+    get() = !isArray && typeNameIsInternal(typeName)
+
+internal val JcClassOrInterface.isInternalType: Boolean
+    get() = typeNameIsInternal(name)
+
+private val loggingPackages = setOf(
+    "org.hibernate.validator.internal.util.logging",
+    "org.apache.commons.logging",
+    "org.slf4j",
+    "ch.qos.logback.classic",
+)
+
+private val Class<*>.isLogger: Boolean
+    get() = loggingPackages.any { packageName.startsWith(it) }
+
+private val JcClassOrInterface.isLogger: Boolean
+    get() = loggingPackages.any { packageName.startsWith(it) }
+
+private val String.inImmutableFromJavaLang: Boolean
+    get() = this.startsWith("java.lang")
+            && this != "java.lang.StringBuilder"
+            && this != "java.lang.StringBuffer"
+            && this != "java.lang.ThreadLocal"
+
+private val Class<*>.inImmutableWithSubtypesFromJavaLang: Boolean
+    get() = this.typeName.inImmutableFromJavaLang && (isFinal || !isPublic)
+
+private val mutableWhiteList = setOf(
+    "java.io.ByteArrayOutputStream"
+)
+
+private val Class<*>.isImmutableSubtype: Boolean get() =
+    !mutableWhiteList.contains(name)
+            && immutableTypes.any { it.isAssignableFrom(this) }
+
+private val JcClassOrInterface.isImmutableSubtype: Boolean get() =
+    !mutableWhiteList.contains(name)
+            && immutableTypes.any { this.allSuperHierarchyWithThis.any { cls -> cls.name == it.typeName } }
+
+// TODO: implement via whitelist instead of blacklist
+internal val Class<*>.isImmutable: Boolean // TODO: this is `isImmutableRec`, implement `isImmutable` and use it in SnapshotTraversal
+    get() = !isArray &&
+            (isImmutableSubtype
+                    || isPrimitive
+                    || isEnum
+                    || isRecord
+                    || packagesWithImmutableTypes.any { packageName.startsWith(it) }
+                    || immutableTypeNames.contains(this.typeName)
+                    || this.typeName.inImmutableFromJavaLang
+                    || isClassLoader
+                    || isLogger
+                    || isInternalType
+                    || allFields.isEmpty())
+
+internal val Class<*>.isImmutableWithSubtypes: Boolean
+    get() = !isArray &&
+            (isImmutableSubtype
+                    || isPrimitive
+                    || isEnum
+                    || isRecord
+                    || packagesWithImmutableTypes.any { packageName.startsWith(it) }
+                    || immutableTypeNames.contains(this.typeName)
+                    || inImmutableWithSubtypesFromJavaLang
+                    || isClassLoader
+                    || isLogger
+                    || isInternalType
+                    || allFields.isEmpty() && isFinal)
+
+internal val JcClassOrInterface.isImmutable: Boolean
+    get() = isImmutableSubtype
+            || isEnum
+            || packagesWithImmutableTypes.any { this.packageName.startsWith(it) }
+            || immutableTypeNames.contains(this.name)
+            || this.name.inImmutableFromJavaLang
+            || isClassLoader
+            || isLogger
+            || isInternalType
+            || allFields.isEmpty()
+
+internal val Class<*>.allInstanceFieldsAreFinal: Boolean
+    get() = allInstanceFields.all { it.isFinal }
+
+internal val Class<*>.isFinal: Boolean
+    get() = Modifier.isFinal(modifiers)
+
+internal val Class<*>.isPublic: Boolean
+    get() = Modifier.isPublic(modifiers)
+
+internal val Class<*>.isAbstract: Boolean
+    get() = Modifier.isAbstract(modifiers)
+
+private val JcClassOrInterface.allSuperHierarchyWithThis: Set<JcClassOrInterface>
+    get() = allSuperHierarchy + this
+
+private val JcClassOrInterface.isClassLoader: Boolean
+    get() = allSuperHierarchyWithThis.any { it.name == "java.lang.ClassLoader" }
+
+internal val Class<*>.isSolid: Boolean
+    get() = notTracked || this.isArray && this.componentType.notTrackedWithSubtypes
+
+internal val Class<*>.isSolidWithSubtypes: Boolean
+    get() = notTrackedWithSubtypes || this.isArray && this.componentType.notTrackedWithSubtypes
+
+private val primitiveWrapperTypes = setOf(
+    java.lang.Boolean::class.java,
+    java.lang.Character::class.java,
+    java.lang.Byte::class.java,
+    java.lang.Short::class.java,
+    java.lang.Integer::class.java,
+    java.lang.Long::class.java,
+    java.lang.Float::class.java,
+    java.lang.Double::class.java,
+    java.lang.Void::class.java
+)
+
+internal val Class<*>.isPrimitiveWrapper: Boolean get() = primitiveWrapperTypes.contains(this)
+
+internal val Class<*>.isPrimitiveOrWrapper: Boolean get() = isPrimitive || isPrimitiveWrapper
+
+fun Class<*>.toJcType(cp: JcClasspath): JcType? {
+    try {
+        val jcdbClassName = typeName.replace('/', '.')
+        if (isHidden)
+            JcGeneratedTypesFeature.addHiddenClass(jcdbClassName, this)
+
+        if (isProxy) {
+            val interfaces = interfaces
+            if (interfaces.size == 1)
+                return cp.findTypeOrNull(interfaces[0].typeName)
+
+            return null
+        }
+
+        val type = cp.findTypeOrNull(jcdbClassName)
+        if (type !is JcClassType) return type
+
+        val jcClass = type.jcClass
+        val approximateAnnotation =
+            jcClass.annotations.find { it.matches("org.jacodb.approximation.annotation.Approximate") }
+                ?: return type
+
+        val approximatedClass = approximateAnnotation.values["value"] as JcClassOrInterface
+        return approximatedClass.toType()
+    } catch (e: Throwable) {
+        return null
+    }
+}
+
+internal fun JcClasspath.jcTypeOf(obj: Any): JcType? = obj.javaClass.toJcType(this)
+
+private fun createProxy(jcClass: JcClassOrInterface): Any {
+    check(jcClass.isInterface)
+    return Proxy.newProxyInstance(
+        JcConcreteMemoryClassLoader,
+        arrayOf(JcConcreteMemoryClassLoader.loadClass(jcClass)),
+        LambdaInvocationHandler()
+    )
+}
+
+internal fun createDefault(type: JcType): Any? {
+    try {
+        return when (type) {
+            is JcArrayType -> type.allocateInstance(JcConcreteMemoryClassLoader, 1)
+            is JcClassType -> {
+                val jcClass = type.jcClass
+                when {
+                    jcClass.isInterface -> createProxy(jcClass)
+                    jcClass.isAbstract -> null
+                    else -> type.allocateInstance(JcConcreteMemoryClassLoader)
+                }
+            }
+            is JcPrimitiveType -> null
+            else -> error("createDefault: unexpected type $type")
+        }
+    } catch (e: Throwable) {
+        println("[WARNING] failed to allocate ${type.internalName}")
+        return null
+    }
+}
+
+private val runtimeGeneratedTypes = setOf(
+    "org.mockito.internal.creation.bytebuddy.inject.MockMethodDispatcher"
+)
+
+internal val String.typeIsRuntimeGenerated: Boolean get() {
+    // TODO: add lambda predicate #CM
+    return isLoadableRuntimeClassName || isNotLoadableRuntimeClassName
+}
+
+internal val String.isLoadableRuntimeClassName: Boolean get() {
+    return runtimeGeneratedTypes.contains(this)
+}
+
+internal val String.isNotLoadableRuntimeClassName: Boolean get() {
+    return this.contains("CGLIB\$\$") || this.contains('/') || this.isLambdaRealName
+}
