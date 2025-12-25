@@ -1,0 +1,99 @@
+$dokka.format:html-v1
+$dokka.linkExtension:html
+$dokka.location:machine.instructions////PointingToDeclaration/usvm-jvm-mocks/machine.instructions/index.html
+$dokka.location:machine.instructions//createUTestInstructions/#machine.memory.JcMockedMethodsValue[[Error type: Unresolved type for USort]]#org.usvm.machine.state.JcState/PointingToDeclaration/usvm-jvm-mocks/machine.instructions/create-u-test-instructions.html
+$dokka.location:machine.instructions//createUTestMockConfigInfo/#kotlin.collections.List[kotlin.collections.List[kotlin.Pair[org.usvm.test.api.UTestInst,kotlin.String]]]/PointingToDeclaration/usvm-jvm-mocks/machine.instructions/create-u-test-mock-config-info.html
+$dokka.location:machine.instructions/UTestMockConfigInfo///PointingToDeclaration/usvm-jvm-mocks/machine.instructions/-u-test-mock-config-info/index.html
+$dokka.location:machine.instructions/UTestMockConfigInfo/UTestMockConfigInfo/#kotlin.collections.List[kotlin.Pair[org.usvm.test.api.UTestInst,kotlin.String]]/PointingToDeclaration/usvm-jvm-mocks/machine.instructions/-u-test-mock-config-info/-u-test-mock-config-info.html
+$dokka.location:machine.instructions/UTestMockConfigInfo/instructions/#/PointingToDeclaration/usvm-jvm-mocks/machine.instructions/-u-test-mock-config-info/instructions.html
+$dokka.location:machine.memory////PointingToDeclaration/usvm-jvm-mocks/machine.memory/index.html
+$dokka.location:machine.memory/JcMockedMethod///PointingToDeclaration/usvm-jvm-mocks/machine.memory/-jc-mocked-method/index.html
+$dokka.location:machine.memory/JcMockedMethod/JcMockedMethod/#kotlin.String#kotlin.String/PointingToDeclaration/usvm-jvm-mocks/machine.memory/-jc-mocked-method/-jc-mocked-method.html
+$dokka.location:machine.memory/JcMockedMethod/enclosingClass/#/PointingToDeclaration/usvm-jvm-mocks/machine.memory/-jc-mocked-method/enclosing-class.html
+$dokka.location:machine.memory/JcMockedMethod/method/#/PointingToDeclaration/usvm-jvm-mocks/machine.memory/-jc-mocked-method/method.html
+$dokka.location:machine.memory/JcMockedMethod/str/#/PointingToDeclaration/usvm-jvm-mocks/machine.memory/-jc-mocked-method/str.html
+$dokka.location:machine.memory/JcMockedMethodsReading///PointingToDeclaration/usvm-jvm-mocks/machine.memory/-jc-mocked-methods-reading/index.html
+$dokka.location:machine.memory/JcMockedMethodsReading/accept/#io.ksmt.expr.transformer.KTransformerBase/PointingToDeclaration/usvm-jvm-mocks/machine.memory/-jc-mocked-methods-reading/accept.html
+$dokka.location:machine.memory/JcMockedMethodsReading/internEquals/#kotlin.Any/PointingToDeclaration/usvm-jvm-mocks/machine.memory/-jc-mocked-methods-reading/intern-equals.html
+$dokka.location:machine.memory/JcMockedMethodsReading/internHashCode/#/PointingToDeclaration/usvm-jvm-mocks/machine.memory/-jc-mocked-methods-reading/intern-hash-code.html
+$dokka.location:machine.memory/JcMockedMethodsReading/method/#/PointingToDeclaration/usvm-jvm-mocks/machine.memory/-jc-mocked-methods-reading/method.html
+$dokka.location:machine.memory/JcMockedMethodsReading/mockedMethod/#/PointingToDeclaration/usvm-jvm-mocks/machine.memory/-jc-mocked-methods-reading/mocked-method.html
+$dokka.location:machine.memory/JcMockedMethodsReading/print/#io.ksmt.expr.printer.ExpressionPrinter/PointingToDeclaration/usvm-jvm-mocks/machine.memory/-jc-mocked-methods-reading/print.html
+$dokka.location:machine.memory/JcMockedMethodsReading/regionId/#/PointingToDeclaration/usvm-jvm-mocks/machine.memory/-jc-mocked-methods-reading/region-id.html
+$dokka.location:machine.memory/JcMockedMethodsReading/sort/#/PointingToDeclaration/usvm-jvm-mocks/machine.memory/-jc-mocked-methods-reading/sort.html
+$dokka.location:machine.memory/JcMockedMethodsReading/type/#/PointingToDeclaration/usvm-jvm-mocks/machine.memory/-jc-mocked-methods-reading/type.html
+$dokka.location:machine.memory/JcMockedMethodsRegion///PointingToDeclaration/usvm-jvm-mocks/machine.memory/-jc-mocked-methods-region/index.html
+$dokka.location:machine.memory/JcMockedMethodsRegion/JcMockedMethodsRegion/#TypeParam(bounds=[kotlin.Any?])#org.jacodb.api.jvm.JcType#[Error type: Unresolved type for UPersistentHashMap<String, UPersistentHashMap<String, UExpr<Sort>>>][kotlin.String,[Error type: Unresolved type for UPersistentHashMap<String, UExpr<Sort>>][kotlin.String,[Error type: Unresolved type for UExpr<Sort>][TypeParam(bounds=[kotlin.Any?])]]]/PointingToDeclaration/usvm-jvm-mocks/machine.memory/-jc-mocked-methods-region/-jc-mocked-methods-region.html
+$dokka.location:machine.memory/JcMockedMethodsRegion/read/#machine.memory.JcMockedMethodsValue[TypeParam(bounds=[kotlin.Any?])]/PointingToDeclaration/usvm-jvm-mocks/machine.memory/-jc-mocked-methods-region/read.html
+$dokka.location:machine.memory/JcMockedMethodsRegion/write/#machine.memory.JcMockedMethodsValue[TypeParam(bounds=[kotlin.Any?])]#[Error type: Unresolved type for UExpr<Sort>][TypeParam(bounds=[kotlin.Any?])]#[Error type: Unresolved type for UBoolExpr]#org.usvm.collections.immutable.internal.MutabilityOwnership/PointingToDeclaration/usvm-jvm-mocks/machine.memory/-jc-mocked-methods-region/write.html
+$dokka.location:machine.memory/JcMockedMethodsRegionId///PointingToDeclaration/usvm-jvm-mocks/machine.memory/-jc-mocked-methods-region-id/index.html
+$dokka.location:machine.memory/JcMockedMethodsRegionId/JcMockedMethodsRegionId/#TypeParam(bounds=[kotlin.Any?])#org.jacodb.api.jvm.JcType/PointingToDeclaration/usvm-jvm-mocks/machine.memory/-jc-mocked-methods-region-id/-jc-mocked-methods-region-id.html
+$dokka.location:machine.memory/JcMockedMethodsRegionId/emptyRegion/#/PointingToDeclaration/usvm-jvm-mocks/machine.memory/-jc-mocked-methods-region-id/empty-region.html
+$dokka.location:machine.memory/JcMockedMethodsRegionId/sort/#/PointingToDeclaration/usvm-jvm-mocks/machine.memory/-jc-mocked-methods-region-id/sort.html
+$dokka.location:machine.memory/JcMockedMethodsRegionId/type/#/PointingToDeclaration/usvm-jvm-mocks/machine.memory/-jc-mocked-methods-region-id/type.html
+$dokka.location:machine.memory/JcMockedMethodsValue///PointingToDeclaration/usvm-jvm-mocks/machine.memory/-jc-mocked-methods-value/index.html
+$dokka.location:machine.memory/JcMockedMethodsValue/JcMockedMethodsValue/#machine.memory.JcMockedMethod#TypeParam(bounds=[kotlin.Any?])#org.jacodb.api.jvm.JcType#org.jacodb.api.jvm.JcMethod/PointingToDeclaration/usvm-jvm-mocks/machine.memory/-jc-mocked-methods-value/-jc-mocked-methods-value.html
+$dokka.location:machine.memory/JcMockedMethodsValue/key/#/PointingToDeclaration/usvm-jvm-mocks/machine.memory/-jc-mocked-methods-value/key.html
+$dokka.location:machine.memory/JcMockedMethodsValue/memoryRegionId/#/PointingToDeclaration/usvm-jvm-mocks/machine.memory/-jc-mocked-methods-value/memory-region-id.html
+$dokka.location:machine.memory/JcMockedMethodsValue/method/#/PointingToDeclaration/usvm-jvm-mocks/machine.memory/-jc-mocked-methods-value/method.html
+$dokka.location:machine.memory/JcMockedMethodsValue/mockedMethod/#/PointingToDeclaration/usvm-jvm-mocks/machine.memory/-jc-mocked-methods-value/mocked-method.html
+$dokka.location:machine.memory/JcMockedMethodsValue/sort/#/PointingToDeclaration/usvm-jvm-mocks/machine.memory/-jc-mocked-methods-value/sort.html
+$dokka.location:machine.memory/JcMockedMethodsValue/type/#/PointingToDeclaration/usvm-jvm-mocks/machine.memory/-jc-mocked-methods-value/type.html
+$dokka.location:machine.render////PointingToDeclaration/usvm-jvm-mocks/machine.render/index.html
+$dokka.location:machine.render//alter/#kotlin.String#kotlin.String/PointingToDeclaration/usvm-jvm-mocks/machine.render/alter.html
+$dokka.location:machine.render//getMethodLineNumber/#kotlin.String/PointingToDeclaration/usvm-jvm-mocks/machine.render/get-method-line-number.html
+$dokka.location:machine.render//modifyText/#kotlin.String#kotlin.collections.List[kotlin.String]/PointingToDeclaration/usvm-jvm-mocks/machine.render/modify-text.html
+$dokka.location:machine.render//renderFinalFileText/#kotlin.Int#kotlin.collections.List[kotlin.String]#kotlin.String/PointingToDeclaration/usvm-jvm-mocks/machine.render/render-final-file-text.html
+$dokka.location:machine.render//renderMockConfigInfo/#org.jacodb.api.jvm.JcClasspath#org.usvm.test.api.UTest#machine.instructions.UTestMockConfigInfo/PointingToDeclaration/usvm-jvm-mocks/machine.render/render-mock-config-info.html
+$dokka.location:machine.render//renderTestFile/#kotlin.Boolean#kotlin.String#kotlin.String#kotlin.String#kotlin.String/PointingToDeclaration/usvm-jvm-mocks/machine.render/render-test-file.html
+$dokka.location:machine.render//reorder/#kotlin.collections.List[kotlin.String]/PointingToDeclaration/usvm-jvm-mocks/machine.render/reorder.html
+$dokka.location:machine.render/ConfigInfoRenderer.JcExprUsageVisitor///PointingToDeclaration/usvm-jvm-mocks/machine.render/-config-info-renderer/-jc-expr-usage-visitor/index.html
+$dokka.location:machine.render/ConfigInfoRenderer.JcExprUsageVisitor/JcExprUsageVisitor/#/PointingToDeclaration/usvm-jvm-mocks/machine.render/-config-info-renderer/-jc-expr-usage-visitor/-jc-expr-usage-visitor.html
+$dokka.location:machine.render/ConfigInfoRenderer.JcExprUsageVisitor/visit/#kotlin.collections.List[org.usvm.test.api.UTestInst]/PointingToDeclaration/usvm-jvm-mocks/machine.render/-config-info-renderer/-jc-expr-usage-visitor/visit.html
+$dokka.location:machine.render/ConfigInfoRenderer///PointingToDeclaration/usvm-jvm-mocks/machine.render/-config-info-renderer/index.html
+$dokka.location:machine.render/ConfigInfoRenderer/ConfigInfoRenderer/#machine.instructions.UTestMockConfigInfo#org.usvm.test.api.UTest#org.usvm.jvm.rendering.unsafeRenderer.JcUnsafeTestClassRenderer#org.usvm.jvm.rendering.baseRenderer.JcImportManager#org.usvm.jvm.rendering.baseRenderer.JcIdentifiersManager#org.jacodb.api.jvm.JcClasspath#com.github.javaparser.ast.expr.SimpleName#kotlin.collections.List[com.github.javaparser.ast.expr.AnnotationExpr]#org.usvm.jvm.rendering.unsafeRenderer.JcUnsafeUtilsRenderer/PointingToDeclaration/usvm-jvm-mocks/machine.render/-config-info-renderer/-config-info-renderer.html
+$dokka.location:machine.render/ConfigInfoRenderer/ifThrowsInstantiationException/#/PointingToDeclaration/usvm-jvm-mocks/machine.render/-config-info-renderer/if-throws-instantiation-exception.html
+$dokka.location:machine.render/ConfigInfoRenderer/renderConfigInfo/#/PointingToDeclaration/usvm-jvm-mocks/machine.render/-config-info-renderer/render-config-info.html
+$dokka.location:machine////PointingToDeclaration/usvm-jvm-mocks/machine/index.html
+$dokka.location:machine//getLineNumber/#kotlin.String/PointingToDeclaration/usvm-jvm-mocks/machine/get-line-number.html
+$dokka.location:machine//mockedMethods/#/PointingToDeclaration/usvm-jvm-mocks/machine/mocked-methods.html
+$dokka.location:machine//mockedMethodsValues/#/PointingToDeclaration/usvm-jvm-mocks/machine/mocked-methods-values.html
+$dokka.location:machine//mocksMap/#/PointingToDeclaration/usvm-jvm-mocks/machine/mocks-map.html
+$dokka.location:machine//varnamesMap/#/PointingToDeclaration/usvm-jvm-mocks/machine/varnames-map.html
+$dokka.location:machine/JcMockedMethodsDecoder///PointingToDeclaration/usvm-jvm-mocks/machine/-jc-mocked-methods-decoder/index.html
+$dokka.location:machine/JcMockedMethodsDecoder/JcMockedMethodsDecoder/#machine.memory.JcMockedMethodsRegionId[TypeParam(bounds=[kotlin.Any?])]#org.usvm.solver.UExprTranslator[*,*]/PointingToDeclaration/usvm-jvm-mocks/machine/-jc-mocked-methods-decoder/-jc-mocked-methods-decoder.html
+$dokka.location:machine/JcMockedMethodsDecoder/decodeLazyRegion/#org.usvm.model.UModelEvaluator[*]#kotlin.collections.List[io.ksmt.expr.KExpr[io.ksmt.sort.KBoolSort]]/PointingToDeclaration/usvm-jvm-mocks/machine/-jc-mocked-methods-decoder/decode-lazy-region.html
+$dokka.location:machine/JcMockedMethodsDecoder/translate/#machine.memory.JcMockedMethodsReading[TypeParam(bounds=[kotlin.Any?])]/PointingToDeclaration/usvm-jvm-mocks/machine/-jc-mocked-methods-decoder/translate.html
+$dokka.location:machine/JcMockedMethodsModel///PointingToDeclaration/usvm-jvm-mocks/machine/-jc-mocked-methods-model/index.html
+$dokka.location:machine/JcMockedMethodsModel/JcMockedMethodsModel/#org.usvm.model.UModelEvaluator[*]#kotlin.collections.Map[machine.memory.JcMockedMethod,[Error type: Unresolved type for UExpr<Sort>][TypeParam(bounds=[kotlin.Any?])]]#org.usvm.solver.UExprTranslator[*,*]/PointingToDeclaration/usvm-jvm-mocks/machine/-jc-mocked-methods-model/-jc-mocked-methods-model.html
+$dokka.location:machine/JcMockedMethodsModel/read/#machine.memory.JcMockedMethodsValue[TypeParam(bounds=[kotlin.Any?])]/PointingToDeclaration/usvm-jvm-mocks/machine/-jc-mocked-methods-model/read.html
+$dokka.location:machine/JcMocksComponents///PointingToDeclaration/usvm-jvm-mocks/machine/-jc-mocks-components/index.html
+$dokka.location:machine/JcMocksComponents/JcMocksComponents/#org.usvm.machine.JcTypeSystem#org.usvm.UMachineOptions/PointingToDeclaration/usvm-jvm-mocks/machine/-jc-mocks-components/-jc-mocks-components.html
+$dokka.location:machine/JcMocksComponents/buildTranslatorAndLazyDecoder/#TypeParam(bounds=[org.usvm.UContext[[Error type: Unresolved type for USizeSort]]])/PointingToDeclaration/usvm-jvm-mocks/machine/-jc-mocks-components/build-translator-and-lazy-decoder.html
+$dokka.location:machine/JcMocksComponents/mkComposer/#TypeParam(bounds=[org.usvm.UContext[[Error type: Unresolved type for USizeSort]]])/PointingToDeclaration/usvm-jvm-mocks/machine/-jc-mocks-components/mk-composer.html
+$dokka.location:machine/JcMocksComponents/mkSoftConstraintsProvider/#TypeParam(bounds=[org.usvm.UContext[[Error type: Unresolved type for USizeSort]]])/PointingToDeclaration/usvm-jvm-mocks/machine/-jc-mocks-components/mk-soft-constraints-provider.html
+$dokka.location:machine/JcMocksComposer///PointingToDeclaration/usvm-jvm-mocks/machine/-jc-mocks-composer/index.html
+$dokka.location:machine/JcMocksComposer/JcMocksComposer/#org.usvm.UContext[[Error type: Unresolved type for USizeSort]]#org.usvm.memory.UReadOnlyMemory[org.jacodb.api.jvm.JcType]#org.usvm.collections.immutable.internal.MutabilityOwnership/PointingToDeclaration/usvm-jvm-mocks/machine/-jc-mocks-composer/-jc-mocks-composer.html
+$dokka.location:machine/JcMocksComposer/transform/#machine.memory.JcMockedMethodsReading[TypeParam(bounds=[kotlin.Any?])]/PointingToDeclaration/usvm-jvm-mocks/machine/-jc-mocks-composer/transform.html
+$dokka.location:machine/JcMocksComposer/transform/#org.usvm.machine.interpreter.statics.JcStaticFieldReading[TypeParam(bounds=[kotlin.Any?])]/PointingToDeclaration/usvm-jvm-mocks/machine/-jc-mocks-composer/transform.html
+$dokka.location:machine/JcMocksExprTranslator///PointingToDeclaration/usvm-jvm-mocks/machine/-jc-mocks-expr-translator/index.html
+$dokka.location:machine/JcMocksExprTranslator/JcMocksExprTranslator/#org.usvm.UContext[[Error type: Unresolved type for USizeSort]]/PointingToDeclaration/usvm-jvm-mocks/machine/-jc-mocks-expr-translator/-jc-mocks-expr-translator.html
+$dokka.location:machine/JcMocksExprTranslator/transform/#machine.memory.JcMockedMethodsReading[TypeParam(bounds=[kotlin.Any?])]/PointingToDeclaration/usvm-jvm-mocks/machine/-jc-mocks-expr-translator/transform.html
+$dokka.location:machine/JcMocksExprTranslator/transform/#org.usvm.machine.interpreter.statics.JcStaticFieldReading[TypeParam(bounds=[kotlin.Any?])]/PointingToDeclaration/usvm-jvm-mocks/machine/-jc-mocks-expr-translator/transform.html
+$dokka.location:machine/JcMocksInterpreter///PointingToDeclaration/usvm-jvm-mocks/machine/-jc-mocks-interpreter/index.html
+$dokka.location:machine/JcMocksInterpreter/JcMocksInterpreter/#kotlin.String#org.usvm.machine.JcContext#org.usvm.machine.JcApplicationGraph#org.usvm.machine.JcMachineOptions#org.usvm.machine.JcInterpreterObserver?/PointingToDeclaration/usvm-jvm-mocks/machine/-jc-mocks-interpreter/-jc-mocks-interpreter.html
+$dokka.location:machine/JcMocksInterpreter/file/#/PointingToDeclaration/usvm-jvm-mocks/machine/-jc-mocks-interpreter/file.html
+$dokka.location:machine/JcMocksInterpreter/updateVarName/#kotlin.Int#kotlin.collections.List[kotlin.String]/PointingToDeclaration/usvm-jvm-mocks/machine/-jc-mocks-interpreter/update-var-name.html
+$dokka.location:machine/JcMocksMachine///PointingToDeclaration/usvm-jvm-mocks/machine/-jc-mocks-machine/index.html
+$dokka.location:machine/JcMocksMachine/JcMocksMachine/#kotlin.String#org.jacodb.api.jvm.JcClasspath#org.usvm.UMachineOptions#org.usvm.machine.JcMachineOptions#org.usvm.machine.JcInterpreterObserver?/PointingToDeclaration/usvm-jvm-mocks/machine/-jc-mocks-machine/-jc-mocks-machine.html
+$dokka.location:machine/JcMocksSoftConstraintsProvider///PointingToDeclaration/usvm-jvm-mocks/machine/-jc-mocks-soft-constraints-provider/index.html
+$dokka.location:machine/JcMocksSoftConstraintsProvider/JcMocksSoftConstraintsProvider/#org.usvm.UContext[[Error type: Unresolved type for USizeSort]]/PointingToDeclaration/usvm-jvm-mocks/machine/-jc-mocks-soft-constraints-provider/-jc-mocks-soft-constraints-provider.html
+$dokka.location:machine/JcMocksSoftConstraintsProvider/transform/#machine.memory.JcMockedMethodsReading[TypeParam(bounds=[kotlin.Any?])]/PointingToDeclaration/usvm-jvm-mocks/machine/-jc-mocks-soft-constraints-provider/transform.html
+$dokka.location:machine/JcMocksSoftConstraintsProvider/transform/#org.usvm.machine.interpreter.statics.JcStaticFieldReading[TypeParam(bounds=[kotlin.Any?])]/PointingToDeclaration/usvm-jvm-mocks/machine/-jc-mocks-soft-constraints-provider/transform.html
+$dokka.location:machine/JcMocksTransformer///PointingToDeclaration/usvm-jvm-mocks/machine/-jc-mocks-transformer/index.html
+$dokka.location:machine/JcMocksTransformer/transform/#machine.memory.JcMockedMethodsReading[TypeParam(bounds=[kotlin.Any?])]/PointingToDeclaration/usvm-jvm-mocks/machine/-jc-mocks-transformer/transform.html
+machine
+machine.instructions
+machine.memory
+machine.render
+

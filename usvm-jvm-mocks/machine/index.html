@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html class="no-js">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
+    <title>machine</title>
+    <link href="../../images/logo-icon.svg" rel="icon" type="image/svg">
+    <script>var pathToRoot = "../../";</script>
+    <script>document.documentElement.classList.replace("no-js","js");</script>
+    <script>const storage = localStorage.getItem("dokka-dark-mode")
+    if (storage == null) {
+        const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (osDarkSchemePreferred === true) {
+            document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+    } else {
+        const savedDarkMode = JSON.parse(storage)
+        if(savedDarkMode === true) {
+            document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+    }
+    </script>
+<script type="text/javascript" src="https://unpkg.com/kotlin-playground@1/dist/playground.min.js" async="async"></script>
+<script type="text/javascript" src="../../scripts/sourceset_dependencies.js" async="async"></script>
+<link href="../../styles/style.css" rel="Stylesheet">
+<link href="../../styles/main.css" rel="Stylesheet">
+<link href="../../styles/prism.css" rel="Stylesheet">
+<link href="../../styles/logo-styles.css" rel="Stylesheet">
+<link href="../../styles/font-jb-sans-auto.css" rel="Stylesheet">
+<script type="text/javascript" src="../../scripts/clipboard.js" async="async"></script>
+<script type="text/javascript" src="../../scripts/navigation-loader.js" async="async"></script>
+<script type="text/javascript" src="../../scripts/platform-content-handler.js" async="async"></script>
+<script type="text/javascript" src="../../scripts/main.js" defer="defer"></script>
+<script type="text/javascript" src="../../scripts/prism.js" async="async"></script>
+<script type="text/javascript" src="../../scripts/symbol-parameters-wrapper_deferred.js" defer="defer"></script>
+</head>
+<body>
+    <div class="root">
+<nav class="navigation" id="navigation-wrapper">
+    <div class="navigation--inner">
+        <div class="navigation-title">
+            <button class="menu-toggle" id="menu-toggle" type="button">toggle menu</button>
+            <div class="library-name">
+                    <a class="library-name--link" href="../../index.html">
+                            usvm-jvm-mocks
+                    </a>
+            </div>
+            <div class="library-version">
+            </div>
+        </div>
+        <div class="filter-section" id="filter-section">
+                <button class="platform-tag platform-selector jvm-like" data-active="" data-filter=":usvm-jvm-mocks:dokkaHtml/main">jvm</button>
+        </div>
+    </div>
+    <div class="navigation-controls">
+        <button class="navigation-controls--btn navigation-controls--theme" id="theme-toggle-button" type="button">switch theme</button>
+        <div class="navigation-controls--btn navigation-controls--search" id="searchBar" role="button">search in API</div>
+    </div>
+</nav>
+        <div id="container">
+            <div class="sidebar" id="leftColumn">
+                <div class="sidebar--inner" id="sideMenu"></div>
+            </div>
+            <div id="main">
+<div class="main-content" data-page-type="package" id="content" pageIds="usvm-jvm-mocks::machine////PointingToDeclaration//-146835540">
+  <div class="breadcrumbs"><a href="../../index.html">usvm-jvm-mocks</a><span class="delimiter">/</span><span class="current">machine</span></div>
+  <div class="cover ">
+    <h1 class="cover"><span><span>Package-level</span></span> <span><span>declarations</span></span></h1>
+  </div>
+  <div class="tabbedcontent">
+    <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="TYPE">Types</button><button class="section-tab" data-togglable="FUNCTION,EXTENSION_FUNCTION">Functions</button><button class="section-tab" data-togglable="PROPERTY,EXTENSION_PROPERTY">Properties</button></div>
+    <div class="tabs-section-body">
+      <div data-togglable="TYPE">
+        <h2 class="">Types</h2>
+        <div class="table"><a data-name="-190043211%2FClasslikes%2F-146835540" anchor-label="JcMockedMethodsDecoder" id="-190043211%2FClasslikes%2F-146835540" data-filterable-set=":usvm-jvm-mocks:dokkaHtml/main"></a>
+          <div class="table-row" data-filterable-current=":usvm-jvm-mocks:dokkaHtml/main" data-filterable-set=":usvm-jvm-mocks:dokkaHtml/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-jc-mocked-methods-decoder/index.html"><span>Jc</span><wbr></wbr><span>Mocked</span><wbr></wbr><span>Methods</span><wbr></wbr><span><span>Decoder</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-190043211%2FClasslikes%2F-146835540"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":usvm-jvm-mocks:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-jc-mocked-methods-decoder/index.html">JcMockedMethodsDecoder</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="-jc-mocked-methods-decoder/index.html">Sort</a><span class="token operator">&gt;</span><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">regionId<span class="token operator">: </span><a href="../machine.memory/-jc-mocked-methods-region-id/index.html">JcMockedMethodsRegionId</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="-jc-mocked-methods-decoder/index.html">Sort</a><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">translator<span class="token operator">: </span><span data-unresolved-link="org.usvm.solver/UExprTranslator///PointingToDeclaration/">UExprTranslator</span><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token punctuation">, </span><span class="token operator">*</span><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span> : <span data-unresolved-link="org.usvm.solver/URegionDecoder///PointingToDeclaration/">URegionDecoder</span><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../machine.memory/-jc-mocked-methods-value/index.html">JcMockedMethodsValue</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="-jc-mocked-methods-decoder/index.html">Sort</a><span class="token operator">&gt;</span><span class="token punctuation">, </span><span class="token keyword"></span><a href="-jc-mocked-methods-decoder/index.html">Sort</a><span class="token operator">&gt; </span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1431153264%2FClasslikes%2F-146835540" anchor-label="JcMockedMethodsModel" id="1431153264%2FClasslikes%2F-146835540" data-filterable-set=":usvm-jvm-mocks:dokkaHtml/main"></a>
+          <div class="table-row" data-filterable-current=":usvm-jvm-mocks:dokkaHtml/main" data-filterable-set=":usvm-jvm-mocks:dokkaHtml/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-jc-mocked-methods-model/index.html"><span>Jc</span><wbr></wbr><span>Mocked</span><wbr></wbr><span>Methods</span><wbr></wbr><span><span>Model</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1431153264%2FClasslikes%2F-146835540"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":usvm-jvm-mocks:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-jc-mocked-methods-model/index.html">JcMockedMethodsModel</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="-jc-mocked-methods-model/index.html">Sort</a><span class="token operator">&gt;</span><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">model<span class="token operator">: </span><span data-unresolved-link="org.usvm.model/UModelEvaluator///PointingToDeclaration/">UModelEvaluator</span><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">translatedMockedMethods<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin.collections/-map/index.html">Map</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../machine.memory/-jc-mocked-method/index.html">JcMockedMethod</a><span class="token punctuation">, </span><span class="token keyword"></span><span data-unresolved-link="/&amp;lt;Error class: unknown class&amp;gt;///PointingToDeclaration/">&lt;Error class: unknown class&gt;</span><span class="token operator">&lt;</span><span class="token keyword"></span><a href="-jc-mocked-methods-model/index.html">Sort</a><span class="token operator">&gt;</span><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">translator<span class="token operator">: </span><span data-unresolved-link="org.usvm.solver/UExprTranslator///PointingToDeclaration/">UExprTranslator</span><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token punctuation">, </span><span class="token operator">*</span><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span> : <span data-unresolved-link="org.usvm.memory/UReadOnlyMemoryRegion///PointingToDeclaration/">UReadOnlyMemoryRegion</span><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../machine.memory/-jc-mocked-methods-value/index.html">JcMockedMethodsValue</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="-jc-mocked-methods-model/index.html">Sort</a><span class="token operator">&gt;</span><span class="token punctuation">, </span><span class="token keyword"></span><a href="-jc-mocked-methods-model/index.html">Sort</a><span class="token operator">&gt; </span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-166585805%2FClasslikes%2F-146835540" anchor-label="JcMocksComponents" id="-166585805%2FClasslikes%2F-146835540" data-filterable-set=":usvm-jvm-mocks:dokkaHtml/main"></a>
+          <div class="table-row" data-filterable-current=":usvm-jvm-mocks:dokkaHtml/main" data-filterable-set=":usvm-jvm-mocks:dokkaHtml/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-jc-mocks-components/index.html"><span>Jc</span><wbr></wbr><span>Mocks</span><wbr></wbr><span><span>Components</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-166585805%2FClasslikes%2F-146835540"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":usvm-jvm-mocks:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-jc-mocks-components/index.html">JcMocksComponents</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">typeSystem<span class="token operator">: </span><span data-unresolved-link="org.usvm.machine/JcTypeSystem///PointingToDeclaration/">JcTypeSystem</span><span class="token punctuation">, </span></span><span class="parameter ">options<span class="token operator">: </span><span data-unresolved-link="org.usvm/UMachineOptions///PointingToDeclaration/">UMachineOptions</span></span></span><span class="token punctuation">)</span> : <span data-unresolved-link="org.usvm.machine/JcComponents///PointingToDeclaration/">JcComponents</span></div><div class="brief "><p class="paragraph">JcMocksComponents simply applies changes made for usvm-jvm-mocks memory to the execution.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-558132887%2FClasslikes%2F-146835540" anchor-label="JcMocksComposer" id="-558132887%2FClasslikes%2F-146835540" data-filterable-set=":usvm-jvm-mocks:dokkaHtml/main"></a>
+          <div class="table-row" data-filterable-current=":usvm-jvm-mocks:dokkaHtml/main" data-filterable-set=":usvm-jvm-mocks:dokkaHtml/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-jc-mocks-composer/index.html"><span>Jc</span><wbr></wbr><span>Mocks</span><wbr></wbr><span><span>Composer</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-558132887%2FClasslikes%2F-146835540"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":usvm-jvm-mocks:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-jc-mocks-composer/index.html">JcMocksComposer</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">ctx<span class="token operator">: </span><span data-unresolved-link="org.usvm/UContext///PointingToDeclaration/">UContext</span><span class="token operator">&lt;</span><span class="token keyword"></span><span data-unresolved-link="/&amp;lt;Error class: unknown class&amp;gt;///PointingToDeclaration/">&lt;Error class: unknown class&gt;</span><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">memory<span class="token operator">: </span><span data-unresolved-link="org.usvm.memory/UReadOnlyMemory///PointingToDeclaration/">UReadOnlyMemory</span><span class="token operator">&lt;</span><span class="token keyword"></span><span data-unresolved-link="org.jacodb.api.jvm/JcType///PointingToDeclaration/">JcType</span><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">ownership<span class="token operator">: </span><span data-unresolved-link="org.usvm.collections.immutable.internal/MutabilityOwnership///PointingToDeclaration/">MutabilityOwnership</span></span></span><span class="token punctuation">)</span> : <span data-unresolved-link="org.usvm/UComposer///PointingToDeclaration/">UComposer</span><span class="token operator">&lt;</span><span class="token keyword"></span><span data-unresolved-link="org.jacodb.api.jvm/JcType///PointingToDeclaration/">JcType</span><span class="token punctuation">, </span><span class="token keyword"></span><span data-unresolved-link="/&amp;lt;Error class: unknown class&amp;gt;///PointingToDeclaration/">&lt;Error class: unknown class&gt;</span><span class="token operator">&gt; </span>, <a href="-jc-mocks-transformer/index.html">JcMocksTransformer</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-208124550%2FClasslikes%2F-146835540" anchor-label="JcMocksExprTranslator" id="-208124550%2FClasslikes%2F-146835540" data-filterable-set=":usvm-jvm-mocks:dokkaHtml/main"></a>
+          <div class="table-row" data-filterable-current=":usvm-jvm-mocks:dokkaHtml/main" data-filterable-set=":usvm-jvm-mocks:dokkaHtml/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-jc-mocks-expr-translator/index.html"><span>Jc</span><wbr></wbr><span>Mocks</span><wbr></wbr><span>Expr</span><wbr></wbr><span><span>Translator</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-208124550%2FClasslikes%2F-146835540"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":usvm-jvm-mocks:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-jc-mocks-expr-translator/index.html">JcMocksExprTranslator</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">ctx<span class="token operator">: </span><span data-unresolved-link="org.usvm/UContext///PointingToDeclaration/">UContext</span><span class="token operator">&lt;</span><span class="token keyword"></span><span data-unresolved-link="/&amp;lt;Error class: unknown class&amp;gt;///PointingToDeclaration/">&lt;Error class: unknown class&gt;</span><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span> : <span data-unresolved-link="org.usvm.solver/UExprTranslator///PointingToDeclaration/">UExprTranslator</span><span class="token operator">&lt;</span><span class="token keyword"></span><span data-unresolved-link="org.jacodb.api.jvm/JcType///PointingToDeclaration/">JcType</span><span class="token punctuation">, </span><span class="token keyword"></span><span data-unresolved-link="/&amp;lt;Error class: unknown class&amp;gt;///PointingToDeclaration/">&lt;Error class: unknown class&gt;</span><span class="token operator">&gt; </span>, <a href="-jc-mocks-transformer/index.html">JcMocksTransformer</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1868102241%2FClasslikes%2F-146835540" anchor-label="JcMocksInterpreter" id="-1868102241%2FClasslikes%2F-146835540" data-filterable-set=":usvm-jvm-mocks:dokkaHtml/main"></a>
+          <div class="table-row" data-filterable-current=":usvm-jvm-mocks:dokkaHtml/main" data-filterable-set=":usvm-jvm-mocks:dokkaHtml/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-jc-mocks-interpreter/index.html"><span>Jc</span><wbr></wbr><span>Mocks</span><wbr></wbr><span><span>Interpreter</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1868102241%2FClasslikes%2F-146835540"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":usvm-jvm-mocks:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-jc-mocks-interpreter/index.html">JcMocksInterpreter</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>file<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span></span><span class="parameter ">ctx<span class="token operator">: </span><span data-unresolved-link="org.usvm.machine/JcContext///PointingToDeclaration/">JcContext</span><span class="token punctuation">, </span></span><span class="parameter ">applicationGraph<span class="token operator">: </span><span data-unresolved-link="org.usvm.machine/JcApplicationGraph///PointingToDeclaration/">JcApplicationGraph</span><span class="token punctuation">, </span></span><span class="parameter ">options<span class="token operator">: </span><span data-unresolved-link="org.usvm.machine/JcMachineOptions///PointingToDeclaration/">JcMachineOptions</span><span class="token punctuation">, </span></span><span class="parameter ">observer<span class="token operator">: </span><span data-unresolved-link="org.usvm.machine/JcInterpreterObserver///PointingToDeclaration/">JcInterpreterObserver</span><span class="token operator">?</span><span class="token operator"> = </span>null</span></span><span class="token punctuation">)</span> : <span data-unresolved-link="org.usvm.machine.interpreter/JcInterpreter///PointingToDeclaration/">JcInterpreter</span></div><div class="brief "><p class="paragraph">JcMocksInterpreter is responsible for handling two special cases:</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="534035570%2FClasslikes%2F-146835540" anchor-label="JcMocksMachine" id="534035570%2FClasslikes%2F-146835540" data-filterable-set=":usvm-jvm-mocks:dokkaHtml/main"></a>
+          <div class="table-row" data-filterable-current=":usvm-jvm-mocks:dokkaHtml/main" data-filterable-set=":usvm-jvm-mocks:dokkaHtml/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-jc-mocks-machine/index.html"><span>Jc</span><wbr></wbr><span>Mocks</span><wbr></wbr><span><span>Machine</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="534035570%2FClasslikes%2F-146835540"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":usvm-jvm-mocks:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-jc-mocks-machine/index.html">JcMocksMachine</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">file<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span></span><span class="parameter ">cp<span class="token operator">: </span><span data-unresolved-link="org.jacodb.api.jvm/JcClasspath///PointingToDeclaration/">JcClasspath</span><span class="token punctuation">, </span></span><span class="parameter ">options<span class="token operator">: </span><span data-unresolved-link="org.usvm/UMachineOptions///PointingToDeclaration/">UMachineOptions</span><span class="token punctuation">, </span></span><span class="parameter ">jcMachineOptions<span class="token operator">: </span><span data-unresolved-link="org.usvm.machine/JcMachineOptions///PointingToDeclaration/">JcMachineOptions</span><span class="token operator"> = </span>JcMachineOptions()<span class="token punctuation">, </span></span><span class="parameter ">interpreterObserver<span class="token operator">: </span><span data-unresolved-link="org.usvm.machine/JcInterpreterObserver///PointingToDeclaration/">JcInterpreterObserver</span><span class="token operator">?</span><span class="token operator"> = </span>null</span></span><span class="token punctuation">)</span> : <span data-unresolved-link="org.usvm.machine/JcMachine///PointingToDeclaration/">JcMachine</span></div><div class="brief "><p class="paragraph">Symbolic machine responsible for handling mocked method execution.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1999132740%2FClasslikes%2F-146835540" anchor-label="JcMocksSoftConstraintsProvider" id="-1999132740%2FClasslikes%2F-146835540" data-filterable-set=":usvm-jvm-mocks:dokkaHtml/main"></a>
+          <div class="table-row" data-filterable-current=":usvm-jvm-mocks:dokkaHtml/main" data-filterable-set=":usvm-jvm-mocks:dokkaHtml/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-jc-mocks-soft-constraints-provider/index.html"><span>Jc</span><wbr></wbr><span>Mocks</span><wbr></wbr><span>Soft</span><wbr></wbr><span>Constraints</span><wbr></wbr><span><span>Provider</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1999132740%2FClasslikes%2F-146835540"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":usvm-jvm-mocks:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-jc-mocks-soft-constraints-provider/index.html">JcMocksSoftConstraintsProvider</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">ctx<span class="token operator">: </span><span data-unresolved-link="org.usvm/UContext///PointingToDeclaration/">UContext</span><span class="token operator">&lt;</span><span class="token keyword"></span><span data-unresolved-link="/&amp;lt;Error class: unknown class&amp;gt;///PointingToDeclaration/">&lt;Error class: unknown class&gt;</span><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span> : <span data-unresolved-link="org.usvm.solver/USoftConstraintsProvider///PointingToDeclaration/">USoftConstraintsProvider</span><span class="token operator">&lt;</span><span class="token keyword"></span><span data-unresolved-link="org.jacodb.api.jvm/JcType///PointingToDeclaration/">JcType</span><span class="token punctuation">, </span><span class="token keyword"></span><span data-unresolved-link="/&amp;lt;Error class: unknown class&amp;gt;///PointingToDeclaration/">&lt;Error class: unknown class&gt;</span><span class="token operator">&gt; </span>, <a href="-jc-mocks-transformer/index.html">JcMocksTransformer</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1181044704%2FClasslikes%2F-146835540" anchor-label="JcMocksTransformer" id="1181044704%2FClasslikes%2F-146835540" data-filterable-set=":usvm-jvm-mocks:dokkaHtml/main"></a>
+          <div class="table-row" data-filterable-current=":usvm-jvm-mocks:dokkaHtml/main" data-filterable-set=":usvm-jvm-mocks:dokkaHtml/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-jc-mocks-transformer/index.html"><span>Jc</span><wbr></wbr><span>Mocks</span><wbr></wbr><span><span>Transformer</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1181044704%2FClasslikes%2F-146835540"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":usvm-jvm-mocks:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword">interface </span><a href="-jc-mocks-transformer/index.html">JcMocksTransformer</a> : <span data-unresolved-link="org.usvm.machine/JcTransformer///PointingToDeclaration/">JcTransformer</span></div><div class="brief "><p class="paragraph">JcMocksTransformer and the following classes are helpers so that JcMockedMemory works like a proper memory region.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-togglable="PROPERTY">
+        <h2 class="">Properties</h2>
+        <div class="table"><a data-name="1548844859%2FProperties%2F-146835540" anchor-label="mockedMethods" id="1548844859%2FProperties%2F-146835540" data-filterable-set=":usvm-jvm-mocks:dokkaHtml/main"></a>
+          <div class="table-row" data-filterable-current=":usvm-jvm-mocks:dokkaHtml/main" data-filterable-set=":usvm-jvm-mocks:dokkaHtml/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="mocked-methods.html"><span>mocked</span><wbr></wbr><span><span>Methods</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1548844859%2FProperties%2F-146835540"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":usvm-jvm-mocks:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="mocked-methods.html">mockedMethods</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin.collections/-mutable-set/index.html">MutableSet</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../machine.memory/-jc-mocked-methods-value/index.html">JcMockedMethodsValue</a><span class="token operator">&lt;</span><span class="token keyword"></span><span data-unresolved-link="/&amp;lt;Error class: unknown class&amp;gt;///PointingToDeclaration/">&lt;Error class: unknown class&gt;</span><span class="token operator">&gt;</span><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">mockedMethods simply tracks which methods were called by mock objects.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="302738873%2FProperties%2F-146835540" anchor-label="mockedMethodsValues" id="302738873%2FProperties%2F-146835540" data-filterable-set=":usvm-jvm-mocks:dokkaHtml/main"></a>
+          <div class="table-row" data-filterable-current=":usvm-jvm-mocks:dokkaHtml/main" data-filterable-set=":usvm-jvm-mocks:dokkaHtml/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="mocked-methods-values.html"><span>mocked</span><wbr></wbr><span>Methods</span><wbr></wbr><span><span>Values</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="302738873%2FProperties%2F-146835540"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":usvm-jvm-mocks:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="mocked-methods-values.html">mockedMethodsValues</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin.collections/-mutable-map/index.html">MutableMap</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../machine.memory/-jc-mocked-methods-value/index.html">JcMockedMethodsValue</a><span class="token operator">&lt;</span><span class="token keyword"></span><span data-unresolved-link="/&amp;lt;Error class: unknown class&amp;gt;///PointingToDeclaration/">&lt;Error class: unknown class&gt;</span><span class="token operator">&gt;</span><span class="token punctuation">, </span><span class="token keyword"></span><span data-unresolved-link="/&amp;lt;Error class: unknown class&amp;gt;///PointingToDeclaration/">&lt;Error class: unknown class&gt;</span><span class="token operator">&lt;</span><span class="token keyword"></span><span data-unresolved-link="/&amp;lt;Error class: unknown class&amp;gt;///PointingToDeclaration/">&lt;Error class: unknown class&gt;</span><span class="token operator">&gt;</span><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">mockedMethodsValues is a map that contains methods from memory and their current return values.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="45037347%2FProperties%2F-146835540" anchor-label="mocksMap" id="45037347%2FProperties%2F-146835540" data-filterable-set=":usvm-jvm-mocks:dokkaHtml/main"></a>
+          <div class="table-row" data-filterable-current=":usvm-jvm-mocks:dokkaHtml/main" data-filterable-set=":usvm-jvm-mocks:dokkaHtml/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="mocks-map.html"><span>mocks</span><wbr></wbr><span><span>Map</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="45037347%2FProperties%2F-146835540"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":usvm-jvm-mocks:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="mocks-map.html">mocksMap</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin.collections/-mutable-map/index.html">MutableMap</a><span class="token operator">&lt;</span><span class="token keyword"></span><span data-unresolved-link="org.usvm/UConcreteHeapRef///PointingToDeclaration/">UConcreteHeapRef</span><span class="token punctuation">, </span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">mocksMap tracks addresses assigned to mock objects during initialization and its metadata.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1016753175%2FProperties%2F-146835540" anchor-label="varnamesMap" id="-1016753175%2FProperties%2F-146835540" data-filterable-set=":usvm-jvm-mocks:dokkaHtml/main"></a>
+          <div class="table-row" data-filterable-current=":usvm-jvm-mocks:dokkaHtml/main" data-filterable-set=":usvm-jvm-mocks:dokkaHtml/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="varnames-map.html"><span>varnames</span><wbr></wbr><span><span>Map</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1016753175%2FProperties%2F-146835540"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":usvm-jvm-mocks:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="varnames-map.html">varnamesMap</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin.collections/-mutable-map/index.html">MutableMap</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html">Int</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">varnamesMap saves variable names and lines where they were defined.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-togglable="FUNCTION">
+        <h2 class="">Functions</h2>
+        <div class="table"><a data-name="316932787%2FFunctions%2F-146835540" anchor-label="getLineNumber" id="316932787%2FFunctions%2F-146835540" data-filterable-set=":usvm-jvm-mocks:dokkaHtml/main"></a>
+          <div class="table-row" data-filterable-current=":usvm-jvm-mocks:dokkaHtml/main" data-filterable-set=":usvm-jvm-mocks:dokkaHtml/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="get-line-number.html"><span>get</span><wbr></wbr><span>Line</span><wbr></wbr><span><span>Number</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="316932787%2FFunctions%2F-146835540"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":usvm-jvm-mocks:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="get-line-number.html"><span class="token function">getLineNumber</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">line<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html">Int</a></div><div class="brief "><p class="paragraph">Given a line with metadata about mocked method, it returns the line where mock object that called it was initialized.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      <div class="footer">
+        <span class="go-to-top-icon"><a href="#content" id="go-to-top-link"></a></span><span>© 2025 Copyright</span><span
+                class="pull-right"><span>Generated by </span><a
+                href="https://github.com/Kotlin/dokka"><span>dokka</span><span class="padded-icon"></span></a></span>
+      </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
