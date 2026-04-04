@@ -4,6 +4,7 @@ import io.ksmt.expr.transformer.KNonRecursiveTransformer
 import io.ksmt.expr.transformer.KTransformer
 import org.usvm.collection.array.UAllocatedArrayReading
 import org.usvm.collection.array.UInputArrayReading
+import org.usvm.collection.array.UNonAliasingArrayReading
 import org.usvm.collection.array.length.UInputArrayLengthReading
 import org.usvm.collection.field.UInputFieldReading
 import org.usvm.collection.map.length.UInputMapLengthReading
@@ -25,6 +26,8 @@ interface UTransformer<Type, USizeSort : USort> : KTransformer {
     fun <Field, Sort : USort> transform(expr: UInputFieldReading<Field, Sort>): UExpr<Sort>
 
     fun <Sort : USort> transform(expr: UAllocatedArrayReading<Type, Sort, USizeSort>): UExpr<Sort>
+
+    fun <Sort : USort> transform(expr: UNonAliasingArrayReading<Type, Sort, USizeSort>): UExpr<Sort>
 
     fun <Sort : USort> transform(expr: UInputArrayReading<Type, Sort, USizeSort>): UExpr<Sort>
 
@@ -65,6 +68,8 @@ interface UTransformer<Type, USizeSort : USort> : KTransformer {
     fun transform(expr: UIsSupertypeExpr<Type>): UBoolExpr
 
     fun transform(expr: UConcreteHeapRef): UExpr<UAddressSort>
+
+    fun transform(expr: UNonAliasingHeapRef): UExpr<UAddressSort>
 
     fun transform(expr: UNullRef): UExpr<UAddressSort>
 }

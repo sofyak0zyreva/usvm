@@ -17,6 +17,7 @@ import org.usvm.UIndexedMethodReturnValue
 import org.usvm.UIsExpr
 import org.usvm.UIsSubtypeExpr
 import org.usvm.UIsSupertypeExpr
+import org.usvm.UNonAliasingHeapRef
 import org.usvm.UNullRef
 import org.usvm.URegisterReading
 import org.usvm.USort
@@ -26,6 +27,7 @@ import org.usvm.collection.array.UAllocatedArrayReading
 import org.usvm.collection.array.UArrayRegionDecoder
 import org.usvm.collection.array.UArrayRegionId
 import org.usvm.collection.array.UInputArrayReading
+import org.usvm.collection.array.UNonAliasingArrayReading
 import org.usvm.collection.array.USymbolicArrayId
 import org.usvm.collection.array.length.UArrayLengthRegionDecoder
 import org.usvm.collection.array.length.UArrayLengthsRegionId
@@ -100,6 +102,11 @@ open class UExprTranslator<Type, USizeSort : USort>(
         return ctx.mkUninterpretedSortValue(ctx.addressSort, expr.address)
     }
 
+    // ??
+    override fun transform(expr: UNonAliasingHeapRef): UExpr<UAddressSort> {
+        return ctx.mkUninterpretedSortValue(ctx.addressSort, expr.id)
+    }
+
     private val _declToIsExpr = mutableMapOf<KDecl<UBoolSort>, UIsExpr<Type>>()
     val declToIsExpr: Map<KDecl<UBoolSort>, UIsExpr<Type>> get() = _declToIsExpr
 
@@ -147,6 +154,13 @@ open class UExprTranslator<Type, USizeSort : USort>(
             val translator = fieldsRegionDecoder(expr.collection.collectionId)
                 .inputFieldRegionTranslator(expr.collection.collectionId)
             translator.translateReading(expr.collection, address)
+        }
+
+    override fun <Sort : USort> transform(expr: UNonAliasingArrayReading<Type, Sort, USizeSort>): KExpr<Sort> =
+        transformExprAfterTransformed(expr, expr.index) { index ->
+            val translator = arrayRegionDecoder(expr.collection.collectionId)
+                .nonAliasingArrayRegionTranslator(expr.collection.collectionId)
+            translator.translateReading(expr.collection, index)
         }
 
     override fun <KeySort : USort, Sort : USort, Reg : Region<Reg>> transform(
