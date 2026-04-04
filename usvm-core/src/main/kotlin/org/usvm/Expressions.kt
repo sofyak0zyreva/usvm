@@ -1,5 +1,6 @@
 package org.usvm
 
+import com.sun.org.apache.xpath.internal.operations.Bool
 import io.ksmt.cache.hash
 import io.ksmt.cache.structurallyEqual
 import io.ksmt.decl.KConstDecl
@@ -23,6 +24,7 @@ import io.ksmt.sort.KSort
 import io.ksmt.sort.KUninterpretedSort
 import org.usvm.memory.USymbolicCollection
 import org.usvm.memory.USymbolicCollectionId
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 
@@ -48,8 +50,9 @@ typealias UIntepretedValue<Sort> = KInterpretedValue<Sort>
 typealias UAddressSort = KUninterpretedSort
 
 //endregion
+//abstract class UNASymbol<Sort : USort>(ctx: UContext<*>, open val id: Int) : UExpr<Sort>(ctx)
 
-abstract class USymbol<Sort : USort>(ctx: UContext<*>) : UExpr<Sort>(ctx)
+abstract class USymbol<Sort : USort>(ctx: UContext<*>, open val id: Int = -1) : UExpr<Sort>(ctx)
 
 //region Object References
 
@@ -66,6 +69,19 @@ typealias UHeapRef = UExpr<UAddressSort>
  */
 typealias USymbolicHeapRef = USymbol<UAddressSort>
 typealias UConcreteHeapAddress = Int
+typealias UNASymbolicHeapRef = USymbol<UAddressSort>
+
+// positive id means uregister reading or else
+fun isIdPositive(ref: UHeapRef): Boolean {
+    return when {
+        ref  is USymbol<*> -> ref.id >= 0
+        else -> false
+    }
+}
+
+fun castToNAHeapRef(naSymbol: UNASymbolicHeapRef): UNonAliasingHeapRef {
+    return UNonAliasingHeapRef(naSymbol.uctx, naSymbol.id)
+}
 
 val UConcreteHeapAddress.isAllocated: Boolean get() = this >= INITIAL_CONCRETE_ADDRESS
 val UConcreteHeapAddress.isStatic: Boolean get() = this <= INITIAL_STATIC_ADDRESS
@@ -76,7 +92,7 @@ fun isSymbolicHeapRef(expr: UExpr<*>): Boolean {
         returns(true) implies (expr is USymbol<*>)
     }
 
-    return expr.sort == expr.uctx.addressSort && expr is USymbol<*>
+    return expr.sort == expr.uctx.addressSort && expr is USymbol<*> && expr !is UNonAliasingHeapRef
 }
 
 @OptIn(ExperimentalContracts::class)
@@ -128,6 +144,47 @@ class UConcreteHeapRef internal constructor(
     override fun internEquals(other: Any): Boolean = structurallyEqual(other) { address }
 
     override fun internHashCode(): Int = hash(address)
+}
+
+typealias UNonAliasingHeapAddress = Int
+
+class UNonAliasingHeapRef(
+    ctx: UContext<*>,
+    id: UNonAliasingHeapAddress
+): USymbol<UAddressSort>(ctx, id) {
+    companion object {
+        private val counter = AtomicInteger(0)
+
+        fun fresh(ctx: UContext<*>): UNonAliasingHeapRef {
+            return UNonAliasingHeapRef(ctx, counter.getAndIncrement())
+        }
+    }
+    override val sort: UAddressSort
+        get() = uctx.addressSort
+
+    override fun accept(transformer: KTransformerBase): KExpr<UAddressSort> {
+        require(transformer is UTransformer<*, *>) {
+            "Expected a UTransformer, but got: $transformer"
+        }
+        return transformer.transform(this)
+    }
+
+    override fun internEquals(other: Any): Boolean =
+        structurallyEqual(other) { id }
+
+    override fun internHashCode(): Int = hash(id)
+
+    override fun print(printer: ExpressionPrinter) {
+        printer.append("na#$id")
+    }
+}
+
+fun UContext<*>.mkNonAliasingHeapRef(id: Int): UNonAliasingHeapRef =
+    UNonAliasingHeapRef(this, id)
+
+
+fun isNonAliasingHeapRef(expr: UExpr<*>): Boolean {
+    return expr is UNonAliasingHeapRef
 }
 
 class UNullRef internal constructor(
@@ -188,7 +245,8 @@ class URegisterReading<Sort : USort> internal constructor(
     ctx: UContext<*>,
     val idx: Int,
     override val sort: Sort,
-) : USymbol<Sort>(ctx) {
+    override val id: Int = idx,
+) : USymbol<Sort>(ctx, id) {
     override fun accept(transformer: KTransformerBase): KExpr<Sort> {
         require(transformer is UTransformer<*, *>) { "Expected a UTransformer, but got: $transformer" }
         return transformer.transform(this)
