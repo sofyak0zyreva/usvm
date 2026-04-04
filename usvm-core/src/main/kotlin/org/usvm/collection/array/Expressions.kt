@@ -41,6 +41,33 @@ class UAllocatedArrayReading<ArrayType, Sort : USort, USizeSort : USort> interna
     }
 }
 
+class UNonAliasingArrayReading<ArrayType, Sort : USort, USizeSort : USort> internal constructor(
+    ctx: UContext<USizeSort>,
+    collection: UNonAliasingArray<ArrayType, Sort, USizeSort>,
+    val index: UExpr<USizeSort>,
+) : UCollectionReading<UNonAliasingArrayId<ArrayType, Sort, USizeSort>, UExpr<USizeSort>, Sort>(ctx, collection) {
+    override fun accept(transformer: KTransformerBase): KExpr<Sort> {
+        require(transformer is UTransformer<*, *>) { "Expected a UTransformer, but got: $transformer" }
+        return transformer.asTypedTransformer<ArrayType, USizeSort>().transform(this)
+    }
+
+    override fun internEquals(other: Any): Boolean =
+        structurallyEqual(
+            other,
+            { collection },
+            { index },
+        )
+
+    override fun internHashCode(): Int = hash(collection, index)
+
+    override fun print(printer: ExpressionPrinter) {
+        printer.append(collection.toString())
+        printer.append("[")
+        printer.append(index)
+        printer.append("]")
+    }
+}
+
 class UInputArrayReading<ArrayType, Sort : USort, USizeSort : USort> internal constructor(
     ctx: UContext<USizeSort>,
     collection: UInputArray<ArrayType, Sort, USizeSort>,
