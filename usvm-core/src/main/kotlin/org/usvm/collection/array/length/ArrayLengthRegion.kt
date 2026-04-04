@@ -61,6 +61,7 @@ internal class UArrayLengthsMemoryRegion<ArrayType, USizeSort : USort>(
 
     override fun read(key: UArrayLengthLValue<ArrayType, USizeSort>): UExpr<USizeSort> = key.ref.mapWithStaticAsSymbolic(
         concreteMapper = { concreteRef -> allocatedLengths[concreteRef.address] ?: sort.sampleUValue() },
+        nonAliasingMapper = {symbolicRef -> getInputLength(key).read(symbolicRef)},
         symbolicMapper = { symbolicRef -> getInputLength(key).read(symbolicRef) }
     )
 
@@ -78,6 +79,11 @@ internal class UArrayLengthsMemoryRegion<ArrayType, USizeSort : USort>(
                 sort.sampleUValue()
             }
             region.updateAllocated(newRegion)
+        },
+        blockOnNonAliasing = { region, (symbolicRef, innerGuard) ->
+            val oldRegion = region.getInputLength(key)
+            val newRegion = oldRegion.write(symbolicRef, value, innerGuard, ownership)
+            region.updatedInput(newRegion)
         },
         blockOnSymbolic = { region, (symbolicRef, innerGuard) ->
             val oldRegion = region.getInputLength(key)

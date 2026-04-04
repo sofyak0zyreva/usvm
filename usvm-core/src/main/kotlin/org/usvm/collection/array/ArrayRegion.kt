@@ -4,6 +4,7 @@ import org.usvm.UBoolExpr
 import org.usvm.UConcreteHeapAddress
 import org.usvm.UExpr
 import org.usvm.UHeapRef
+import org.usvm.UNonAliasingHeapAddress
 import org.usvm.USort
 import org.usvm.collections.immutable.getOrPut
 import org.usvm.uctx
@@ -41,6 +42,7 @@ data class UArrayRegionId<ArrayType, Sort : USort, USizeSort : USort>(val arrayT
 }
 
 typealias UAllocatedArray<ArrayType, Sort, USizeSort> = USymbolicCollection<UAllocatedArrayId<ArrayType, Sort, USizeSort>, UExpr<USizeSort>, Sort>
+typealias UNonAliasingArray<ArrayType, Sort, USizeSort> = USymbolicCollection<UNonAliasingArrayId<ArrayType, Sort, USizeSort>, UExpr<USizeSort>, Sort>
 typealias UInputArray<ArrayType, Sort, USizeSort> = USymbolicCollection<UInputArrayId<ArrayType, Sort, USizeSort>, USymbolicArrayIndex<USizeSort>, Sort>
 
 interface UArrayRegion<ArrayType, Sort : USort, USizeSort : USort> : UMemoryRegion<UArrayIndexLValue<ArrayType, Sort, USizeSort>, Sort> {
@@ -69,6 +71,7 @@ interface UArrayRegion<ArrayType, Sort : USort, USizeSort : USort> : UMemoryRegi
 internal class UArrayMemoryRegion<ArrayType, Sort : USort, USizeSort : USort>(
     private var allocatedArrays: UPersistentHashMap<UConcreteHeapAddress, UAllocatedArray<ArrayType, Sort, USizeSort>> = persistentHashMapOf(),
     private var inputArray: UInputArray<ArrayType, Sort, USizeSort>? = null,
+    private var nonAliasingArrays: UPersistentHashMap<UNonAliasingHeapAddress, UNonAliasingArray<ArrayType, Sort, USizeSort>> = persistentHashMapOf()
 ) : UArrayRegion<ArrayType, Sort, USizeSort> {
 
     private fun getAllocatedArray(
@@ -87,7 +90,24 @@ internal class UArrayMemoryRegion<ArrayType, Sort : USort, USizeSort : USort>(
         ref: UConcreteHeapAddress,
         updated: UAllocatedArray<ArrayType, Sort, USizeSort>,
         ownership: MutabilityOwnership,
-    ) = UArrayMemoryRegion(allocatedArrays.put(ref, updated, ownership), inputArray)
+    ) = UArrayMemoryRegion(allocatedArrays.put(ref, updated, ownership), inputArray, nonAliasingArrays)
+
+    private fun getNonAliasingArray(
+        arrayType: ArrayType,
+        sort: Sort,
+        id: UNonAliasingHeapAddress,
+    ): UNonAliasingArray<ArrayType, Sort, USizeSort> {
+        val (updatedArrays, collection) = nonAliasingArrays.getOrPut(id, sort.uctx.defaultOwnership) {
+            UNonAliasingArrayId<_, _, USizeSort>(arrayType, sort, id).emptyRegion()
+        }
+        nonAliasingArrays = updatedArrays
+        return collection
+    }
+    private fun updateNonAliasingArray(
+        ref: UNonAliasingHeapAddress,
+        updated: UNonAliasingArray<ArrayType, Sort, USizeSort>,
+        ownership: MutabilityOwnership,
+    ) = UArrayMemoryRegion(allocatedArrays, inputArray, nonAliasingArrays.put(ref, updated, ownership))
 
     private fun getInputArray(arrayType: ArrayType, sort: Sort): UInputArray<ArrayType, Sort, USizeSort> {
         if (inputArray == null)
@@ -96,13 +116,28 @@ internal class UArrayMemoryRegion<ArrayType, Sort : USort, USizeSort : USort>(
     }
 
     private fun updateInput(updated: UInputArray<ArrayType, Sort, USizeSort>) =
-        UArrayMemoryRegion(allocatedArrays, updated)
+        UArrayMemoryRegion(allocatedArrays, updated, nonAliasingArrays)
 
-    override fun read(key: UArrayIndexLValue<ArrayType, Sort, USizeSort>): UExpr<Sort> =
-        key.ref.mapWithStaticAsSymbolic(
-            concreteMapper = { concreteRef -> getAllocatedArray(key.arrayType, key.sort, concreteRef.address).read(key.index) },
+    override fun read(key: UArrayIndexLValue<ArrayType, Sort, USizeSort>): UExpr<Sort> {
+        val x = key.ref.mapWithStaticAsSymbolic(
+            concreteMapper = { concreteRef ->
+                getAllocatedArray(
+                    key.arrayType,
+                    key.sort,
+                    concreteRef.address
+                ).read(key.index)
+            },
+            nonAliasingMapper = { nonAliasingRef ->
+                getNonAliasingArray(
+                    key.arrayType,
+                    key.sort,
+                    nonAliasingRef.id
+                ).read(key.index)
+            },
             symbolicMapper = { symbolicRef -> getInputArray(key.arrayType, key.sort).read(symbolicRef to key.index) }
         )
+        return x
+    }
 
     override fun write(
         key: UArrayIndexLValue<ArrayType, Sort, USizeSort>,
@@ -117,6 +152,11 @@ internal class UArrayMemoryRegion<ArrayType, Sort : USort, USizeSort : USort>(
             val oldRegion = region.getAllocatedArray(key.arrayType, key.sort, concreteRef.address)
             val newRegion = oldRegion.write(key.index, value, innerGuard, ownership)
             region.updateAllocatedArray(concreteRef.address, newRegion, ownership)
+        },
+        blockOnNonAliasing = { region, (nonAliasingRef, innerGuard) ->
+            val oldRegion = region.getNonAliasingArray(key.arrayType, key.sort, nonAliasingRef.id)
+            val newRegion = oldRegion.write(key.index, value, innerGuard, ownership)
+            region.updateNonAliasingArray(nonAliasingRef.id, newRegion, ownership)
         },
         blockOnSymbolic = { region, (symbolicRef, innerGuard) ->
             val oldRegion = region.getInputArray(key.arrayType, key.sort)
@@ -149,11 +189,49 @@ internal class UArrayMemoryRegion<ArrayType, Sort : USort, USizeSort : USort>(
             val newDstCollection = dstCollection.copyRange(srcCollection, adapter, guard)
             region.updateAllocatedArray(dstConcrete.address, newDstCollection, ownership)
         },
-
+        blockOnConcrete0NonAliasing1 = { region, srcConcrete, dstNonAliasing, guard ->
+            val srcCollection = region.getAllocatedArray(type, elementSort, srcConcrete.address)
+            val dstCollection = region.getNonAliasingArray(type, elementSort, dstNonAliasing.id)
+            val adapter = USymbolicArrayAllocatedToNonAliasingCopyAdapter(
+                fromSrcIdx, fromDstIdx, toDstIdx, USizeExprKeyInfo()
+            )
+            val newDstCollection = dstCollection.copyRange(srcCollection, adapter, guard)
+            region.updateNonAliasingArray(dstNonAliasing.id, newDstCollection, ownership)
+        },
         blockOnConcrete0Symbolic1 = { region, srcConcrete, dstSymbolic, guard ->
             val srcCollection = region.getAllocatedArray(type, elementSort, srcConcrete.address)
             val dstCollection = region.getInputArray(type, elementSort)
             val adapter = USymbolicArrayAllocatedToInputCopyAdapter(
+                fromSrcIdx,
+                dstSymbolic to fromDstIdx,
+                dstSymbolic to toDstIdx,
+                USymbolicArrayIndexKeyInfo()
+            )
+            val newDstCollection = dstCollection.copyRange(srcCollection, adapter, guard)
+            region.updateInput(newDstCollection)
+        },
+        blockOnNonAliasing0Concrete1 = { region, srcNonAliasing, dstConcrete, guard ->
+            val srcCollection = region.getNonAliasingArray(type, elementSort, srcNonAliasing.id)
+            val dstCollection = region.getAllocatedArray(type, elementSort, dstConcrete.address)
+            val adapter = USymbolicArrayNonAliasingToAllocatedCopyAdapter(
+                fromSrcIdx, fromDstIdx, toDstIdx, USizeExprKeyInfo()
+            )
+            val newDstCollection = dstCollection.copyRange(srcCollection, adapter, guard)
+            region.updateAllocatedArray(dstConcrete.address, newDstCollection, ownership)
+        },
+        blockOnNonAliasing0NonAliasing1 = { region, srcNonAliasing, dstNonAliasing, guard ->
+            val srcCollection = region.getNonAliasingArray(type, elementSort, srcNonAliasing.id)
+            val dstCollection = region.getNonAliasingArray(type, elementSort, dstNonAliasing.id)
+            val adapter = USymbolicArrayNonAliasingToNonAliasingCopyAdapter(
+                fromSrcIdx, fromDstIdx, toDstIdx, USizeExprKeyInfo()
+            )
+            val newDstCollection = dstCollection.copyRange(srcCollection, adapter, guard)
+            region.updateNonAliasingArray(dstNonAliasing.id, newDstCollection, ownership)
+        },
+        blockOnNonAliasing0Symbolic1 = { region, srcNonAliasing, dstSymbolic, guard ->
+            val srcCollection = region.getNonAliasingArray(type, elementSort, srcNonAliasing.id)
+            val dstCollection = region.getInputArray(type, elementSort)
+            val adapter = USymbolicArrayNonAliasingToInputCopyAdapter(
                 fromSrcIdx,
                 dstSymbolic to fromDstIdx,
                 dstSymbolic to toDstIdx,
@@ -174,6 +252,18 @@ internal class UArrayMemoryRegion<ArrayType, Sort : USort, USizeSort : USort>(
             val newDstCollection = dstCollection.copyRange(srcCollection, adapter, guard)
             region.updateAllocatedArray(dstConcrete.address, newDstCollection, ownership)
         },
+        blockOnSymbolic0NonAliasing1 = { region, srcSymbolic, dstNonAliasing, guard ->
+            val srcCollection = region.getInputArray(type, elementSort)
+            val dstCollection = region.getNonAliasingArray(type, elementSort, dstNonAliasing.id)
+            val adapter = USymbolicArrayInputToNonAliasingCopyAdapter(
+                srcSymbolic to fromSrcIdx,
+                fromDstIdx,
+                toDstIdx,
+                USizeExprKeyInfo()
+            )
+            val newDstCollection = dstCollection.copyRange(srcCollection, adapter, guard)
+            region.updateNonAliasingArray(dstNonAliasing.id, newDstCollection, ownership)
+        },
         blockOnSymbolic0Symbolic1 = { region, srcSymbolic, dstSymbolic, guard ->
             val srcCollection = region.getInputArray(type, elementSort)
             val dstCollection = region.getInputArray(type, elementSort)
@@ -185,7 +275,7 @@ internal class UArrayMemoryRegion<ArrayType, Sort : USort, USizeSort : USort>(
             )
             val newDstCollection = dstCollection.copyRange(srcCollection, adapter, guard)
             region.updateInput(newDstCollection)
-        },
+        }
     )
 
     override fun initializeAllocatedArray(

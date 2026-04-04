@@ -133,6 +133,9 @@ data class USymbolicCollection<out CollectionId : USymbolicCollectionId<Key, Sor
                 blockOnConcrete = { newUpdates, (valueRef, valueGuard) ->
                     newUpdates.splitWrite(key, valueRef.asExpr(sort), valueGuard) { it is UConcreteHeapRef }
                 },
+                blockOnNonAliasing = { newUpdates, (valueRef, valueGuard) ->
+                    newUpdates.splitWrite(key, valueRef.asExpr(sort), valueGuard) { it is UConcreteHeapRef }
+                },
                 blockOnSymbolic = { newUpdates, (valueRef, valueGuard) ->
                     newUpdates.splitWrite(key, valueRef.asExpr(sort), valueGuard) { it is UConcreteHeapRef }
                 }
