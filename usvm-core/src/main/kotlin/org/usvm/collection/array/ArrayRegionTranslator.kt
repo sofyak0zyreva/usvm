@@ -64,7 +64,12 @@ class UArrayRegionDecoder<ArrayType, Sort : USort, USizeSort : USort>(
     override fun decodeLazyRegion(
         model: UModelEvaluator<*>,
         assertions: List<KExpr<KBoolSort>>
-    ) = inputRegionTranslator?.let { UArrayLazyModelRegion(regionId, model, it) }
+    ) = inputRegionTranslator?.let {
+        UArrayLazyModelRegion(regionId, model, it)
+    } ?: nonAliasingRegions.values.firstOrNull()?.let {
+        UNonAliasingArrayModelRegion(regionId, model, it)
+    }
+
 }
 
 private class UAllocatedArrayRegionTranslator<ArrayType, Sort : USort, USizeSort : USort>(
@@ -92,12 +97,15 @@ private class UAllocatedArrayRegionTranslator<ArrayType, Sort : USort, USizeSort
 private class UNonAliasingArrayRegionTranslator<ArrayType, Sort : USort, USizeSort : USort>(
     private val collectionId: UNonAliasingArrayId<ArrayType, Sort, USizeSort>,
     exprTranslator: UExprTranslator<*, USizeSort>
-): URegionTranslator<UNonAliasingArrayId<ArrayType, Sort, USizeSort>, UExpr<USizeSort>, Sort> {
+): URegionTranslator<UNonAliasingArrayId<ArrayType, Sort, USizeSort>, UExpr<USizeSort>, Sort>,
+    UCollectionDecoder<UExpr<USizeSort>, Sort>
+{
 
     private val initialValue = with(exprTranslator.ctx) {
-        val sort = mkArraySort(sizeSort, collectionId.sort)
-        val translatedDefaultValue = exprTranslator.translate(collectionId.defaultValue)
-        mkArrayConst(sort, translatedDefaultValue)
+//        val sort = mkArraySort(sizeSort, collectionId.sort)
+//        val translatedDefaultValue = exprTranslator.translate(collectionId.defaultValue)
+//        mkArrayConst(sort, translatedDefaultValue)
+        mkArraySort(sizeSort, collectionId.sort).mkConst(collectionId.toString())
     }
     private val visitorCache = IdentityHashMap<Any?, KExpr<KArraySort<USizeSort, Sort>>>()
     private val updatesTranslator = UAllocatedArrayUpdatesTranslator(exprTranslator, initialValue)
@@ -110,6 +118,8 @@ private class UNonAliasingArrayRegionTranslator<ArrayType, Sort : USort, USizeSo
         return updatesTranslator.visitSelect(translatedCollection, key)
     }
 
+    override fun decodeCollection(model: UModelEvaluator<*>): UReadOnlyMemoryRegion<UExpr<USizeSort>, Sort> =
+        model.evalAndCompleteArray1DMemoryRegion(initialValue.decl)
 }
 
 private class UInputArrayRegionTranslator<ArrayType, Sort : USort, USizeSort : USort>(
