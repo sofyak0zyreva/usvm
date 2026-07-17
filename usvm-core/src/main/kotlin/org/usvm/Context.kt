@@ -16,6 +16,8 @@ import org.usvm.collection.array.UAllocatedArray
 import org.usvm.collection.array.UAllocatedArrayReading
 import org.usvm.collection.array.UInputArray
 import org.usvm.collection.array.UInputArrayReading
+import org.usvm.collection.array.UNonAliasingArray
+import org.usvm.collection.array.UNonAliasingArrayReading
 import org.usvm.collection.array.length.UInputArrayLengthReading
 import org.usvm.collection.array.length.UInputArrayLengths
 import org.usvm.collection.field.UInputFieldReading
@@ -71,6 +73,8 @@ open class UContext<USizeSort : USort>(
     val sizeExprs by lazy { components.mkSizeExprProvider(this) }
     val statesForkProvider by lazy { components.mkStatesForkProvider() }
 
+    val runInAliasingMode: Boolean = false
+
     private var currentStateId = 0u
 
     /**
@@ -97,13 +101,11 @@ open class UContext<USizeSort : USort>(
     fun mkNullRef(): USymbolicHeapRef {
         return nullRef
     }
-
     val addressCounter = UAddressCounter()
 
     fun mkAddressCounter(): UAddressCounter {
         return addressCounter
     }
-
 
     /**
      * Disassembles [lhs] and [rhs], simplifies concrete refs, if it has any, and rewrites it in a DNF, except that the
@@ -210,6 +212,14 @@ open class UContext<USizeSort : USort>(
         index: UExpr<USizeSort>,
     ): UAllocatedArrayReading<ArrayType, Sort, USizeSort> = allocatedArrayReadingCache.createIfContextActive {
         UAllocatedArrayReading(this, region, index)
+    }.cast()
+
+    private val nonAliasingReadingCache = mkAstInterner<UNonAliasingArrayReading<*, out USort, USizeSort>>()
+    fun <ArrayType, Sort : USort> mkNonAliasingArrayReading(
+        region: UNonAliasingArray<ArrayType, Sort, USizeSort>,
+        index: UExpr<USizeSort>,
+    ): UNonAliasingArrayReading<ArrayType, Sort, USizeSort> = nonAliasingReadingCache.createIfContextActive {
+        UNonAliasingArrayReading(this, region, index)
     }.cast()
 
     private val inputArrayReadingCache = mkAstInterner<UInputArrayReading<*, out USort, USizeSort>>()
