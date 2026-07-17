@@ -58,6 +58,7 @@ internal class UFieldsMemoryRegion<Field, Sort : USort>(
 
     override fun read(key: UFieldLValue<Field, Sort>): UExpr<Sort> = key.ref.mapWithStaticAsSymbolic(
         concreteMapper = { concreteRef -> allocatedFields[concreteRef.address] ?: sort.sampleUValue() },
+        nonAliasingMapper = { symbolicRef -> getInputFields(key).read(symbolicRef) },
         symbolicMapper = { symbolicRef -> getInputFields(key).read(symbolicRef) }
     )
 
@@ -75,6 +76,11 @@ internal class UFieldsMemoryRegion<Field, Sort : USort>(
                 sort.sampleUValue()
             }
             region.updateAllocated(newRegion)
+        },
+        blockOnNonAliasing = { region, (symbolicRef, innerGuard) ->
+            val oldRegion = region.getInputFields(key)
+            val newRegion = oldRegion.write(symbolicRef, value, innerGuard, ownership)
+            region.updateInput(newRegion)
         },
         blockOnSymbolic = { region, (symbolicRef, innerGuard) ->
             val oldRegion = region.getInputFields(key)

@@ -56,6 +56,17 @@ object ObjectMapCollectionApi {
                 // Concrete map size is always correct
                 it
             },
+            nonAliasingMapper = { symbolicMapRef ->
+                val length = calcOnState { memory.read(UMapLengthLValue(symbolicMapRef, mapType, ctx.sizeSort)) }
+                val ctx = calcOnState { ctx }
+                with(ctx) {
+                    val boundConstraint = mkSizeGeExpr(length, mkSizeExpr(0))
+                    // Map size must be correct regardless of guard
+                    assert(boundConstraint)
+                        .logAssertFailure { "Constraint violation: SymbolicMap size correctness constraint" }
+                        ?: return null
+                }
+                symbolicMapRef},
             symbolicMapper = { symbolicMapRef ->
                 val length = calcOnState { memory.read(UMapLengthLValue(symbolicMapRef, mapType, ctx.sizeSort)) }
                 val ctx = calcOnState { ctx }

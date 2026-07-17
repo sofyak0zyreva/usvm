@@ -47,6 +47,18 @@ object ListCollectionApi {
                 // Concrete list size is always correct
                 it
             },
+            nonAliasingMapper = { symbolicListRef ->
+                val length = calcOnState { memory.readArrayLength(symbolicListRef, listType, ctx.sizeSort) }
+                val ctx = calcOnState { ctx }
+                with(ctx) {
+                    val boundConstraint = mkSizeGeExpr(length, mkSizeExpr(0))
+                    // List size must be correct regardless of guard
+                    assert(boundConstraint)
+                        .logAssertFailure { "Constraint violation: SymbolicList size correctness constraint" }
+                        ?: return null
+                }
+                symbolicListRef
+            },
             symbolicMapper = { symbolicListRef ->
                 val length = calcOnState { memory.readArrayLength(symbolicListRef, listType, ctx.sizeSort) }
                 val ctx = calcOnState { ctx }

@@ -128,7 +128,9 @@ internal class USetMemoryRegion<SetType, ElementSort : USort, Reg : Region<Reg>>
     override fun read(key: USetEntryLValue<SetType, ElementSort, Reg>): UExpr<UBoolSort> =
         key.setRef.mapWithStaticAsSymbolic(
             { concreteRef -> allocatedSetElements(concreteRef.address).read(key.setElement) },
-            { symbolicRef -> inputSetElements().read(symbolicRef to key.setElement) }
+            { symbolicRef -> inputSetElements().read(symbolicRef to key.setElement) },
+            // all these cases needs serious rewrites maybe (copy-paste from above)
+            {symbolicRef -> inputSetElements().read(symbolicRef to key.setElement)}
         )
     override fun write(
         key: USetEntryLValue<SetType, ElementSort, Reg>,
@@ -145,7 +147,13 @@ internal class USetMemoryRegion<SetType, ElementSort : USort, Reg : Region<Reg>>
                 .write(key.setElement, value, guard, ownership)
             region.updateAllocatedSet(id, newCollection, ownership)
         },
+        // all these cases needs serious rewrites maybe (copy-paste from above)
         blockOnSymbolic = { region, (symbolicRef, guard) ->
+            val newCollection = region.inputSetElements()
+                .write(symbolicRef to key.setElement, value, guard, ownership)
+            region.updateInputSet(newCollection)
+        },
+        blockOnNonAliasing = { region, (symbolicRef, guard) ->
             val newCollection = region.inputSetElements()
                 .write(symbolicRef to key.setElement, value, guard, ownership)
             region.updateInputSet(newCollection)
@@ -183,6 +191,8 @@ internal class USetMemoryRegion<SetType, ElementSort : USort, Reg : Region<Reg>>
             val updated = dstCollection.copyRange(srcCollection, adapter, guard)
             region.updateInputSet(updated)
         },
+        // all these cases needs serious rewrites maybe (copy-paste from above)
+
         blockOnSymbolic0Concrete1 = { region, srcSymbolic, dstConcrete, guard ->
             val srcCollection = region.inputSetElements()
 
@@ -201,6 +211,41 @@ internal class USetMemoryRegion<SetType, ElementSort : USort, Reg : Region<Reg>>
             val updated = dstCollection.copyRange(srcCollection, adapter, guard)
             region.updateInputSet(updated)
         },
+        blockOnNonAliasing0NonAliasing1 = {region, srcSymbolic, dstSymbolic, guard ->
+            val srcCollection = region.inputSetElements()
+            val dstCollection = region.inputSetElements()
+
+            val adapter = UInputToInputSymbolicSetUnionAdapter(srcSymbolic, dstSymbolic, srcCollection)
+            val updated = dstCollection.copyRange(srcCollection, adapter, guard)
+            region.updateInputSet(updated)},
+        blockOnSymbolic0NonAliasing1 = {region, srcSymbolic, dstSymbolic, guard ->
+            val srcCollection = region.inputSetElements()
+            val dstCollection = region.inputSetElements()
+
+            val adapter = UInputToInputSymbolicSetUnionAdapter(srcSymbolic, dstSymbolic, srcCollection)
+            val updated = dstCollection.copyRange(srcCollection, adapter, guard)
+            region.updateInputSet(updated)},
+        blockOnNonAliasing0Symbolic1 = {region, srcSymbolic, dstSymbolic, guard ->
+            val srcCollection = region.inputSetElements()
+            val dstCollection = region.inputSetElements()
+
+            val adapter = UInputToInputSymbolicSetUnionAdapter(srcSymbolic, dstSymbolic, srcCollection)
+            val updated = dstCollection.copyRange(srcCollection, adapter, guard)
+            region.updateInputSet(updated)},
+        blockOnNonAliasing0Concrete1 = {region, srcSymbolic, dstSymbolic, guard ->
+            val srcCollection = region.inputSetElements()
+            val dstCollection = region.inputSetElements()
+
+            val adapter = UInputToInputSymbolicSetUnionAdapter(srcSymbolic, dstSymbolic, srcCollection)
+            val updated = dstCollection.copyRange(srcCollection, adapter, guard)
+            region.updateInputSet(updated)},
+        blockOnConcrete0NonAliasing1 = {region, srcSymbolic, dstSymbolic, guard ->
+            val srcCollection = region.inputSetElements()
+            val dstCollection = region.inputSetElements()
+
+            val adapter = UInputToInputSymbolicSetUnionAdapter(srcSymbolic, dstSymbolic, srcCollection)
+            val updated = dstCollection.copyRange(srcCollection, adapter, guard)
+            region.updateInputSet(updated)}
     )
 
     override fun setEntries(ref: UHeapRef): UPrimitiveSetEntries<SetType, ElementSort, Reg> =
@@ -221,7 +266,20 @@ internal class USetMemoryRegion<SetType, ElementSort : USort, Reg : Region<Reg>>
 
                 entries
             },
+            // all these cases needs serious rewrites maybe (copy-paste from above)
+
             blockOnSymbolic = { entries, (symbolicRef, _) ->
+                val setElements = inputSetElements()
+                val elements = USymbolicSetElementsCollector.collect(setElements.updates)
+                elements.elements.forEach { elem ->
+                    entries.add(USetEntryLValue(elementSort, symbolicRef, elem.second, setType, elementInfo))
+                }
+
+                entries.markAsInput()
+
+                entries
+            },
+            blockOnNonAliasing = { entries, (symbolicRef, _) ->
                 val setElements = inputSetElements()
                 val elements = USymbolicSetElementsCollector.collect(setElements.updates)
                 elements.elements.forEach { elem ->
