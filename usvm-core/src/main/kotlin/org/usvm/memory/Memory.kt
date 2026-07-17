@@ -1,6 +1,7 @@
 package org.usvm.memory
 
 import org.usvm.INITIAL_CONCRETE_ADDRESS
+import org.usvm.INITIAL_NA_ADDRESS
 import org.usvm.INITIAL_STATIC_ADDRESS
 import org.usvm.UBoolExpr
 import org.usvm.UConcreteHeapAddress
@@ -11,6 +12,7 @@ import org.usvm.UHeapRef
 import org.usvm.UIndexedMocker
 import org.usvm.UMockEvaluator
 import org.usvm.UMocker
+import org.usvm.UNonAliasingHeapAddress
 import org.usvm.USort
 import org.usvm.collections.immutable.getOrPut
 import org.usvm.collections.immutable.implementations.immutableMap.UPersistentHashMap
@@ -51,6 +53,8 @@ interface ULValue<Key, Sort : USort> {
 class UAddressCounter {
     private var lastAllocatedAddress: Int = INITIAL_CONCRETE_ADDRESS
     private var lastStaticAddress: Int = INITIAL_STATIC_ADDRESS
+    private var lastNAAddress: Int = INITIAL_NA_ADDRESS
+    fun freshNAAddress(): UNonAliasingHeapAddress = lastNAAddress++
 
     /**
      * Returns the [lastAllocatedAddress] and increments it.
@@ -71,7 +75,8 @@ interface UReadOnlyMemory<Type> {
 
     private fun <Key, Sort : USort> read(regionId: UMemoryRegionId<Key, Sort>, key: Key): UExpr<Sort> {
         val region = getRegion(regionId)
-        return region.read(key)
+        val x = region.read(key)
+        return x
     }
 
     fun <Key, Sort : USort> read(lvalue: ULValue<Key, Sort>) = read(lvalue.memoryRegionId, lvalue.key)

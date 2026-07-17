@@ -104,7 +104,8 @@ open class UExprTranslator<Type, USizeSort : USort>(
 
     // ??
     override fun transform(expr: UNonAliasingHeapRef): UExpr<UAddressSort> {
-        return ctx.mkUninterpretedSortValue(ctx.addressSort, expr.id)
+        val registerConst = expr.sort.mkConst("r${expr.id}_${expr.sort}")
+        return registerConst
     }
 
     private val _declToIsExpr = mutableMapOf<KDecl<UBoolSort>, UIsExpr<Type>>()

@@ -21,23 +21,10 @@ import io.ksmt.sort.KSort
 import io.ksmt.sort.KSortVisitor
 import io.ksmt.sort.KUninterpretedSort
 import io.ksmt.utils.asExpr
-import org.usvm.UAddressSort
-import org.usvm.UBoolExpr
-import org.usvm.UBvSort
-import org.usvm.UCollectionReading
-import org.usvm.UConcreteHeapRef
-import org.usvm.UContext
-import org.usvm.UExpr
-import org.usvm.UIndexedMethodReturnValue
-import org.usvm.UIsSubtypeExpr
-import org.usvm.UIsSupertypeExpr
-import org.usvm.UNullRef
-import org.usvm.URegisterReading
-import org.usvm.USort
-import org.usvm.UTrackedSymbol
-import org.usvm.UTransformer
+import org.usvm.*
 import org.usvm.collection.array.UAllocatedArrayReading
 import org.usvm.collection.array.UInputArrayReading
+import org.usvm.collection.array.UNonAliasingArrayReading
 import org.usvm.collection.array.length.UInputArrayLengthReading
 import org.usvm.collection.field.UInputFieldReading
 import org.usvm.collection.map.length.UInputMapLengthReading
@@ -52,13 +39,7 @@ import org.usvm.collection.set.ref.UAllocatedRefSetWithInputElementsReading
 import org.usvm.collection.set.ref.UInputRefSetWithAllocatedElementsReading
 import org.usvm.collection.set.ref.UInputRefSetWithInputElementsReading
 import org.usvm.constraints.UPathConstraints
-import org.usvm.isAllocatedConcreteHeapRef
-import org.usvm.isFalse
-import org.usvm.isStaticHeapRef
-import org.usvm.mkSizeExpr
-import org.usvm.mkSizeLeExpr
 import org.usvm.regions.Region
-import org.usvm.uctx
 
 open class USoftConstraintsProvider<Type, USizeSort : USort>(
     override val ctx: UContext<USizeSort>
@@ -122,6 +103,8 @@ open class USoftConstraintsProvider<Type, USizeSort : USort>(
         expr: UConcreteHeapRef,
     ): UExpr<UAddressSort> = expr
 
+    override fun transform(expr: UNonAliasingHeapRef): UExpr<UAddressSort> = transformExpr(expr)
+
     override fun transform(expr: UNullRef): UExpr<UAddressSort> = expr
 
     override fun transform(expr: UIsSubtypeExpr<Type>): UBoolExpr = expr
@@ -130,6 +113,9 @@ open class USoftConstraintsProvider<Type, USizeSort : USort>(
 
     override fun <Field, Sort : USort> transform(expr: UInputFieldReading<Field, Sort>): UExpr<Sort> =
         readingWithSingleArgumentTransform(expr, expr.address)
+
+    override fun <Sort : USort> transform(expr: UNonAliasingArrayReading<Type, Sort, USizeSort>): UExpr<Sort> =
+        readingWithSingleArgumentTransform(expr, expr.index)
 
     override fun <Sort : USort> transform(expr: UAllocatedArrayReading<Type, Sort, USizeSort>): UExpr<Sort> =
         readingWithSingleArgumentTransform(expr, expr.index)

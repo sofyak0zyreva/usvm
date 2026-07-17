@@ -65,7 +65,8 @@ open class UComposer<Type, USizeSort : USort>(
         key: Key,
     ): UExpr<Sort> = with(expr) {
         val mappedKey = collection.collectionId.keyInfo().mapKey(key, this@UComposer)
-        return collection.read(mappedKey, this@UComposer)
+        val x = collection.read(mappedKey, this@UComposer)
+        return x
     }
 
     override fun transform(expr: UInputArrayLengthReading<Type, USizeSort>): UExpr<USizeSort> =
@@ -80,9 +81,8 @@ open class UComposer<Type, USizeSort : USort>(
     override fun <Field, Sort : USort> transform(expr: UInputFieldReading<Field, Sort>): UExpr<Sort> =
         transformCollectionReading(expr, expr.address)
 
-    override fun <Sort : USort> transform(expr: UNonAliasingArrayReading<Type, Sort, USizeSort>): UExpr<Sort> {
-        TODO("Not yet implemented")
-    }
+    override fun <Sort : USort> transform(expr: UNonAliasingArrayReading<Type, Sort, USizeSort>): UExpr<Sort> =
+        transformCollectionReading(expr, expr.index)
 
     override fun <KeySort : USort, Sort : USort, Reg : Region<Reg>> transform(
         expr: UAllocatedMapReading<Type, KeySort, Sort, Reg>
@@ -125,9 +125,9 @@ open class UComposer<Type, USizeSort : USort>(
         transformCollectionReading(expr, expr.setRef to expr.elementRef)
 
     override fun transform(expr: UConcreteHeapRef): UExpr<UAddressSort> = expr
-    override fun transform(expr: UNonAliasingHeapRef): UExpr<UAddressSort> {
-        TODO("Not yet implemented")
-    }
+    //?
+    override fun transform(expr: UNonAliasingHeapRef): UExpr<UAddressSort> =
+        with(expr) { memory.stack.readRegister(id, sort) }
 
     override fun transform(expr: UNullRef): UExpr<UAddressSort> = memory.nullRef()
 }

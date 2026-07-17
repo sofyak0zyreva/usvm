@@ -14,7 +14,6 @@ import org.usvm.USort
 import org.usvm.USymbolicHeapRef
 import org.usvm.castToNAHeapRef
 import org.usvm.isFalse
-import org.usvm.isIdPositive
 import org.usvm.isStaticHeapRef
 import org.usvm.uctx
 
@@ -128,12 +127,8 @@ inline fun <R> foldHeapRef(
         } else {
             initial
         }
-//        ref is UNASymbolicHeapRef && isIdPositive(ref) -> blockOnNonAliasing(initial, castToNAHeapRef(ref) with initialGuard)
-        ref is USymbolicHeapRef ->
-//            if (isIdPositive(ref))
-//                blockOnNonAliasing(initial, castToNAHeapRef(ref) with initialGuard)
-//            else
-                blockOnSymbolic(initial, ref with initialGuard)
+        ref is UNASymbolicHeapRef && !ref.uctx.runInAliasingMode -> blockOnNonAliasing(initial, castToNAHeapRef(ref) with initialGuard)
+        ref is USymbolicHeapRef -> blockOnSymbolic(initial, ref with initialGuard)
         ref is UIteExpr<UAddressSort> -> {
             val (concreteHeapRefs, symbolicHeapRefs) = splitUHeapRef(
                 ref,
@@ -281,13 +276,9 @@ internal inline fun <Sort : USort> UHeapRef.map(
         require(!ignoreNullRefs) { "Got nullRef on the top!" }
         symbolicMapper(this)
     }
-//    this is UNASymbolicHeapRef && isIdPositive(this) -> nonAliasingMapper(castToNAHeapRef(this))
+    this is UNASymbolicHeapRef && !this.uctx.runInAliasingMode -> nonAliasingMapper(castToNAHeapRef(this))
 
-    this is USymbolicHeapRef  ->
-//        if (isIdPositive(this))
-//            nonAliasingMapper(castToNAHeapRef(this))
-//        else
-            symbolicMapper(this)
+    this is USymbolicHeapRef  -> symbolicMapper(this)
     this is UIteExpr<UAddressSort> -> {
         /**
          * This code simulates DFS on a binary tree without an explicit recursion. Pair.second represents the first
@@ -304,7 +295,7 @@ internal inline fun <Sort : USort> UHeapRef.map(
             when {
                 isStaticHeapRef(ref) -> completelyMapped += staticMapper(ref)
                 ref is UConcreteHeapRef -> completelyMapped += concreteMapper(ref)
-                ref is UNonAliasingHeapRef -> completelyMapped += nonAliasingMapper(ref)
+                ref is UNASymbolicHeapRef && !ref.uctx.runInAliasingMode -> completelyMapped += nonAliasingMapper(castToNAHeapRef(ref))
                 ref is USymbolicHeapRef -> completelyMapped += symbolicMapper(ref)
                 ref is UIteExpr<UAddressSort> -> {
 

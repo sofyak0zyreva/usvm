@@ -157,6 +157,11 @@ private inline fun <Type, R : USort> UState<Type, *, *, *, *, *>.mapTypeStream(
         val types = memory.types.getTypeStream(concreteRef)
         operation(concreteRef, types)
     },
+    nonAliasingMapper = { nonAliasingRef ->
+        val types = memory.types.getTypeStream(nonAliasingRef)
+        operation(nonAliasingRef, types)
+
+    },
     symbolicMapper = { symbolicRef ->
         if (symbolicRef is UNullRef) {
             onNull()
