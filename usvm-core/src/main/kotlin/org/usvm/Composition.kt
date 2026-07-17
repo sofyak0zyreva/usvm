@@ -126,8 +126,15 @@ open class UComposer<Type, USizeSort : USort>(
 
     override fun transform(expr: UConcreteHeapRef): UExpr<UAddressSort> = expr
     //?
-    override fun transform(expr: UNonAliasingHeapRef): UExpr<UAddressSort> =
-        with(expr) { memory.stack.readRegister(id, sort) }
+    override fun transform(expr: UNonAliasingHeapRef): UExpr<UAddressSort> {
+        return when (val ref = expr.symbol) {
+            is UIndexedMethodReturnValue<*, UAddressSort> -> transform(ref)
+            is UTrackedSymbol<UAddressSort> -> transform(ref)
+            else -> with(expr) { memory.stack.readRegister(id, sort) }
+        }
+    }
+//    =
+//        with(expr) { memory.stack.readRegister(id, sort) }
 
     override fun transform(expr: UNullRef): UExpr<UAddressSort> = memory.nullRef()
 }

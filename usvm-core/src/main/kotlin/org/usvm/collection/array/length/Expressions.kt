@@ -17,6 +17,7 @@ class UInputArrayLengthReading<ArrayType, USizeSort : USort> internal constructo
     ctx: UContext<USizeSort>,
     collection: UInputArrayLengths<ArrayType, USizeSort>,
     val address: UHeapRef,
+    id: Int = -1
 ) : UCollectionReading<UInputArrayLengthId<ArrayType, USizeSort>, UHeapRef, USizeSort>(ctx, collection) {
     init {
         require(address !is UNullRef)
