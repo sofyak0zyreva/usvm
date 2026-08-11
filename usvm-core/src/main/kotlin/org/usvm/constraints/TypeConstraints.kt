@@ -415,6 +415,20 @@ class UTypeConstraints<Type>(
                     concreteRef.ctx.falseExpr
                 }
             },
+            nonAliasingMapper = { nonAliasingRef ->
+                // need to do something about nullability
+//                if (nonAliasingRef == castToNAHeapRef(nonAliasingRef.uctx.nullRef)){
+//                    return nonAliasingRef.ctx.trueExpr
+//                }
+                val typeRegion = getTypeRegion(nonAliasingRef)
+
+                if (typeRegion.addSupertype(supertype).isEmpty) {
+                    nonAliasingRef.uctx.mkEq(nonAliasingRef, nonAliasingRef.uctx.nullRef)
+                } else {
+                    nonAliasingRef.uctx.mkIsSubtypeExpr(nonAliasingRef, supertype)
+                }
+
+            },
             symbolicMapper = mapper@{ symbolicRef ->
                 if (symbolicRef == symbolicRef.uctx.nullRef) {
                     // accordingly to the [UIsSubtypeExpr] specification, [nullRef] always satisfies the [type]
@@ -441,6 +455,20 @@ class UTypeConstraints<Type>(
                     concreteRef.ctx.falseExpr
                 }
             },
+            nonAliasingMapper = { nonAliasingRef ->
+//                if (nonAliasingRef == castToNAHeapRef(nonAliasingRef.uctx.nullRef)) {
+//                    // accordingly to the [UIsSupertypeExpr] specification, on [nullRef] return false
+//                    return nonAliasingRef.ctx.falseExpr
+//                }
+                // need to do something about nullability
+                val typeRegion = getTypeRegion(nonAliasingRef)
+
+                if (typeRegion.addSubtype(subtype).isEmpty) {
+                    nonAliasingRef.ctx.falseExpr
+                } else {
+                    nonAliasingRef.uctx.mkIsSupertypeExpr(nonAliasingRef, subtype)
+                }
+                },
             symbolicMapper = mapper@{ symbolicRef ->
                 if (symbolicRef == symbolicRef.uctx.nullRef) {
                     // accordingly to the [UIsSupertypeExpr] specification, on [nullRef] return false
