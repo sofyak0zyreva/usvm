@@ -35,6 +35,7 @@ class UArrayRegionDecoder<ArrayType, Sort : USort, USizeSort : USort>(
 
     private val nonAliasingRegions =
         mutableMapOf<UNonAliasingHeapAddress, UNonAliasingArrayRegionTranslator<ArrayType, Sort, USizeSort>>()
+//    private var nonAliasingRegionTranslator: UNonAliasingArrayRegionTranslator<ArrayType, Sort, USizeSort>? = null
 
     private var inputRegionTranslator: UInputArrayRegionTranslator<ArrayType, Sort, USizeSort>? = null
 
@@ -47,10 +48,17 @@ class UArrayRegionDecoder<ArrayType, Sort : USort, USizeSort : USort>(
 
     fun nonAliasingArrayRegionTranslator(
         collectionId: UNonAliasingArrayId<ArrayType, Sort, USizeSort>
-    ): URegionTranslator<UNonAliasingArrayId<ArrayType, Sort, USizeSort>, UExpr<USizeSort>, Sort> =
+    ): URegionTranslator<UNonAliasingArrayId<ArrayType, Sort, USizeSort>, UExpr<USizeSort>, Sort>
+    =
         nonAliasingRegions.getOrPut(collectionId.id) {
             UNonAliasingArrayRegionTranslator(collectionId, exprTranslator)
         }
+//    {
+//        if (nonAliasingRegionTranslator == null) {
+//            nonAliasingRegionTranslator = UNonAliasingArrayRegionTranslator(collectionId, exprTranslator)
+//        }
+//        return nonAliasingRegionTranslator!!
+//    }
 
     fun inputArrayRegionTranslator(
         collectionId: UInputArrayId<ArrayType, Sort, USizeSort>
@@ -66,9 +74,12 @@ class UArrayRegionDecoder<ArrayType, Sort : USort, USizeSort : USort>(
         assertions: List<KExpr<KBoolSort>>
     ) = inputRegionTranslator?.let {
         UArrayLazyModelRegion(regionId, model, it)
-    } ?: nonAliasingRegions.values.firstOrNull()?.let {
-        UNonAliasingArrayModelRegion(regionId, model, it)
     }
+        ?: if (nonAliasingRegions.isNotEmpty()) { UNonAliasingArrayModelRegion(regionId, model, nonAliasingRegions) }
+    else null
+//        ?: nonAliasingRegionTranslator?.let {
+//            UNonAliasingArrayModelRegion(regionId, model, it)
+//        }
 
 }
 
