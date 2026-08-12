@@ -7,7 +7,9 @@ import io.ksmt.sort.KBoolSort
 import io.ksmt.utils.mkConst
 import org.usvm.UAddressSort
 import org.usvm.UHeapRef
+import org.usvm.UNonAliasingHeapAddress
 import org.usvm.USort
+import org.usvm.collection.array.UNonAliasingArrayModelRegion
 import org.usvm.memory.URangedUpdateNode
 import org.usvm.memory.UReadOnlyMemoryRegion
 import org.usvm.memory.USymbolicCollection
@@ -26,6 +28,9 @@ class UFieldRegionDecoder<Field, Sort : USort>(
 ) : URegionDecoder<UFieldLValue<Field, Sort>, Sort> {
     private var inputRegionTranslator: UInputFieldRegionTranslator<Field, Sort>? = null
 
+    private val nonAliasingRegions =
+        mutableMapOf<UNonAliasingHeapAddress, UNonAliasingFieldRegionTranslator<Field, Sort>>()
+
     fun inputFieldRegionTranslator(
         collectionId: UInputFieldId<Field, Sort>
     ): URegionTranslator<UInputFieldId<Field, Sort>, UHeapRef, Sort> {
@@ -35,10 +40,21 @@ class UFieldRegionDecoder<Field, Sort : USort>(
         return inputRegionTranslator!!
     }
 
+    fun nonAliasingFieldRegionTranslator(
+        collectionId: UNonAliasingFieldId<Field, Sort>
+    ): URegionTranslator<UNonAliasingFieldId<Field, Sort>, UHeapRef, Sort> =
+        nonAliasingRegions.getOrPut(collectionId.id) {
+            UNonAliasingFieldRegionTranslator(collectionId, exprTranslator)
+        }
+
     override fun decodeLazyRegion(
         model: UModelEvaluator<*>,
         assertions: List<KExpr<KBoolSort>>
-    ) = inputRegionTranslator?.let { UFieldsLazyModelRegion(regionId, model, it) }
+    ) = inputRegionTranslator?.let {
+        UFieldsLazyModelRegion(regionId, model, it)
+    } ?: nonAliasingRegions.values.firstOrNull()?.let {
+        UNonAliasingFieldsModelRegion(regionId, model, it)
+    }
 }
 
 private class UInputFieldRegionTranslator<Field, Sort : USort>(
@@ -54,6 +70,32 @@ private class UInputFieldRegionTranslator<Field, Sort : USort>(
 
     override fun translateReading(
         region: USymbolicCollection<UInputFieldId<Field, Sort>, UHeapRef, Sort>,
+        key: UHeapRef
+    ): KExpr<Sort> {
+        val translatedCollection = region.updates.accept(updatesTranslator, visitorCache)
+        return updatesTranslator.visitSelect(translatedCollection, key)
+    }
+
+    override fun decodeCollection(
+        model: UModelEvaluator<*>
+    ): UReadOnlyMemoryRegion<UHeapRef, Sort> =
+        model.evalAndCompleteArray1DMemoryRegion(initialValue.decl)
+}
+
+private class UNonAliasingFieldRegionTranslator<Field, Sort : USort>(
+    private val collectionId: UNonAliasingFieldId<Field, Sort>,
+    exprTranslator: UExprTranslator<*, *>
+) : URegionTranslator<UNonAliasingFieldId<Field, Sort>, UHeapRef, Sort>, UCollectionDecoder<UHeapRef, Sort> {
+
+    private val initialValue = with(collectionId.sort.uctx) {
+        mkArraySort(addressSort, collectionId.sort).mkConst(collectionId.toString())
+    }
+
+    private val visitorCache = IdentityHashMap<Any?, KExpr<KArraySort<UAddressSort, Sort>>>()
+    private val updatesTranslator = UInputFieldUpdateTranslator(exprTranslator, initialValue)
+
+    override fun translateReading(
+        region: USymbolicCollection<UNonAliasingFieldId<Field, Sort>, UHeapRef, Sort>,
         key: UHeapRef
     ): KExpr<Sort> {
         val translatedCollection = region.updates.accept(updatesTranslator, visitorCache)
