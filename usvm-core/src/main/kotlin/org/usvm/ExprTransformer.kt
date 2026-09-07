@@ -7,6 +7,7 @@ import org.usvm.collection.array.UInputArrayReading
 import org.usvm.collection.array.UNonAliasingArrayReading
 import org.usvm.collection.array.length.UInputArrayLengthReading
 import org.usvm.collection.field.UInputFieldReading
+import org.usvm.collection.field.UNonAliasingFieldReading
 import org.usvm.collection.map.length.UInputMapLengthReading
 import org.usvm.collection.map.primitive.UAllocatedMapReading
 import org.usvm.collection.map.primitive.UInputMapReading
@@ -24,6 +25,8 @@ interface UTransformer<Type, USizeSort : USort> : KTransformer {
     fun <Sort : USort> transform(expr: URegisterReading<Sort>): UExpr<Sort>
 
     fun <Field, Sort : USort> transform(expr: UInputFieldReading<Field, Sort>): UExpr<Sort>
+
+    fun <Field, Sort : USort> transform(expr: UNonAliasingFieldReading<Field, Sort>): UExpr<Sort>
 
     fun <Sort : USort> transform(expr: UAllocatedArrayReading<Type, Sort, USizeSort>): UExpr<Sort>
 

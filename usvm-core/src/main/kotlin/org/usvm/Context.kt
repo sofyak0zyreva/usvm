@@ -22,6 +22,8 @@ import org.usvm.collection.array.length.UInputArrayLengthReading
 import org.usvm.collection.array.length.UInputArrayLengths
 import org.usvm.collection.field.UInputFieldReading
 import org.usvm.collection.field.UInputFields
+import org.usvm.collection.field.UNonAliasingFieldReading
+import org.usvm.collection.field.UNonAliasingFields
 import org.usvm.collection.map.length.UInputMapLengthCollection
 import org.usvm.collection.map.length.UInputMapLengthReading
 import org.usvm.collection.map.primitive.UAllocatedMap
@@ -203,6 +205,15 @@ open class UContext<USizeSort : USort>(
         address: UHeapRef,
     ): UInputFieldReading<Field, Sort> = inputFieldReadingCache.createIfContextActive {
         UInputFieldReading(this, region, address)
+    }.cast()
+
+    private val nonAliasingFieldReadingCache = mkAstInterner<UNonAliasingFieldReading<*, out USort>>()
+
+    fun <Field, Sort : USort> mkNonAliasingFieldReading(
+        region: UNonAliasingFields<Field, Sort>,
+        address: UHeapRef,
+    ): UNonAliasingFieldReading<Field, Sort> = nonAliasingFieldReadingCache.createIfContextActive {
+        UNonAliasingFieldReading(this, region, address)
     }.cast()
 
     private val allocatedArrayReadingCache = mkAstInterner<UAllocatedArrayReading<*, out USort, USizeSort>>()

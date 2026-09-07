@@ -36,6 +36,7 @@ import org.usvm.collection.array.length.USymbolicArrayLengthId
 import org.usvm.collection.field.UFieldRegionDecoder
 import org.usvm.collection.field.UFieldsRegionId
 import org.usvm.collection.field.UInputFieldReading
+import org.usvm.collection.field.UNonAliasingFieldReading
 import org.usvm.collection.field.USymbolicFieldId
 import org.usvm.collection.map.length.UInputMapLengthReading
 import org.usvm.collection.map.length.UMapLengthRegionDecoder
@@ -102,10 +103,26 @@ open class UExprTranslator<Type, USizeSort : USort>(
         return ctx.mkUninterpretedSortValue(ctx.addressSort, expr.address)
     }
 
-    // ??
+
     override fun transform(expr: UNonAliasingHeapRef): UExpr<UAddressSort> {
-        val registerConst = expr.sort.mkConst("r${expr.id}_${expr.sort}")
-        return registerConst
+        return when (val ref = expr.symbol) {
+            is UNullRef -> transform(ref)
+            is UIndexedMethodReturnValue<*, UAddressSort> -> transform(ref)
+            is UTrackedSymbol<UAddressSort> -> transform(ref)
+            is UNonAliasingFieldReading<*, *> -> {
+                val casted = ref.uncheckedCast<Any?, UNonAliasingFieldReading<*, UAddressSort>>()
+                transform(casted)
+            }
+            is UNonAliasingArrayReading<*, *, *> -> {
+                val casted = ref.uncheckedCast<Any?, UNonAliasingArrayReading<Type, UAddressSort, USizeSort>>()
+                transform(casted)
+            }
+            else -> {
+                expr.sort.mkConst("r${expr.id}_${expr.sort}")
+            }
+        }
+
+
     }
 
     private val _declToIsExpr = mutableMapOf<KDecl<UBoolSort>, UIsExpr<Type>>()
@@ -154,6 +171,13 @@ open class UExprTranslator<Type, USizeSort : USort>(
         transformExprAfterTransformed(expr, expr.address) { address ->
             val translator = fieldsRegionDecoder(expr.collection.collectionId)
                 .inputFieldRegionTranslator(expr.collection.collectionId)
+            translator.translateReading(expr.collection, address)
+        }
+
+    override fun <Field, Sort : USort> transform(expr: UNonAliasingFieldReading<Field, Sort>): KExpr<Sort> =
+        transformExprAfterTransformed(expr, expr.address) { address ->
+            val translator = fieldsRegionDecoder(expr.collection.collectionId)
+                .nonAliasingFieldRegionTranslator(expr.collection.collectionId)
             translator.translateReading(expr.collection, address)
         }
 

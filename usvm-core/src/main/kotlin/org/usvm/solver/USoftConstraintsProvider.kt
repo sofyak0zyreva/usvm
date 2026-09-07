@@ -27,6 +27,7 @@ import org.usvm.collection.array.UInputArrayReading
 import org.usvm.collection.array.UNonAliasingArrayReading
 import org.usvm.collection.array.length.UInputArrayLengthReading
 import org.usvm.collection.field.UInputFieldReading
+import org.usvm.collection.field.UNonAliasingFieldReading
 import org.usvm.collection.map.length.UInputMapLengthReading
 import org.usvm.collection.map.primitive.UAllocatedMapReading
 import org.usvm.collection.map.primitive.UInputMapReading
@@ -112,6 +113,9 @@ open class USoftConstraintsProvider<Type, USizeSort : USort>(
     override fun transform(expr: UIsSupertypeExpr<Type>): UBoolExpr = expr
 
     override fun <Field, Sort : USort> transform(expr: UInputFieldReading<Field, Sort>): UExpr<Sort> =
+        readingWithSingleArgumentTransform(expr, expr.address)
+
+    override fun <Field, Sort : USort> transform(expr: UNonAliasingFieldReading<Field, Sort>): UExpr<Sort> =
         readingWithSingleArgumentTransform(expr, expr.address)
 
     override fun <Sort : USort> transform(expr: UNonAliasingArrayReading<Type, Sort, USizeSort>): UExpr<Sort> =
