@@ -54,7 +54,7 @@ class UAddressCounter {
     private var lastAllocatedAddress: Int = INITIAL_CONCRETE_ADDRESS
     private var lastStaticAddress: Int = INITIAL_STATIC_ADDRESS
     private var lastNAAddress: Int = INITIAL_NA_ADDRESS
-    fun freshNAAddress(): UNonAliasingHeapAddress = lastNAAddress++
+    fun freshNAAddress(): UNonAliasingHeapAddress = lastNAAddress--
 
     /**
      * Returns the [lastAllocatedAddress] and increments it.
