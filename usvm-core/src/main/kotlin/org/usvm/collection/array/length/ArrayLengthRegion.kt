@@ -6,6 +6,7 @@ import org.usvm.UExpr
 import org.usvm.UHeapRef
 import org.usvm.UNonAliasingHeapAddress
 import org.usvm.USort
+import org.usvm.collection.field.getId
 import org.usvm.collections.immutable.implementations.immutableMap.UPersistentHashMap
 import org.usvm.collections.immutable.internal.MutabilityOwnership
 import org.usvm.collections.immutable.persistentHashMapOf
@@ -52,8 +53,8 @@ internal class UArrayLengthsMemoryRegion<ArrayType, USizeSort : USort>(
     private fun updateAllocated(updated: UPersistentHashMap<UConcreteHeapAddress, UExpr<USizeSort>>) =
         UArrayLengthsMemoryRegion(sort, arrayType, updated, nonAliasingLengths, inputLengths)
 
-    private fun updateNonAliasing(updated: UPersistentHashMap<UNonAliasingHeapAddress, UExpr<USizeSort>>) =
-        UArrayLengthsMemoryRegion(sort, arrayType, allocatedLengths, updated, inputLengths)
+//    private fun updateNonAliasing(updated: UPersistentHashMap<UNonAliasingHeapAddress, UExpr<USizeSort>>) =
+//        UArrayLengthsMemoryRegion(sort, arrayType, allocatedLengths, updated, inputLengths)
 
     private fun getInputLength(ref: UArrayLengthLValue<ArrayType, USizeSort>): UInputArrayLengths<ArrayType, USizeSort> {
         if (inputLengths == null)
@@ -86,10 +87,9 @@ internal class UArrayLengthsMemoryRegion<ArrayType, USizeSort : USort>(
             region.updateAllocated(newRegion)
         },
         blockOnNonAliasing = { region, (nonAliasing, innerGuard) ->
-            val newRegion = region.nonAliasingLengths.guardedWrite(nonAliasing.id, value, innerGuard, ownership) {
-                sort.sampleUValue()
-            }
-            region.updateNonAliasing(newRegion)
+            val oldRegion = region.getInputLength(key)
+            val newRegion = oldRegion.write(nonAliasing, value, innerGuard, ownership)
+            region.updatedInput(newRegion)
         },
         blockOnSymbolic = { region, (symbolicRef, innerGuard) ->
             val oldRegion = region.getInputLength(key)
