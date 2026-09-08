@@ -2,6 +2,7 @@ package org.usvm.collection.array
 
 import org.usvm.UBoolExpr
 import org.usvm.UConcreteHeapAddress
+import org.usvm.UConcreteHeapRef
 import org.usvm.UExpr
 import org.usvm.UHeapRef
 import org.usvm.UNonAliasingHeapAddress
@@ -72,7 +73,8 @@ interface UArrayRegion<ArrayType, Sort : USort, USizeSort : USort> : UMemoryRegi
 internal class UArrayMemoryRegion<ArrayType, Sort : USort, USizeSort : USort>(
     private var allocatedArrays: UPersistentHashMap<UConcreteHeapAddress, UAllocatedArray<ArrayType, Sort, USizeSort>> = persistentHashMapOf(),
     private var inputArray: UInputArray<ArrayType, Sort, USizeSort>? = null,
-    private var nonAliasingArrays: UPersistentHashMap<UNonAliasingHeapAddress, UNonAliasingArray<ArrayType, Sort, USizeSort>> = persistentHashMapOf()
+    private var nonAliasingArrays: UPersistentHashMap<UNonAliasingHeapAddress, UNonAliasingArray<ArrayType, Sort, USizeSort>> = persistentHashMapOf(),
+    private var staticArrays: UPersistentHashMap<UNonAliasingHeapAddress, UNonAliasingArray<ArrayType, Sort, USizeSort>> = persistentHashMapOf()
 ) : UArrayRegion<ArrayType, Sort, USizeSort> {
 
     private fun getAllocatedArray(
@@ -91,7 +93,24 @@ internal class UArrayMemoryRegion<ArrayType, Sort : USort, USizeSort : USort>(
         ref: UConcreteHeapAddress,
         updated: UAllocatedArray<ArrayType, Sort, USizeSort>,
         ownership: MutabilityOwnership,
-    ) = UArrayMemoryRegion(allocatedArrays.put(ref, updated, ownership), inputArray, nonAliasingArrays)
+    ) = UArrayMemoryRegion(allocatedArrays.put(ref, updated, ownership), inputArray, nonAliasingArrays, staticArrays)
+
+    private fun getStaticArray(
+        arrayType: ArrayType,
+        sort: Sort,
+    ): UNonAliasingArray<ArrayType, Sort, USizeSort> {
+        val mapId = -2
+        val (updatedArrays, collection) = staticArrays.getOrPut(mapId, sort.uctx.defaultOwnership) {
+            UNonAliasingArrayId<_, _, USizeSort>(arrayType, sort, mapId).emptyRegion()
+        }
+        staticArrays = updatedArrays
+        return collection
+    }
+
+    private fun updateStatic(
+        updated: UNonAliasingArray<ArrayType, Sort, USizeSort>,
+        ownership: MutabilityOwnership,
+    ) = UArrayMemoryRegion(allocatedArrays, inputArray, nonAliasingArrays, staticArrays.put(-2, updated, ownership))
 
     private fun getNonAliasingArray(
         arrayType: ArrayType,
@@ -108,7 +127,7 @@ internal class UArrayMemoryRegion<ArrayType, Sort : USort, USizeSort : USort>(
         ref: UNonAliasingHeapAddress,
         updated: UNonAliasingArray<ArrayType, Sort, USizeSort>,
         ownership: MutabilityOwnership,
-    ) = UArrayMemoryRegion(allocatedArrays, inputArray, nonAliasingArrays.put(ref, updated, ownership))
+    ) = UArrayMemoryRegion(allocatedArrays, inputArray, nonAliasingArrays.put(ref, updated, ownership), staticArrays)
 
     private fun getInputArray(arrayType: ArrayType, sort: Sort): UInputArray<ArrayType, Sort, USizeSort> {
         if (inputArray == null)
@@ -117,7 +136,7 @@ internal class UArrayMemoryRegion<ArrayType, Sort : USort, USizeSort : USort>(
     }
 
     private fun updateInput(updated: UInputArray<ArrayType, Sort, USizeSort>) =
-        UArrayMemoryRegion(allocatedArrays, updated, nonAliasingArrays)
+        UArrayMemoryRegion(allocatedArrays, updated, nonAliasingArrays, staticArrays)
 
     override fun read(key: UArrayIndexLValue<ArrayType, Sort, USizeSort>): UExpr<Sort> {
         val x = key.ref.mapWithStaticAsSymbolic(
@@ -158,7 +177,13 @@ internal class UArrayMemoryRegion<ArrayType, Sort : USort, USizeSort : USort>(
             val id = getId(nonAliasingRef)
             val oldRegion = region.getNonAliasingArray(key.arrayType, key.sort, id)
             val newRegion = oldRegion.write(key.index, value, innerGuard, ownership)
-            region.updateNonAliasingArray(id, newRegion, ownership)
+            val reg = region.updateNonAliasingArray(id, newRegion, ownership)
+            val ret = if (nonAliasingRef is UConcreteHeapRef) {
+                val oldRegion2 = reg.getStaticArray(key.arrayType, key.sort,)
+                val newRegion2 = oldRegion2.write(key.index, value, innerGuard, ownership)
+                reg.updateStatic(newRegion2, ownership)
+            } else reg
+            ret
         },
         blockOnSymbolic = { region, (symbolicRef, innerGuard) ->
             val oldRegion = region.getInputArray(key.arrayType, key.sort)
