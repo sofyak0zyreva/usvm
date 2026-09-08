@@ -415,19 +415,18 @@ class UTypeConstraints<Type>(
                     concreteRef.ctx.falseExpr
                 }
             },
-            nonAliasingMapper = { nonAliasingRef ->
-                // need to do something about nullability
-//                if (nonAliasingRef == castToNAHeapRef(nonAliasingRef.uctx.nullRef)){
-//                    return nonAliasingRef.ctx.trueExpr
-//                }
-                val typeRegion = getTypeRegion(nonAliasingRef)
+            nonAliasingMapper = mapper@{ nonAliasingRef ->
+                val sym = nonAliasingRef.symbol ?: throw IllegalStateException("symbol in NA is null")
+                if (sym == sym.uctx.nullRef) {
+                    return@mapper sym.ctx.trueExpr
+                }
+                val typeRegion = getTypeRegion(sym)
 
                 if (typeRegion.addSupertype(supertype).isEmpty) {
-                    nonAliasingRef.uctx.mkEq(nonAliasingRef, nonAliasingRef.uctx.nullRef)
+                    sym.uctx.mkEq(sym, sym.uctx.nullRef)
                 } else {
-                    nonAliasingRef.uctx.mkIsSubtypeExpr(nonAliasingRef, supertype)
+                    sym.uctx.mkIsSubtypeExpr(sym, supertype)
                 }
-
             },
             symbolicMapper = mapper@{ symbolicRef ->
                 if (symbolicRef == symbolicRef.uctx.nullRef) {
@@ -455,20 +454,19 @@ class UTypeConstraints<Type>(
                     concreteRef.ctx.falseExpr
                 }
             },
-            nonAliasingMapper = { nonAliasingRef ->
-//                if (nonAliasingRef == castToNAHeapRef(nonAliasingRef.uctx.nullRef)) {
-//                    // accordingly to the [UIsSupertypeExpr] specification, on [nullRef] return false
-//                    return nonAliasingRef.ctx.falseExpr
-//                }
-                // need to do something about nullability
-                val typeRegion = getTypeRegion(nonAliasingRef)
+            nonAliasingMapper = mapper@{ nonAliasingRef ->
+                val sym = nonAliasingRef.symbol ?: throw IllegalStateException("symbol in NA is null")
+                if (sym == sym.uctx.nullRef) {
+                    return@mapper sym.ctx.falseExpr
+                }
+                val typeRegion = getTypeRegion(sym)
 
                 if (typeRegion.addSubtype(subtype).isEmpty) {
-                    nonAliasingRef.ctx.falseExpr
+                    sym.ctx.falseExpr
                 } else {
-                    nonAliasingRef.uctx.mkIsSupertypeExpr(nonAliasingRef, subtype)
+                    sym.uctx.mkIsSupertypeExpr(sym, subtype)
                 }
-                },
+            },
             symbolicMapper = mapper@{ symbolicRef ->
                 if (symbolicRef == symbolicRef.uctx.nullRef) {
                     // accordingly to the [UIsSupertypeExpr] specification, on [nullRef] return false
