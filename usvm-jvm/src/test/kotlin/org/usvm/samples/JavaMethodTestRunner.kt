@@ -5,7 +5,6 @@ import org.jacodb.api.jvm.JcClasspath
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.extension.ExtendWith
 import org.usvm.CoverageZone
-import org.usvm.NAHeapRefMap
 import org.usvm.PathSelectionStrategy
 import org.usvm.UMachineOptions
 import org.usvm.api.JcClassCoverage
@@ -35,7 +34,6 @@ import kotlin.reflect.KFunction4
 import kotlin.reflect.full.instanceParameter
 import kotlin.reflect.jvm.javaConstructor
 import kotlin.time.Duration
-import kotlin.time.Duration.Companion.milliseconds
 
 @ExtendWith(UTestRunnerController::class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -823,7 +821,6 @@ open class JavaMethodTestRunner : TestRunner<JcTest, KFunction<*>, KClass<*>?, J
 
     override val runner: (KFunction<*>, UMachineOptions) -> List<JcTest> = { method, options ->
         val jcMethod = cp.getJcMethodByName(method)
-        NAHeapRefMap.clear()
 
         createMachine(cp, options, interpreterObserver).use { machine ->
             val states = machine.analyze(jcMethod.method, targets)
