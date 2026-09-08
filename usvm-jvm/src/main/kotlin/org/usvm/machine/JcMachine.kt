@@ -7,6 +7,8 @@ import org.jacodb.api.jvm.cfg.JcInst
 import org.jacodb.api.jvm.ext.humanReadableSignature
 import org.jacodb.api.jvm.ext.methods
 import org.usvm.CoverageZone
+import org.usvm.NAHeapRefMap
+import org.usvm.NAReadingIdMap
 import org.usvm.StateCollectionStrategy
 import org.usvm.UMachine
 import org.usvm.UMachineOptions
@@ -57,6 +59,8 @@ class JcMachine(
     private val cfgStatistics = CfgStatisticsImpl(applicationGraph)
 
     fun analyze(methods: List<JcMethod>, targets: List<JcTarget> = emptyList()): List<JcState> {
+        NAHeapRefMap.clear()
+        NAReadingIdMap.clear()
         logger.debug("{}.analyze({})", this, methods)
         val initialStates = mutableMapOf<JcMethod, JcState>()
         methods.forEach {

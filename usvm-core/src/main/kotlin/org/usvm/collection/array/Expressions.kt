@@ -5,10 +5,12 @@ import io.ksmt.cache.structurallyEqual
 import io.ksmt.expr.KExpr
 import io.ksmt.expr.printer.ExpressionPrinter
 import io.ksmt.expr.transformer.KTransformerBase
+import org.usvm.NAReadingIdMap
 import org.usvm.UCollectionReading
 import org.usvm.UContext
 import org.usvm.UExpr
 import org.usvm.UHeapRef
+import org.usvm.UNonAliasingHeapAddress
 import org.usvm.UNullRef
 import org.usvm.USort
 import org.usvm.UTransformer
@@ -46,6 +48,16 @@ class UNonAliasingArrayReading<ArrayType, Sort : USort, USizeSort : USort> inter
     collection: UNonAliasingArray<ArrayType, Sort, USizeSort>,
     val index: UExpr<USizeSort>,
 ) : UCollectionReading<UNonAliasingArrayId<ArrayType, Sort, USizeSort>, UExpr<USizeSort>, Sort>(ctx, collection) {
+    private fun makeNonAliasingIdForReading(ctx: UContext<USizeSort>, collectionId: UNonAliasingHeapAddress, index: UExpr<USizeSort>,): UNonAliasingHeapAddress {
+        val key = Pair(collectionId, index)
+        val address = if (NAReadingIdMap[key] == null)
+             ctx.addressCounter.freshNAAddress()
+        else
+             NAReadingIdMap[key]!!
+        NAReadingIdMap[key] = address
+        return address
+    }
+    override val id : UNonAliasingHeapAddress = makeNonAliasingIdForReading(ctx, collection.collectionId.id, index)
     override fun accept(transformer: KTransformerBase): KExpr<Sort> {
         require(transformer is UTransformer<*, *>) { "Expected a UTransformer, but got: $transformer" }
         return transformer.asTypedTransformer<ArrayType, USizeSort>().transform(this)

@@ -52,7 +52,7 @@ typealias UAddressSort = KUninterpretedSort
 //endregion
 //abstract class UNASymbol<Sort : USort>(ctx: UContext<*>, open val id: Int) : UExpr<Sort>(ctx)
 
-abstract class USymbol<Sort : USort>(ctx: UContext<*>, open val id: Int = -1) : UExpr<Sort>(ctx)
+abstract class USymbol<Sort : USort>(ctx: UContext<*>, open val id: Int = -2) : UExpr<Sort>(ctx)
 
 //region Object References
 
@@ -75,9 +75,13 @@ typealias UNASymbolicHeapRef = USymbol<UAddressSort>
 typealias UNonAliasingHeapAddress = Int
 
 val NAHeapRefMap: MutableMap<Int, UNonAliasingHeapRef> = mutableMapOf()
+val NAReadingIdMap: MutableMap<Any, Int> = mutableMapOf()
 
 fun castToNAHeapRef(naSymbol: UNASymbolicHeapRef): UNonAliasingHeapRef {
-    if (NAHeapRefMap[naSymbol.id] == null) {
+    if (naSymbol is URegisterReading<*> && NAHeapRefMap[naSymbol.idx] == null) {
+        NAHeapRefMap[naSymbol.idx] = UNonAliasingHeapRef(naSymbol.uctx, naSymbol.idx, naSymbol)
+    }
+    else if (NAHeapRefMap[naSymbol.id] == null) {
         NAHeapRefMap[naSymbol.id] = UNonAliasingHeapRef(naSymbol.uctx, naSymbol.id, naSymbol)
     }
     return NAHeapRefMap[naSymbol.id]!!
@@ -92,7 +96,7 @@ fun isSymbolicHeapRef(expr: UExpr<*>): Boolean {
         returns(true) implies (expr is USymbol<*>)
     }
 
-    return expr.sort == expr.uctx.addressSort && expr is USymbol<*> && expr.id == -1
+    return expr.sort == expr.uctx.addressSort && expr is USymbol<*> && expr.id == -2
 }
 
 @OptIn(ExperimentalContracts::class)
@@ -126,6 +130,7 @@ class UConcreteHeapRefDecl internal constructor(
 class UConcreteHeapRef internal constructor(
     ctx: UContext<*>,
     val address: UConcreteHeapAddress,
+    val id: Int = address,
 ) : UIntepretedValue<UAddressSort>(ctx) {
 
     override val decl: UConcreteHeapRefDecl get() = uctx.mkConcreteHeapRefDecl(address)
@@ -176,7 +181,7 @@ class UNonAliasingHeapRef(
     override fun internHashCode(): Int = hash(id)
 
     override fun print(printer: ExpressionPrinter) {
-        printer.append("%$id")
+        if (id == -1) printer.append("null") else printer.append("%$id")
     }
 }
 
@@ -185,7 +190,7 @@ fun UContext<*>.mkNonAliasingHeapRef(id: Int): UNonAliasingHeapRef =
 
 class UNullRef internal constructor(
     ctx: UContext<*>,
-    override val id: Int = 0
+    override val id: Int = -1
 ) : USymbolicHeapRef(ctx, id) {
     override val sort: UAddressSort
         get() = uctx.addressSort
@@ -233,7 +238,7 @@ const val INITIAL_CONCRETE_ADDRESS = NULL_ADDRESS + 1
  */
 const val INITIAL_STATIC_ADDRESS = -(1 shl 20) // Use value not less than UNINTERPRETED_SORT_MIN_ALLOWED_VALUE in ksmt
 
-const val INITIAL_NA_ADDRESS = NULL_ADDRESS
+const val INITIAL_NA_ADDRESS = NULL_ADDRESS - 3
 
 //endregion
 
@@ -243,7 +248,7 @@ class URegisterReading<Sort : USort> internal constructor(
     ctx: UContext<*>,
     val idx: Int,
     override val sort: Sort,
-    override val id: Int = ctx.addressCounter.freshNAAddress(),
+    override val id: Int = idx
 ) : USymbol<Sort>(ctx, id) {
     override fun accept(transformer: KTransformerBase): KExpr<Sort> {
         require(transformer is UTransformer<*, *>) { "Expected a UTransformer, but got: $transformer" }
@@ -262,8 +267,7 @@ class URegisterReading<Sort : USort> internal constructor(
 abstract class UCollectionReading<CollectionId : USymbolicCollectionId<Key, Sort, CollectionId>, Key, Sort : USort>(
     ctx: UContext<*>,
     val collection: USymbolicCollection<CollectionId, Key, Sort>,
-    override val id: Int = ctx.addressCounter.freshNAAddress(),
-) : USymbol<Sort>(ctx, id) {
+) : USymbol<Sort>(ctx) {
     override val sort: Sort get() = collection.sort
 }
 

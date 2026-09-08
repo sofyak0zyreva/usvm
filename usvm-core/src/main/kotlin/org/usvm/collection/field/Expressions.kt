@@ -5,12 +5,12 @@ import io.ksmt.cache.structurallyEqual
 import io.ksmt.expr.KExpr
 import io.ksmt.expr.printer.ExpressionPrinter
 import io.ksmt.expr.transformer.KTransformerBase
+import org.usvm.NAReadingIdMap
 import org.usvm.UCollectionReading
 import org.usvm.UContext
-import org.usvm.UExpr
 import org.usvm.UHeapRef
+import org.usvm.UNonAliasingHeapAddress
 import org.usvm.UNullRef
-import org.usvm.URegisterReading
 import org.usvm.USort
 import org.usvm.UTransformer
 
@@ -46,6 +46,16 @@ class UNonAliasingFieldReading<Field, Sort : USort> internal constructor(
     collection: UNonAliasingFields<Field, Sort>,
     val address: UHeapRef,
 ) : UCollectionReading<UNonAliasingFieldId<Field, Sort>, UHeapRef, Sort>(ctx, collection) {
+    private fun makeNonAliasingIdForReading(ctx: UContext<*>, collectionId: UNonAliasingHeapAddress, field: Field): UNonAliasingHeapAddress {
+        val key = Pair(collectionId, field)
+        val address = if (NAReadingIdMap[key] == null)
+            ctx.addressCounter.freshNAAddress()
+        else
+            NAReadingIdMap[key]!!
+        NAReadingIdMap[key] = address
+        return address
+    }
+    override val id : UNonAliasingHeapAddress = makeNonAliasingIdForReading(ctx, collection.collectionId.id, collection.collectionId.field)
     init {
         require(address !is UNullRef)
     }
