@@ -57,19 +57,19 @@ internal class UFieldsMemoryRegion<Field, Sort : USort>(
     private fun updateAllocated(updated: UPersistentHashMap<UConcreteHeapAddress, UExpr<Sort>>) =
         UFieldsMemoryRegion(sort, field, updated, inputFields, nonAliasingFields, staticFields)
 
-    private fun getStaticFields(ref: UFieldLValue<Field, Sort>, nonAliasingId: UNonAliasingHeapAddress): UNonAliasingFields<Field, Sort>{
-        val mapId = if (ref.ref is UConcreteHeapRef) -2 else nonAliasingId
-        val (updatedArrays, collection) = staticFields.getOrPut(mapId, sort.uctx.defaultOwnership) {
+    private fun getStaticFields(ref: UFieldLValue<Field, Sort>): UNonAliasingFields<Field, Sort>{
+        val mapId = -2
+        val (updatedFields, collection) = staticFields.getOrPut(mapId, sort.uctx.defaultOwnership) {
                 UNonAliasingFieldId<Field, Sort>(ref.field, ref.sort, mapId).emptyRegion()
             }
-        staticFields = updatedArrays
+        staticFields = updatedFields
         return collection
     }
     private fun updateStatic(updated: UPersistentHashMap<UNonAliasingHeapAddress, UNonAliasingFields<Field, Sort>>) =
         UFieldsMemoryRegion(sort, field, allocatedFields, inputFields, nonAliasingFields, updated)
 
     private fun getNonAliasingFields(ref: UFieldLValue<Field, Sort>, nonAliasingId: UNonAliasingHeapAddress): UNonAliasingFields<Field, Sort> {
-        val (updatedArrays, collection) = nonAliasingFields.getOrPut(nonAliasingId, sort.uctx.defaultOwnership) {
+        val (updatedFields, collection) = nonAliasingFields.getOrPut(nonAliasingId, sort.uctx.defaultOwnership) {
             val concrete = staticFields[-2]
             if (concrete != null && concrete.collectionId.field == ref.field && concrete.collectionId.sort == ref.sort) {
                 concrete
@@ -78,7 +78,7 @@ internal class UFieldsMemoryRegion<Field, Sort : USort>(
                 UNonAliasingFieldId<Field, Sort>(ref.field, ref.sort, nonAliasingId).emptyRegion()
             }
         }
-        nonAliasingFields = updatedArrays
+        nonAliasingFields = updatedFields
         return collection
     }
     private fun updateNonAliasing(updated: UPersistentHashMap<UNonAliasingHeapAddress, UNonAliasingFields<Field, Sort>>) =
@@ -96,7 +96,6 @@ internal class UFieldsMemoryRegion<Field, Sort : USort>(
     override fun read(key: UFieldLValue<Field, Sort>): UExpr<Sort> = key.ref.mapWithStaticAsSymbolic(
         concreteMapper = { concreteRef -> allocatedFields[concreteRef.address] ?: sort.sampleUValue() },
         nonAliasingMapper = { nonAliasingRef -> getNonAliasingFields(key, getId(nonAliasingRef)).read(nonAliasingRef) },
-//        nonAliasingMapper = { symbolicRef -> getInputFields(key).read(symbolicRef) },
         symbolicMapper = { symbolicRef -> getInputFields(key).read(symbolicRef) }
     )
 
@@ -116,13 +115,12 @@ internal class UFieldsMemoryRegion<Field, Sort : USort>(
             region.updateAllocated(newRegion)
         },
         blockOnNonAliasing = { region, (nonAliasingRef, innerGuard) ->
-
             val id = getId(nonAliasingRef)
             val oldRegion = region.getNonAliasingFields(key, id)
             val newRegion = oldRegion.write(nonAliasingRef, value, innerGuard, ownership)
             val reg = region.updateNonAliasing(nonAliasingFields.put(id, newRegion, ownership))
             val ret = if (nonAliasingRef is UConcreteHeapRef) {
-                    val oldRegion2 = reg.getStaticFields(key, -2)
+                    val oldRegion2 = reg.getStaticFields(key)
                     val newRegion2 = oldRegion2.write(nonAliasingRef, value, innerGuard, ownership)
                     reg.updateStatic(staticFields.put(-2, newRegion2, ownership))
                 } else reg
