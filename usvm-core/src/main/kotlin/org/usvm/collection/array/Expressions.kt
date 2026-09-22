@@ -43,21 +43,23 @@ class UAllocatedArrayReading<ArrayType, Sort : USort, USizeSort : USort> interna
     }
 }
 
+fun makeNonAliasingIdForReading(ctx: UContext<*>, key: Pair<UNonAliasingHeapAddress, *>,): UNonAliasingHeapAddress {
+    val address = if (NAReadingIdMap[key] == null)
+        ctx.addressCounter.freshNAAddress()
+    else
+        NAReadingIdMap[key]!!
+    NAReadingIdMap[key] = address
+    return address
+}
+
 class UNonAliasingArrayReading<ArrayType, Sort : USort, USizeSort : USort> internal constructor(
     ctx: UContext<USizeSort>,
     collection: UNonAliasingArray<ArrayType, Sort, USizeSort>,
     val index: UExpr<USizeSort>,
 ) : UCollectionReading<UNonAliasingArrayId<ArrayType, Sort, USizeSort>, UExpr<USizeSort>, Sort>(ctx, collection) {
-    private fun makeNonAliasingIdForReading(ctx: UContext<USizeSort>, collectionId: UNonAliasingHeapAddress, index: UExpr<USizeSort>,): UNonAliasingHeapAddress {
-        val key = Pair(collectionId, index)
-        val address = if (NAReadingIdMap[key] == null)
-             ctx.addressCounter.freshNAAddress()
-        else
-             NAReadingIdMap[key]!!
-        NAReadingIdMap[key] = address
-        return address
-    }
-    override val id : UNonAliasingHeapAddress = makeNonAliasingIdForReading(ctx, collection.collectionId.id, index)
+
+    override val id : UNonAliasingHeapAddress = makeNonAliasingIdForReading(ctx, Pair(collection.collectionId.id, Pair(index, collection.collectionId.arrayType)))
+
     override fun accept(transformer: KTransformerBase): KExpr<Sort> {
         require(transformer is UTransformer<*, *>) { "Expected a UTransformer, but got: $transformer" }
         return transformer.asTypedTransformer<ArrayType, USizeSort>().transform(this)

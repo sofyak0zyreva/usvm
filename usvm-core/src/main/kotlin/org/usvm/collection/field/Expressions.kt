@@ -13,6 +13,7 @@ import org.usvm.UNonAliasingHeapAddress
 import org.usvm.UNullRef
 import org.usvm.USort
 import org.usvm.UTransformer
+import org.usvm.collection.array.makeNonAliasingIdForReading
 
 class UInputFieldReading<Field, Sort : USort> internal constructor(
     ctx: UContext<*>,
@@ -46,16 +47,9 @@ class UNonAliasingFieldReading<Field, Sort : USort> internal constructor(
     collection: UNonAliasingFields<Field, Sort>,
     val address: UHeapRef,
 ) : UCollectionReading<UNonAliasingFieldId<Field, Sort>, UHeapRef, Sort>(ctx, collection) {
-    private fun makeNonAliasingIdForReading(ctx: UContext<*>, collectionId: UNonAliasingHeapAddress, field: Field): UNonAliasingHeapAddress {
-        val key = Pair(collectionId, field)
-        val address = if (NAReadingIdMap[key] == null)
-            ctx.addressCounter.freshNAAddress()
-        else
-            NAReadingIdMap[key]!!
-        NAReadingIdMap[key] = address
-        return address
-    }
-    override val id : UNonAliasingHeapAddress = makeNonAliasingIdForReading(ctx, collection.collectionId.id, collection.collectionId.field)
+
+    override val id : UNonAliasingHeapAddress = makeNonAliasingIdForReading(ctx, Pair(collection.collectionId.id, collection.collectionId.field))
+
     init {
         require(address !is UNullRef)
     }

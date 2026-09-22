@@ -1,7 +1,16 @@
 package org.usvm.collection.array
 
+import io.ksmt.KAst
+import io.ksmt.decl.KDecl
+import io.ksmt.decl.KUninterpretedConstDecl
+import io.ksmt.expr.KExpr
 import io.ksmt.expr.KUninterpretedSortValue
+import io.ksmt.solver.model.KFuncInterp
+import io.ksmt.solver.model.KFuncInterpVarsFree
+import io.ksmt.sort.KSort
 import io.ksmt.sort.KUninterpretedSort
+import kotlinx.collections.immutable.persistentMapOf
+import org.usvm.UAddressSort
 import org.usvm.UConcreteHeapRef
 import org.usvm.UExpr
 import org.usvm.UNonAliasingHeapAddress
@@ -58,56 +67,30 @@ class UNonAliasingArrayModelRegion<ArrayType, Sort : USort, USizeSort : USort>(
                 .firstOrNull { (_, value) -> value == key.ref }
                 ?.key
 
-            val strValAddress = valAddress.toString()
-            val valAddressIdx = strValAddress.substringAfterLast("!").toIntOrNull()
-            val allValues: List<UExpr<Sort>> = nonAliasingArrays.values.map { region ->
-                region.read(key.index)
-            }
-            val interpretations = model.model.toString()
-            fun findRegisterNumber(targetAddress: String, dump: String): Int? {
-                val cleanTarget = targetAddress.trim()
-                val lines = dump.lines().map { it.trim() }
-
-                for (i in lines.indices) {
-                    val line = lines[i]
-
-                    // Check if this line is an address definition like "(r1_Address () Address):="
-                    if (line.startsWith("(r") && line.contains("_Address")) {
-                        // Extract the number X from (rX_Address...
-                        val rNum = line.substringAfter("(r").substringBefore("_Address").toIntOrNull()
-
-                        // Look ahead in current or next lines for the target address
-                        val lookaheadBlock = lines.subList(i, minOf(i + 3, lines.size)).joinToString(" ")
-                        if (lookaheadBlock.contains(cleanTarget)) {
-                            return rNum
-                        }
-                    }
-                }
-                return null
-            }
-
-            val rAddressIdx = findRegisterNumber(strValAddress, interpretations)
-            val x = nonAliasingArrays[rAddressIdx]?.read(key.index) ?: defValue
-            return x
-
-//            val x =  (nonAliasingArrays[key.ref.address]?.read(key.index)
-//                ?: defValue
-//                    )
-//            return x
+            val rIdx = rAddressIdx(model, valAddress)
+            return nonAliasingArrays[rIdx]?.read(key.index) ?: defValue
         }
         else if (key.ref is UNonAliasingHeapRef) {
-            val x =  (nonAliasingArrays[key.ref.id]?.read(key.index)
+            return  (nonAliasingArrays[key.ref.id]?.read(key.index)
                 ?: defValue
                     )
-            return  x
         }
         return defValue
     }
-//    val nonAliasingArray: UReadOnlyMemoryRegion<UExpr<USizeSort>, Sort> by lazy {
-//        nonAliasingArrayDecoder.decodeCollection(model)
-//    }
-//    override fun read(key: UArrayIndexLValue<ArrayType, Sort, USizeSort>): UExpr<Sort> {
-//        modelEnsureRightInputRef(key.ref)
-//        return nonAliasingArray.read(key.index)
-//    }
+}
+
+fun rAddressIdx(model: UModelEvaluator<*>, valAddress: UExpr<UAddressSort>?): Int? {
+    val rAddress: KDecl<*>? = run {
+        for (decl in model.model.declarations) {
+            val interp = model.model.interpretation(decl)
+            if (interp.toString() == valAddress.toString()) {
+                return@run decl
+            }
+        }
+        null
+    }
+    rAddress?.let{
+        return rAddress.name.substringAfter("r").substringBefore("_Address").toIntOrNull()
+    }
+    return null
 }
