@@ -1,12 +1,16 @@
 package org.usvm.collection.set.primitive
 
+import io.ksmt.decl.KFuncDecl
 import io.ksmt.expr.KExpr
 import io.ksmt.sort.KBoolSort
 import org.usvm.UBoolSort
 import org.usvm.UExpr
 import org.usvm.USort
+import org.usvm.collection.map.primitive.UNonAliasingMapModelRegion
 import org.usvm.collection.set.UAllocatedSetUpdatesTranslator
 import org.usvm.collection.set.UInputSetUpdatesTranslator
+import org.usvm.collection.set.UNonAliasingSetCollectionDecoder
+import org.usvm.collection.set.UNonAliasingSetUpdatesTranslator
 import org.usvm.collection.set.USetCollectionDecoder
 import org.usvm.collection.set.USymbolicSetElement
 import org.usvm.memory.UReadOnlyMemoryRegion
@@ -26,6 +30,9 @@ class USetRegionDecoder<SetType, ElementSort : USort, Reg : Region<Reg>>(
     private val allocatedRegionTranslator =
         mutableMapOf<UAllocatedSetId<SetType, ElementSort, Reg>, UAllocatedSetTranslator<SetType, ElementSort, Reg>>()
 
+    private val nonAliasingRegionTranslators =
+        mutableMapOf<UNonAliasingSetId<SetType, ElementSort, Reg>, UNonAliasingSetTranslator<SetType, ElementSort, Reg>>()
+
     private var inputRegionTranslator: UInputSetTranslator<SetType, ElementSort, Reg>? = null
 
     fun allocatedSetTranslator(
@@ -33,6 +40,13 @@ class USetRegionDecoder<SetType, ElementSort : USort, Reg : Region<Reg>>(
     ): URegionTranslator<UAllocatedSetId<SetType, ElementSort, Reg>, UExpr<ElementSort>, UBoolSort> =
         allocatedRegionTranslator.getOrPut(collectionId) {
             UAllocatedSetTranslator(exprTranslator)
+        }
+
+    fun nonAliasingSetTranslator(
+        collectionId: UNonAliasingSetId<SetType, ElementSort, Reg>
+    ): URegionTranslator<UNonAliasingSetId<SetType, ElementSort, Reg>, UExpr<ElementSort>, UBoolSort> =
+        nonAliasingRegionTranslators.getOrPut(collectionId) {
+            UNonAliasingSetTranslator(collectionId, exprTranslator)
         }
 
     fun inputSetTranslator(
@@ -49,6 +63,9 @@ class USetRegionDecoder<SetType, ElementSort : USort, Reg : Region<Reg>>(
         assertions: List<KExpr<KBoolSort>>
     ): UReadOnlyMemoryRegion<USetEntryLValue<SetType, ElementSort, Reg>, UBoolSort>? =
         inputRegionTranslator?.let { USetLazyModelRegion(regionId, model, assertions, it) }
+        ?: if (nonAliasingRegionTranslators.isNotEmpty()) {
+            UNonAliasingSetModelRegion(regionId, model, assertions, nonAliasingRegionTranslators) }
+        else null
 }
 
 private class UAllocatedSetTranslator<SetType, ElementSort : USort, Reg : Region<Reg>>(
@@ -60,6 +77,25 @@ private class UAllocatedSetTranslator<SetType, ElementSort : USort, Reg : Region
     ): KExpr<UBoolSort> {
         val updatesTranslator = UAllocatedSetUpdatesTranslator(exprTranslator, key)
         return region.updates.accept(updatesTranslator, IdentityHashMap())
+    }
+}
+
+private class UNonAliasingSetTranslator<SetType, ElementSort : USort, Reg : Region<Reg>>(
+    collectionId: UNonAliasingSetId<SetType, ElementSort, Reg>,
+    private val exprTranslator: UExprTranslator<*, *>
+) : URegionTranslator<UNonAliasingSetId<SetType, ElementSort, Reg>, UExpr<ElementSort>, UBoolSort>,
+    UNonAliasingSetCollectionDecoder<ElementSort>() {
+    override fun translateReading(
+        region: USymbolicCollection<UNonAliasingSetId<SetType, ElementSort, Reg>, UExpr<ElementSort>, UBoolSort>,
+        key: UExpr<ElementSort>
+    ): KExpr<UBoolSort> {
+        val updatesTranslator = UNonAliasingSetUpdatesTranslator(exprTranslator, inputFunction, key)
+        return region.updates.accept(updatesTranslator, IdentityHashMap())
+    }
+
+    override val inputFunction: KFuncDecl<KBoolSort>
+        = with(collectionId.sort.uctx) {
+        mkFuncDecl(collectionId.toString(), boolSort, listOf(collectionId.elementSort))
     }
 }
 

@@ -9,7 +9,9 @@ import io.ksmt.utils.mkConst
 import org.usvm.UAddressSort
 import org.usvm.UConcreteHeapAddress
 import org.usvm.UExpr
+import org.usvm.UNonAliasingHeapAddress
 import org.usvm.USort
+import org.usvm.collection.array.UNonAliasingArrayModelRegion
 import org.usvm.collection.map.USymbolicMapKey
 import org.usvm.memory.URangedUpdateNode
 import org.usvm.memory.UReadOnlyMemoryRegion
@@ -33,6 +35,9 @@ class UMapRegionDecoder<MapType, KeySort : USort, ValueSort : USort, Reg : Regio
     private val allocatedRegions =
         mutableMapOf<UConcreteHeapAddress, UAllocatedMapTranslator<MapType, KeySort, ValueSort, Reg>>()
 
+    private val nonAliasingRegions =
+        mutableMapOf<UNonAliasingHeapAddress, UNonAliasingMapTranslator<MapType, KeySort, ValueSort, Reg>>()
+
     private var inputRegionTranslator: UInputMapTranslator<MapType, KeySort, ValueSort, Reg>? = null
 
     fun allocatedMapTranslator(
@@ -40,6 +45,13 @@ class UMapRegionDecoder<MapType, KeySort : USort, ValueSort : USort, Reg : Regio
     ): URegionTranslator<UAllocatedMapId<MapType, KeySort, ValueSort, Reg>, UExpr<KeySort>, ValueSort> =
         allocatedRegions.getOrPut(collectionId.address) {
             UAllocatedMapTranslator(collectionId, exprTranslator)
+        }
+
+    fun nonAliasingMapTranslator(
+        collectionId: UNonAliasingMapId<MapType, KeySort, ValueSort, Reg>
+    ): URegionTranslator<UNonAliasingMapId<MapType, KeySort, ValueSort, Reg>, UExpr<KeySort>, ValueSort> =
+        nonAliasingRegions.getOrPut(collectionId.id) {
+            UNonAliasingMapTranslator(collectionId, exprTranslator)
         }
 
     fun inputMapTranslator(
@@ -55,6 +67,9 @@ class UMapRegionDecoder<MapType, KeySort : USort, ValueSort : USort, Reg : Regio
         model: UModelEvaluator<*>,
         assertions: List<KExpr<KBoolSort>>
     ) = inputRegionTranslator?.let { UMapLazyModelRegion(regionId, model, it) }
+        ?: if (nonAliasingRegions.isNotEmpty()) {
+            UNonAliasingMapModelRegion(regionId, model, nonAliasingRegions) }
+        else null
 }
 
 private class UAllocatedMapTranslator<MapType, KeySort : USort, ValueSort : USort, Reg : Region<Reg>>(
@@ -77,6 +92,33 @@ private class UAllocatedMapTranslator<MapType, KeySort : USort, ValueSort : USor
         val translatedCollection = region.updates.accept(updatesTranslator, visitorCache)
         return updatesTranslator.visitSelect(translatedCollection, key)
     }
+}
+
+private class UNonAliasingMapTranslator<MapType, KeySort : USort, ValueSort : USort, Reg : Region<Reg>>(
+    collectionId: UNonAliasingMapId<MapType, KeySort, ValueSort, Reg>,
+    exprTranslator: UExprTranslator<*, *>
+) : URegionTranslator<UNonAliasingMapId<MapType, KeySort, ValueSort, Reg>, UExpr<KeySort>, ValueSort>,
+    UCollectionDecoder<UExpr<KeySort>, ValueSort>
+{
+
+    private val initialValue = with(collectionId.sort.uctx) {
+        mkArraySort(collectionId.keySort, collectionId.sort).mkConst(collectionId.toString())
+    }
+
+    private val visitorCache = IdentityHashMap<Any?, KExpr<KArraySort<KeySort, ValueSort>>>()
+    private val updatesTranslator = UAllocatedMapUpdatesTranslator(exprTranslator, initialValue)
+
+    override fun translateReading(
+        region: USymbolicCollection<UNonAliasingMapId<MapType, KeySort, ValueSort, Reg>, UExpr<KeySort>, ValueSort>,
+        key: UExpr<KeySort>
+    ): KExpr<ValueSort> {
+        val translatedCollection = region.updates.accept(updatesTranslator, visitorCache)
+        return updatesTranslator.visitSelect(translatedCollection, key)
+    }
+
+    override fun decodeCollection(model: UModelEvaluator<*>): UReadOnlyMemoryRegion<UExpr<KeySort>, ValueSort> =
+        model.evalAndCompleteArray1DMemoryRegion(initialValue.decl)
+
 }
 
 private class UInputMapTranslator<MapType, KeySort : USort, ValueSort : USort, Reg : Region<Reg>>(

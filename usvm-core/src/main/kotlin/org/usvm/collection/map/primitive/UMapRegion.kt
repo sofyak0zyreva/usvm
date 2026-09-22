@@ -4,6 +4,7 @@ import org.usvm.UBoolExpr
 import org.usvm.UExpr
 import org.usvm.UHeapRef
 import org.usvm.USort
+import org.usvm.collection.field.getId
 import org.usvm.collection.map.USymbolicMapKey
 import org.usvm.collection.set.primitive.USetRegion
 import org.usvm.collections.immutable.getOrPut
@@ -50,6 +51,9 @@ data class UMapRegionId<MapType, KeySort : USort, ValueSort : USort, Reg : Regio
 typealias UAllocatedMap<MapType, KeySort, ValueSort, Reg> =
         USymbolicCollection<UAllocatedMapId<MapType, KeySort, ValueSort, Reg>, UExpr<KeySort>, ValueSort>
 
+typealias UNonAliasingMap<MapType, KeySort, ValueSort, Reg> =
+        USymbolicCollection<UNonAliasingMapId<MapType, KeySort, ValueSort, Reg>, UExpr<KeySort>, ValueSort>
+
 typealias UInputMap<MapType, KeySort, ValueSort, Reg> =
         USymbolicCollection<UInputMapId<MapType, KeySort, ValueSort, Reg>, USymbolicMapKey<KeySort>, ValueSort>
 
@@ -71,6 +75,7 @@ internal class UMapMemoryRegion<MapType, KeySort : USort, ValueSort : USort, Reg
     private val mapType: MapType,
     private val keyInfo: USymbolicCollectionKeyInfo<UExpr<KeySort>, Reg>,
     private var allocatedMaps: UPersistentHashMap<UAllocatedMapId<MapType, KeySort, ValueSort, Reg>, UAllocatedMap<MapType, KeySort, ValueSort, Reg>> = persistentHashMapOf(),
+    private var nonAliasingMaps: UPersistentHashMap<UNonAliasingMapId<MapType, KeySort, ValueSort, Reg>, UNonAliasingMap<MapType, KeySort, ValueSort, Reg>> = persistentHashMapOf(),
     private var inputMap: UInputMap<MapType, KeySort, ValueSort, Reg>? = null,
 ) : UMapRegion<MapType, KeySort, ValueSort, Reg> {
 
@@ -100,6 +105,29 @@ internal class UMapMemoryRegion<MapType, KeySort : USort, ValueSort : USort, Reg
         mapType,
         keyInfo,
         allocatedMaps.put(id, updatedMap, ownership),
+        nonAliasingMaps,
+        inputMap
+    )
+
+    private fun getNonAliasingMap(
+        id: UNonAliasingMapId<MapType, KeySort, ValueSort, Reg>
+    ): UNonAliasingMap<MapType, KeySort, ValueSort, Reg> {
+        val (updatesMaps, collection) = nonAliasingMaps.getOrPut(id, defaultOwnership) { id.emptyRegion() }
+        nonAliasingMaps = updatesMaps
+        return collection
+    }
+
+    private fun updateNonAliasingMap(
+        id: UNonAliasingMapId<MapType, KeySort, ValueSort, Reg>,
+        updatedMap: UNonAliasingMap<MapType, KeySort, ValueSort, Reg>,
+        ownership: MutabilityOwnership,
+    ) = UMapMemoryRegion(
+        keySort,
+        valueSort,
+        mapType,
+        keyInfo,
+        allocatedMaps,
+        nonAliasingMaps.put(id, updatedMap, ownership),
         inputMap
     )
 
@@ -117,6 +145,7 @@ internal class UMapMemoryRegion<MapType, KeySort : USort, ValueSort : USort, Reg
         mapType,
         keyInfo,
         allocatedMaps,
+        nonAliasingMaps,
         updatedMap
     )
 
@@ -126,7 +155,10 @@ internal class UMapMemoryRegion<MapType, KeySort : USort, ValueSort : USort, Reg
                 val id = UAllocatedMapId(keySort, valueSort, mapType, keyInfo, concreteRef.address)
                 getAllocatedMap(id).read(key.mapKey)
             },
-            nonAliasingMapper = { symbolicRef -> getInputMap().read(symbolicRef to key.mapKey) },
+            nonAliasingMapper = { nonAliasingRef ->
+                val id = UNonAliasingMapId(keySort, valueSort, mapType, keyInfo, getId(nonAliasingRef))
+                getNonAliasingMap(id).read(key.mapKey)
+            },
             symbolicMapper = { symbolicRef -> getInputMap().read(symbolicRef to key.mapKey) }
         )
 
@@ -145,10 +177,11 @@ internal class UMapMemoryRegion<MapType, KeySort : USort, ValueSort : USort, Reg
             val newMap = map.write(key.mapKey, value, guard, ownership)
             region.updateAllocatedMap(id, newMap, ownership)
         },
-        blockOnNonAliasing = { region, (symbolicRef, guard) ->
-            val map = region.getInputMap()
-            val newMap = map.write(symbolicRef to key.mapKey, value, guard, ownership)
-            region.updateInputMap(newMap)
+        blockOnNonAliasing = { region, (nonAliasingRef, guard) ->
+            val id = UNonAliasingMapId(keySort, valueSort, mapType, keyInfo, getId(nonAliasingRef))
+            val map = region.getNonAliasingMap(id)
+            val newMap = map.write(key.mapKey, value, guard, ownership)
+            region.updateNonAliasingMap(id, newMap, ownership)
         },
         blockOnSymbolic = { region, (symbolicRef, guard) ->
             val map = region.getInputMap()
@@ -212,56 +245,67 @@ internal class UMapMemoryRegion<MapType, KeySort : USort, ValueSort : USort, Reg
             val newDstCollection = dstCollection.copyRange(srcCollection, adapter, guard)
             region.updateInputMap(newDstCollection)
         },
-        // all these cases needs serious rewrites maybe (copy-paste from above)
-        blockOnConcrete0NonAliasing1 = { region, srcSymbolic, dstSymbolic, guard ->
-            val srcCollection = region.getInputMap()
-            val srcKeys = srcKeySet.inputSetElements()
+        blockOnConcrete0NonAliasing1 = { region, srcConcrete, dstNonAliasing, guard ->
+            val id = getId(dstNonAliasing)
+            val srcId = UAllocatedMapId(keySort, valueSort, mapType, keyInfo, srcConcrete.address)
+            val srcCollection = region.getAllocatedMap(srcId)
+            val srcKeys = srcKeySet.allocatedSetElements(srcConcrete.address)
 
-            val dstCollection = getInputMap()
+            val dstId = UNonAliasingMapId(keySort, valueSort, mapType, keyInfo, id)
+            val dstCollection = region.getNonAliasingMap(dstId)
 
-            val adapter = UInputToInputSymbolicMapMergeAdapter(srcSymbolic, dstSymbolic, srcKeys)
+            val adapter = UAllocatedToNonAliasingSymbolicMapMergeAdapter(dstNonAliasing, srcKeys)
             val newDstCollection = dstCollection.copyRange(srcCollection, adapter, guard)
-            region.updateInputMap(newDstCollection)
+            region.updateNonAliasingMap(dstId, newDstCollection, ownership)
         },
-        blockOnNonAliasing0Concrete1 = { region, srcSymbolic, dstSymbolic, guard ->
-            val srcCollection = region.getInputMap()
-            val srcKeys = srcKeySet.inputSetElements()
+        blockOnNonAliasing0Concrete1 = { region, srcNonAliasing, dstConcrete, guard ->
+            val id = getId(srcNonAliasing)
+            val srcId = UNonAliasingMapId(keySort, valueSort, mapType, keyInfo, id)
+            val srcCollection = region.getNonAliasingMap(srcId)
+            val srcKeys = srcKeySet.nonAliasingSetElements(id)
 
-            val dstCollection = getInputMap()
+            val dstId = UAllocatedMapId(keySort, valueSort, mapType, keyInfo, dstConcrete.address)
+            val dstCollection = region.getAllocatedMap(dstId)
 
-            val adapter = UInputToInputSymbolicMapMergeAdapter(srcSymbolic, dstSymbolic, srcKeys)
+            val adapter = UNonAliasingToAllocatedSymbolicMapMergeAdapter(srcNonAliasing, srcKeys)
             val newDstCollection = dstCollection.copyRange(srcCollection, adapter, guard)
-            region.updateInputMap(newDstCollection)
+            region.updateAllocatedMap(dstId, newDstCollection, ownership)
         },
-        blockOnNonAliasing0NonAliasing1 = { region, srcSymbolic, dstSymbolic, guard ->
-            val srcCollection = region.getInputMap()
-            val srcKeys = srcKeySet.inputSetElements()
+        blockOnNonAliasing0NonAliasing1 = { region, srcNonAliasing, dstNonAliasing, guard ->
+            val id = getId(srcNonAliasing)
+            val srcId = UNonAliasingMapId(keySort, valueSort, mapType, keyInfo, id)
+            val srcCollection = region.getNonAliasingMap(srcId)
+            val srcKeys = srcKeySet.nonAliasingSetElements(id)
 
-            val dstCollection = getInputMap()
+            val dstId = UNonAliasingMapId(keySort, valueSort, mapType, keyInfo, getId(dstNonAliasing))
+            val dstCollection = region.getNonAliasingMap(dstId)
 
-            val adapter = UInputToInputSymbolicMapMergeAdapter(srcSymbolic, dstSymbolic, srcKeys)
+            val adapter = UNonAliasingToNonAliasingSymbolicMapMergeAdapter(srcNonAliasing, dstNonAliasing, srcKeys)
             val newDstCollection = dstCollection.copyRange(srcCollection, adapter, guard)
-            region.updateInputMap(newDstCollection)
+            region.updateNonAliasingMap(dstId, newDstCollection, ownership)
         },
-        blockOnNonAliasing0Symbolic1 = { region, srcSymbolic, dstSymbolic, guard ->
-            val srcCollection = region.getInputMap()
-            val srcKeys = srcKeySet.inputSetElements()
-
-            val dstCollection = getInputMap()
-
-            val adapter = UInputToInputSymbolicMapMergeAdapter(srcSymbolic, dstSymbolic, srcKeys)
-            val newDstCollection = dstCollection.copyRange(srcCollection, adapter, guard)
-            region.updateInputMap(newDstCollection)
-        },
-        blockOnSymbolic0NonAliasing1 = { region, srcSymbolic, dstSymbolic, guard ->
-            val srcCollection = region.getInputMap()
-            val srcKeys = srcKeySet.inputSetElements()
-
-            val dstCollection = getInputMap()
-
-            val adapter = UInputToInputSymbolicMapMergeAdapter(srcSymbolic, dstSymbolic, srcKeys)
-            val newDstCollection = dstCollection.copyRange(srcCollection, adapter, guard)
-            region.updateInputMap(newDstCollection)
-        }
+//        blockOnNonAliasing0Symbolic1 = { region, srcNonAliasing, dstSymbolic, guard ->
+//            val id = getId(srcNonAliasing)
+//            val srcId = UNonAliasingMapId(keySort, valueSort, mapType, keyInfo, id)
+//            val srcCollection = region.getNonAliasingMap(srcId)
+//            val srcKeys = srcKeySet.nonAliasingSetElements(id)
+//
+//            val dstCollection = getInputMap()
+//
+//            val adapter = UNonAliasingToInputSymbolicMapMergeAdapter(srcNonAliasing, dstSymbolic, srcKeys)
+//            val newDstCollection = dstCollection.copyRange(srcCollection, adapter, guard)
+//            region.updateInputMap(newDstCollection)
+//        },
+//        blockOnSymbolic0NonAliasing1 = { region, srcSymbolic, dstNonAliasing, guard ->
+//            val srcCollection = region.getInputMap()
+//            val srcKeys = srcKeySet.inputSetElements()
+//
+//            val dstId = UNonAliasingMapId(keySort, valueSort, mapType, keyInfo, getId(dstNonAliasing))
+//            val dstCollection = region.getNonAliasingMap(dstId)
+//
+//            val adapter = UInputToNonAliasingSymbolicMapMergeAdapter(srcSymbolic, dstNonAliasing, srcKeys)
+//            val newDstCollection = dstCollection.copyRange(srcCollection, adapter, guard)
+//            region.updateNonAliasingMap(dstId, newDstCollection, ownership)
+//        }
     )
 }

@@ -4,16 +4,19 @@ import io.ksmt.cache.hash
 import io.ksmt.cache.structurallyEqual
 import io.ksmt.expr.printer.ExpressionPrinter
 import io.ksmt.expr.transformer.KTransformerBase
+import org.usvm.NAReadingIdMap
 import org.usvm.UBoolExpr
 import org.usvm.UBoolSort
 import org.usvm.UCollectionReading
 import org.usvm.UContext
 import org.usvm.UExpr
 import org.usvm.UHeapRef
+import org.usvm.UNonAliasingHeapAddress
 import org.usvm.UNullRef
 import org.usvm.USort
 import org.usvm.UTransformer
 import org.usvm.asTypedTransformer
+import org.usvm.collection.array.makeNonAliasingIdForReading
 import org.usvm.collection.set.USymbolicSetElement
 import org.usvm.regions.Region
 
@@ -22,6 +25,37 @@ class UAllocatedSetReading<SetType, ElementSort : USort, Reg : Region<Reg>> inte
     collection: UAllocatedSet<SetType, ElementSort, Reg>,
     val element: UExpr<ElementSort>,
 ) : UCollectionReading<UAllocatedSetId<SetType, ElementSort, Reg>, UExpr<ElementSort>, UBoolSort>(ctx, collection) {
+
+    override fun accept(transformer: KTransformerBase): UBoolExpr {
+        require(transformer is UTransformer<*, *>) { "Expected a UTransformer, but got: $transformer" }
+        return transformer.asTypedTransformer<SetType, USort>().transform(this)
+    }
+
+    override fun internEquals(other: Any): Boolean =
+        structurallyEqual(
+            other,
+            { collection },
+            { element },
+        )
+
+    override fun internHashCode(): Int = hash(collection, element)
+
+    override fun print(printer: ExpressionPrinter) {
+        printer.append("(")
+        printer.append(element)
+        printer.append(" in ")
+        printer.append(collection.toString())
+        printer.append(")")
+    }
+}
+
+class UNonAliasingSetReading<SetType, ElementSort : USort, Reg : Region<Reg>> internal constructor(
+    ctx: UContext<*>,
+    collection: UNonAliasingSet<SetType, ElementSort, Reg>,
+    val element: UExpr<ElementSort>,
+) : UCollectionReading<UNonAliasingSetId<SetType, ElementSort, Reg>, UExpr<ElementSort>, UBoolSort>(ctx, collection) {
+
+    override val id : UNonAliasingHeapAddress = makeNonAliasingIdForReading(ctx, Pair(collection.collectionId.id, Pair(element, "set")))
 
     override fun accept(transformer: KTransformerBase): UBoolExpr {
         require(transformer is UTransformer<*, *>) { "Expected a UTransformer, but got: $transformer" }
