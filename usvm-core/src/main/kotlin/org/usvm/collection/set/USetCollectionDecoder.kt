@@ -14,6 +14,7 @@ import org.usvm.UHeapRef
 import org.usvm.USort
 import org.usvm.isTrue
 import org.usvm.model.FunctionAppCollector
+import org.usvm.model.UMemory1DArray
 import org.usvm.model.UMemory2DArray
 import org.usvm.model.UModelEvaluator
 import org.usvm.model.mapAddress
@@ -58,5 +59,43 @@ abstract class USetCollectionDecoder<ElementSort : USort> {
         }
 
         return UMemory2DArray(entries, constValue = inputFunction.ctx.falseExpr)
+    }
+}
+
+abstract class UNonAliasingSetCollectionDecoder<ElementSort : USort> {
+    abstract val inputFunction: KFuncDecl<KBoolSort>
+
+    private val appCollector by lazy {
+        FunctionAppCollector(inputFunction.ctx, inputFunction)
+    }
+
+    fun decodeCollection(
+        evaluator: UModelEvaluator<*>,
+        assertions: List<KExpr<KBoolSort>>,
+    ): UMemory1DArray<ElementSort, UBoolSort> {
+        val model = evaluator.model
+        val mapping = evaluator.addressesMapping
+
+        if (model.interpretation(inputFunction) == null) {
+            return UMemory1DArray(persistentHashMapOf(), constValue = inputFunction.ctx.falseExpr)
+        }
+
+        val usedSetKeys = hashSetOf<KFunctionApp<KBoolSort>>()
+        assertions.flatMapTo(usedSetKeys) { appCollector.applyVisitor(it) }
+
+        var entries = persistentHashMapOf<UExpr<ElementSort>, UBoolExpr>()
+        for (key in usedSetKeys) {
+            val keyInSet = model.eval(key, isComplete = false)
+            if (!keyInSet.isTrue) continue
+
+            val rawElement = key.args[0]
+            val element: UExpr<ElementSort> = rawElement.uncheckedCast()
+            val elementModel = model.eval(element, isComplete = true).mapAddress(mapping)
+
+            entries = entries.put(
+                elementModel, inputFunction.ctx.trueExpr, evaluator.ctx.defaultOwnership
+            )
+        }
+        return UMemory1DArray(entries, constValue = inputFunction.ctx.falseExpr)
     }
 }

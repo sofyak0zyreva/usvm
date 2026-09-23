@@ -63,6 +63,16 @@ internal class UAllocatedSetUpdatesTranslator<ElementSort : USort>(
     override fun visitInitialValue(): KExpr<KBoolSort> = selectKey.ctx.falseExpr
 }
 
+internal class UNonAliasingSetUpdatesTranslator<ElementSort : USort>(
+    exprTranslator: UExprTranslator<*, *>,
+    private val initialFunction: KFuncDecl<UBoolSort>,
+    selectKey: UExpr<ElementSort>
+) : USetUpdatesTranslator<UExpr<ElementSort>>(exprTranslator, selectKey) {
+    override fun visitInitialValue(): KExpr<KBoolSort> = with(initialFunction.ctx) {
+        mkApp(initialFunction, listOf(selectKey))
+    }
+}
+
 internal class UInputSetUpdatesTranslator<ElementSort : USort>(
     exprTranslator: UExprTranslator<*, *>,
     private val initialFunction: KFuncDecl<UBoolSort>,
