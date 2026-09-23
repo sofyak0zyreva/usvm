@@ -7,6 +7,7 @@ import org.usvm.UBoolSort
 import org.usvm.UComposer
 import org.usvm.UConcreteHeapAddress
 import org.usvm.UExpr
+import org.usvm.UNonAliasingHeapAddress
 import org.usvm.USort
 import org.usvm.collection.set.USetRegionBuilder
 import org.usvm.collection.set.USymbolicSetElement
@@ -115,6 +116,69 @@ class UAllocatedSetId<SetType, ElementSort : USort, Reg : Region<Reg>>(
     }
 
     override fun hashCode(): Int = hash(setAddress, setType, elementSort)
+}
+
+class UNonAliasingSetId<SetType, ElementSort : USort, Reg : Region<Reg>>(
+    elementSort: ElementSort,
+    setType: SetType,
+    elementInfo: USymbolicCollectionKeyInfo<UExpr<ElementSort>, Reg>,
+    val id: UNonAliasingHeapAddress,
+) : USymbolicSetId<SetType, ElementSort, UExpr<ElementSort>, Reg, Reg,
+        UNonAliasingSetId<SetType, ElementSort, Reg>>(elementSort, setType, elementInfo) {
+
+    override fun instantiate(
+        collection: USymbolicCollection<UNonAliasingSetId<SetType, ElementSort, Reg>, UExpr<ElementSort>, UBoolSort>,
+        key: UExpr<ElementSort>,
+        composer: UComposer<*, *>?
+    ): UExpr<UBoolSort> {
+        if (composer == null) {
+            return sort.uctx.mkNonAliasingSetReading(collection, key)
+        }
+
+        val memory = composer.memory.toWritableMemory(composer.ownership)
+        collection.applyTo(memory, key, composer)
+        return memory.read(mkLValue(key))
+    }
+
+    private fun mkLValue(key: UExpr<ElementSort>): ULValue<*, UBoolSort> =
+        USetEntryLValue(elementSort, sort.uctx.mkNonAliasingHeapRef(id), key, setType, elementInfo)
+
+    override fun <Type> write(
+        memory: UWritableMemory<Type>,
+        key: UExpr<ElementSort>,
+        value: UExpr<UBoolSort>,
+        guard: UBoolExpr
+    ) {
+        memory.write(mkLValue(key), value, guard)
+    }
+
+    override fun keyInfo() = elementInfo
+
+    override fun emptyRegion(): USymbolicCollection<UNonAliasingSetId<SetType, ElementSort, Reg>, UExpr<ElementSort>, UBoolSort> {
+        val updates = UTreeUpdates<UExpr<ElementSort>, Reg, UBoolSort>(
+            updates = emptyRegionTree(),
+            keyInfo()
+        )
+        return USymbolicCollection(this, updates)
+    }
+
+    private val regionCache = IdentityHashMap<Any?, Any>()
+
+    fun <R : Region<R>> region(
+        collection: USymbolicCollection<UNonAliasingSetId<SetType, ElementSort, *>, UExpr<ElementSort>, UBoolSort>,
+        keyInfo: USymbolicCollectionKeyInfo<UExpr<ElementSort>, R>,
+    ): R {
+        val regionBuilder = USetRegionBuilder(
+            baseRegion = keyInfo.bottomRegion(),
+            keyInfo = keyInfo,
+            topRegion = keyInfo.topRegion()
+        )
+        return collection.updates.accept(
+            regionBuilder,
+            regionCache.uncheckedCast()
+        )
+    }
+
 }
 
 class UInputSetId<SetType, ElementSort : USort, Reg : Region<Reg>>(
