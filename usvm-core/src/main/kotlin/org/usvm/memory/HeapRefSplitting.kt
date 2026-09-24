@@ -11,6 +11,7 @@ import org.usvm.UNASymbolicHeapRef
 import org.usvm.UNonAliasingHeapRef
 import org.usvm.UNullRef
 import org.usvm.USort
+import org.usvm.USymbol
 import org.usvm.USymbolicHeapRef
 import org.usvm.castToNAHeapRef
 import org.usvm.isFalse
@@ -192,9 +193,9 @@ inline fun <R> foldHeapRef2(
     blockOnConcrete0Symbolic1: (R, UConcreteHeapRef, UHeapRef, UBoolExpr) -> R,
     blockOnNonAliasing0Concrete1: (R, UHeapRef, UConcreteHeapRef, UBoolExpr) -> R,
     blockOnNonAliasing0NonAliasing1: (R, UHeapRef, UHeapRef, UBoolExpr) -> R,
-    blockOnNonAliasing0Symbolic1: (R, UHeapRef, UHeapRef, UBoolExpr) -> R,
+//    blockOnNonAliasing0Symbolic1: (R, UHeapRef, UHeapRef, UBoolExpr) -> R,
     blockOnSymbolic0Concrete1: (R, UHeapRef, UConcreteHeapRef, UBoolExpr) -> R,
-    blockOnSymbolic0NonAliasing1: (R, UHeapRef, UHeapRef, UBoolExpr) -> R,
+//    blockOnSymbolic0NonAliasing1: (R, UHeapRef, UHeapRef, UBoolExpr) -> R,
     blockOnSymbolic0Symbolic1: (R, UHeapRef, UHeapRef, UBoolExpr) -> R,
 ): R = foldHeapRefWithStaticAsSymbolic(
     ref = ref0,
@@ -231,7 +232,7 @@ inline fun <R> foldHeapRef2(
                 blockOnNonAliasing0NonAliasing1(r1, na0, na1, guard1)
             },
             blockOnSymbolic = { r1, (inputRef1, guard1) ->
-                blockOnNonAliasing0Symbolic1(r1, na0, inputRef1, guard1)
+                throw IllegalStateException("NA and input together")
             }
         )
 
@@ -246,7 +247,7 @@ inline fun <R> foldHeapRef2(
                 blockOnSymbolic0Concrete1(r1, inputRef0, concrete1, guard1)
             },
             blockOnNonAliasing = { r1, (na1, guard1) ->
-                blockOnSymbolic0NonAliasing1(r1, inputRef0, na1, guard1)
+                throw IllegalStateException("NA and input together")
             },
             blockOnSymbolic = { r1, (inputRef1, guard1) ->
                 blockOnSymbolic0Symbolic1(r1, inputRef0, inputRef1, guard1)
