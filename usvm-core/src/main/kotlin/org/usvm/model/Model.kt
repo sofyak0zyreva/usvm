@@ -97,7 +97,7 @@ fun modelEnsureConcreteInputRef(ref: UHeapRef): UConcreteHeapRef {
 }
 
 fun modelEnsureRightInputRef(ref: UHeapRef) {
-    require((ref is UConcreteHeapRef  && (ref.address <= INITIAL_INPUT_ADDRESS || ref.address == NULL_ADDRESS)) || (ref is UNonAliasingHeapRef)) {
+    require(((ref is UConcreteHeapRef  && (ref.address <= INITIAL_INPUT_ADDRESS || ref.address == NULL_ADDRESS))) || (ref is UNonAliasingHeapRef)) {
         "Unexpected ref: $ref"
     }
 }
