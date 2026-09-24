@@ -11,14 +11,24 @@ import org.usvm.collection.field.UNonAliasingFieldReading
 import org.usvm.collection.map.length.UInputMapLengthReading
 import org.usvm.collection.map.primitive.UAllocatedMapReading
 import org.usvm.collection.map.primitive.UInputMapReading
+import org.usvm.collection.map.primitive.UNonAliasingMapReading
 import org.usvm.collection.map.ref.UAllocatedRefMapWithInputKeysReading
+import org.usvm.collection.map.ref.UAllocatedRefMapWithNonAliasingKeysReading
 import org.usvm.collection.map.ref.UInputRefMapWithAllocatedKeysReading
 import org.usvm.collection.map.ref.UInputRefMapWithInputKeysReading
+import org.usvm.collection.map.ref.UNonAliasingRefMapWithAllocatedKeysReading
+import org.usvm.collection.map.ref.UNonAliasingRefMapWithNonAliasingKeysReading
 import org.usvm.collection.set.primitive.UAllocatedSetReading
 import org.usvm.collection.set.primitive.UInputSetReading
+import org.usvm.collection.set.primitive.UNonAliasingSetReading
 import org.usvm.collection.set.ref.UAllocatedRefSetWithInputElementsReading
+import org.usvm.collection.set.ref.UAllocatedRefSetWithNonAliasingElementsReading
 import org.usvm.collection.set.ref.UInputRefSetWithAllocatedElementsReading
 import org.usvm.collection.set.ref.UInputRefSetWithInputElementsReading
+//import org.usvm.collection.set.ref.UInputRefSetWithNonAliasingElementsReading
+import org.usvm.collection.set.ref.UNonAliasingRefSetWithAllocatedElementsReading
+//import org.usvm.collection.set.ref.UNonAliasingRefSetWithInputElementsReading
+import org.usvm.collection.set.ref.UNonAliasingRefSetWithNonAliasingElementsReading
 import org.usvm.regions.Region
 
 interface UTransformer<Type, USizeSort : USort> : KTransformer {
@@ -41,18 +51,30 @@ interface UTransformer<Type, USizeSort : USort> : KTransformer {
     ): UExpr<Sort>
 
     fun <KeySort : USort, Sort : USort, Reg : Region<Reg>> transform(
+        expr: UNonAliasingMapReading<Type, KeySort, Sort, Reg>
+    ): UExpr<Sort>
+
+    fun <KeySort : USort, Sort : USort, Reg : Region<Reg>> transform(
         expr: UInputMapReading<Type, KeySort, Sort, Reg>
     ): UExpr<Sort>
 
     fun <Sort : USort> transform(expr: UAllocatedRefMapWithInputKeysReading<Type, Sort>): UExpr<Sort>
 
+    fun <Sort : USort> transform(expr: UAllocatedRefMapWithNonAliasingKeysReading<Type, Sort>): UExpr<Sort>
+
     fun <Sort : USort> transform(expr: UInputRefMapWithAllocatedKeysReading<Type, Sort>): UExpr<Sort>
 
+    fun <Sort : USort> transform(expr: UNonAliasingRefMapWithAllocatedKeysReading<Type, Sort>): UExpr<Sort>
+
     fun <Sort : USort> transform(expr: UInputRefMapWithInputKeysReading<Type, Sort>): UExpr<Sort>
+
+    fun <Sort : USort> transform(expr: UNonAliasingRefMapWithNonAliasingKeysReading<Type, Sort>): UExpr<Sort>
 
     fun transform(expr: UInputMapLengthReading<Type, USizeSort>): UExpr<USizeSort>
 
     fun <ElemSort : USort, Reg : Region<Reg>> transform(expr: UAllocatedSetReading<Type, ElemSort, Reg>): UBoolExpr
+
+    fun <ElemSort : USort, Reg : Region<Reg>> transform(expr: UNonAliasingSetReading<Type, ElemSort, Reg>): UBoolExpr
 
     fun <ElemSort : USort, Reg : Region<Reg>> transform(expr: UInputSetReading<Type, ElemSort, Reg>): UBoolExpr
 
@@ -61,6 +83,16 @@ interface UTransformer<Type, USizeSort : USort> : KTransformer {
     fun transform(expr: UInputRefSetWithAllocatedElementsReading<Type>): UBoolExpr
 
     fun transform(expr: UInputRefSetWithInputElementsReading<Type>): UBoolExpr
+
+//    fun  transform(expr: UNonAliasingRefSetWithInputElementsReading<Type>): UBoolExpr
+//
+//    fun  transform(expr: UInputRefSetWithNonAliasingElementsReading<Type>): UBoolExpr
+
+    fun  transform(expr: UNonAliasingRefSetWithNonAliasingElementsReading<Type>): UBoolExpr
+
+    fun  transform(expr: UAllocatedRefSetWithNonAliasingElementsReading<Type>): UBoolExpr
+
+    fun  transform(expr: UNonAliasingRefSetWithAllocatedElementsReading<Type>): UBoolExpr
 
     fun <Method, Sort : USort> transform(expr: UIndexedMethodReturnValue<Method, Sort>): UExpr<Sort>
 
