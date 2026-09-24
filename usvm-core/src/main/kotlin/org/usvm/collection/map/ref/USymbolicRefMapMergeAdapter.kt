@@ -9,7 +9,9 @@ import org.usvm.UHeapRef
 import org.usvm.collection.map.USymbolicMapKey
 import org.usvm.collection.set.USymbolicSetKeyInfo
 import org.usvm.collection.set.ref.UAllocatedRefSetWithInputElementsId
+import org.usvm.collection.set.ref.UAllocatedRefSetWithNonAliasingElementsId
 import org.usvm.collection.set.ref.UInputRefSetWithInputElementsId
+import org.usvm.collection.set.ref.UNonAliasingRefSetWithNonAliasingElementsId
 import org.usvm.collection.set.ref.USymbolicRefSetId
 import org.usvm.compose
 import org.usvm.isTrue
@@ -130,6 +132,88 @@ class UAllocatedToInputSymbolicRefMapMergeAdapter<MapType>(
     }
 }
 
+class UAllocatedToAllocatedNARefMapMergeAdapter<MapType>(
+    setOfKeys: USymbolicCollection<UAllocatedRefSetWithNonAliasingElementsId<MapType>, UHeapRef, UBoolSort>,
+) : USymbolicRefMapMergeAdapter<MapType, UHeapRef, UHeapRef, UAllocatedRefSetWithNonAliasingElementsId<MapType>>(setOfKeys) {
+    override fun convert(key: UHeapRef, composer: UComposer<*, *>?): UHeapRef = key
+
+    @Suppress("UNCHECKED_CAST")
+    override fun <DstReg : Region<DstReg>> region(): DstReg =
+        setOfKeys.collectionId.region(
+            setOfKeys,
+            setOfKeys.collectionId.keyInfo()
+        ) as DstReg
+
+    override fun <Type> applyTo(
+        memory: UWritableMemory<Type>,
+        srcCollectionId: USymbolicCollectionId<UHeapRef, *, *>,
+        dstCollectionId: USymbolicCollectionId<UHeapRef, *, *>,
+        guard: UBoolExpr,
+        srcKey: UHeapRef,
+        composer: UComposer<*, *>,
+    ) {
+        check(srcCollectionId is UAllocatedRefMapWithNonAliasingKeysId<*, *>) { "Unexpected collection: $srcCollectionId" }
+        check(dstCollectionId is UAllocatedRefMapWithNonAliasingKeysId<*, *>) { "Unexpected collection: $dstCollectionId" }
+
+        setOfKeys.applyTo(memory, srcKey, composer)
+
+        with(guard.uctx) {
+            memory.refMapMerge(
+                mkConcreteHeapRef(srcCollectionId.mapAddress),
+                mkConcreteHeapRef(dstCollectionId.mapAddress),
+                srcCollectionId.mapType,
+                srcCollectionId.sort,
+                setOfKeys.collectionId.setRegionId().uncheckedCast(),
+                guard
+            )
+        }
+    }
+}
+
+class UAllocatedToNonAliasingSymbolicRefMapMergeAdapter<MapType>(
+    val dstMapRef: UHeapRef,
+    setOfKeys: USymbolicCollection<UAllocatedRefSetWithNonAliasingElementsId<MapType>, UHeapRef, UBoolSort>,
+) : USymbolicRefMapMergeAdapter<MapType, UHeapRef, USymbolicMapKey<UAddressSort>,
+        UAllocatedRefSetWithNonAliasingElementsId<MapType>>(setOfKeys) {
+
+    override fun convert(key: USymbolicMapKey<UAddressSort>, composer: UComposer<*, *>?): UHeapRef = key.second
+
+    @Suppress("UNCHECKED_CAST")
+    override fun <DstReg : Region<DstReg>> region(): DstReg {
+        val elementRegion = setOfKeys.collectionId.region(
+            setOfKeys,
+            UHeapRefKeyInfo
+        )
+        val dstRefKeyInfo = UHeapRefKeyInfo.keyToRegion(dstMapRef)
+        return USymbolicSetKeyInfo.addSetRefRegion(dstRefKeyInfo, elementRegion) as DstReg
+    }
+
+    override fun <Type> applyTo(
+        memory: UWritableMemory<Type>,
+        srcCollectionId: USymbolicCollectionId<UHeapRef, *, *>,
+        dstCollectionId: USymbolicCollectionId<USymbolicMapKey<UAddressSort>, *, *>,
+        guard: UBoolExpr,
+        srcKey: UHeapRef,
+        composer: UComposer<*, *>,
+    ) {
+        check(srcCollectionId is UAllocatedRefMapWithNonAliasingKeysId<*, *>) { "Unexpected collection: $srcCollectionId" }
+        check(dstCollectionId is UNonAliasingRefMapWithNonAliasingKeysId<*, *>) { "Unexpected collection: $dstCollectionId" }
+
+        setOfKeys.applyTo(memory, srcKey, composer)
+
+        with(guard.uctx) {
+            memory.refMapMerge(
+                mkConcreteHeapRef(srcCollectionId.mapAddress),
+                composer.compose(dstMapRef),
+                srcCollectionId.mapType,
+                srcCollectionId.sort,
+                setOfKeys.collectionId.setRegionId().uncheckedCast(),
+                guard
+            )
+        }
+    }
+}
+
 class UInputToAllocatedSymbolicRefMapMergeAdapter<MapType>(
     val srcMapRef: UHeapRef,
     setOfKeys: USymbolicCollection<UInputRefSetWithInputElementsId<MapType>, USymbolicMapKey<UAddressSort>, UBoolSort>,
@@ -165,6 +249,96 @@ class UInputToAllocatedSymbolicRefMapMergeAdapter<MapType>(
             memory.refMapMerge(
                 composer.compose(srcMapRef),
                 mkConcreteHeapRef(dstCollectionId.mapAddress),
+                dstCollectionId.mapType,
+                dstCollectionId.sort,
+                setOfKeys.collectionId.setRegionId().uncheckedCast(),
+                guard
+            )
+        }
+    }
+}
+
+class UNonAliasingToAllocatedSymbolicRefMapMergeAdapter<MapType>(
+    val srcMapRef: UHeapRef,
+    setOfKeys: USymbolicCollection<UNonAliasingRefSetWithNonAliasingElementsId<MapType>, USymbolicMapKey<UAddressSort>, UBoolSort>,
+) : USymbolicRefMapMergeAdapter<MapType, USymbolicMapKey<UAddressSort>, UHeapRef,
+        UNonAliasingRefSetWithNonAliasingElementsId<MapType>>(setOfKeys) {
+
+    override fun convert(key: UHeapRef, composer: UComposer<*, *>?): USymbolicMapKey<UAddressSort> =
+        composer.compose(srcMapRef) to key
+
+    @Suppress("UNCHECKED_CAST")
+    override fun <DstReg : Region<DstReg>> region(): DstReg {
+        val srcKeySet = setOfKeys.collectionId.region(
+            setOfKeys,
+            USymbolicSetKeyInfo(UHeapRefKeyInfo)
+        )
+        return USymbolicSetKeyInfo.removeSetRefRegion(srcKeySet, UHeapRefKeyInfo) as DstReg
+    }
+
+    override fun <Type> applyTo(
+        memory: UWritableMemory<Type>,
+        srcCollectionId: USymbolicCollectionId<USymbolicMapKey<UAddressSort>, *, *>,
+        dstCollectionId: USymbolicCollectionId<UHeapRef, *, *>,
+        guard: UBoolExpr,
+        srcKey: USymbolicMapKey<UAddressSort>,
+        composer: UComposer<*, *>,
+    ) {
+        check(srcCollectionId is UNonAliasingRefMapWithNonAliasingKeysId<*, *>) { "Unexpected collection: $srcCollectionId" }
+        check(dstCollectionId is UAllocatedRefMapWithNonAliasingKeysId<*, *>) { "Unexpected collection: $dstCollectionId" }
+
+        setOfKeys.applyTo(memory, srcKey, composer)
+
+        with(guard.uctx) {
+            memory.refMapMerge(
+                composer.compose(srcMapRef),
+                mkConcreteHeapRef(dstCollectionId.mapAddress),
+                dstCollectionId.mapType,
+                dstCollectionId.sort,
+                setOfKeys.collectionId.setRegionId().uncheckedCast(),
+                guard
+            )
+        }
+    }
+}
+
+class UNonAliasingToNonAliasingSymbolicRefMapMergeAdapter<MapType>(
+    val srcMapRef: UHeapRef,
+    val dstMapRef: UHeapRef,
+    setOfKeys: USymbolicCollection<UNonAliasingRefSetWithNonAliasingElementsId<MapType>, USymbolicMapKey<UAddressSort>, UBoolSort>,
+) : USymbolicRefMapMergeAdapter<MapType, USymbolicMapKey<UAddressSort>, USymbolicMapKey<UAddressSort>,
+        UNonAliasingRefSetWithNonAliasingElementsId<MapType>>(setOfKeys) {
+
+    override fun convert(key: USymbolicMapKey<UAddressSort>, composer: UComposer<*, *>?): USymbolicMapKey<UAddressSort> =
+        composer.compose(srcMapRef) to key.second
+
+    @Suppress("UNCHECKED_CAST")
+    override fun <DstReg : Region<DstReg>> region(): DstReg {
+        val srcKeySet = setOfKeys.collectionId.region(
+            setOfKeys,
+            USymbolicSetKeyInfo(UHeapRefKeyInfo)
+        )
+        val dstRefKeyInfo = UHeapRefKeyInfo.keyToRegion(dstMapRef)
+        return USymbolicSetKeyInfo.changeSetRefRegion(srcKeySet, dstRefKeyInfo, UHeapRefKeyInfo) as DstReg
+    }
+
+    override fun <Type> applyTo(
+        memory: UWritableMemory<Type>,
+        srcCollectionId: USymbolicCollectionId<USymbolicMapKey<UAddressSort>, *, *>,
+        dstCollectionId: USymbolicCollectionId<USymbolicMapKey<UAddressSort>, *, *>,
+        guard: UBoolExpr,
+        srcKey: USymbolicMapKey<UAddressSort>,
+        composer: UComposer<*, *>,
+    ) {
+        check(srcCollectionId is USymbolicRefMapId<*, *, *, *, *>) { "Unexpected collection: $srcCollectionId" }
+        check(dstCollectionId is USymbolicRefMapId<*, *, *, *, *>) { "Unexpected collection: $dstCollectionId" }
+
+        setOfKeys.applyTo(memory, srcKey, composer)
+
+        with(guard.uctx) {
+            memory.refMapMerge(
+                composer.compose(srcMapRef),
+                composer.compose(dstMapRef),
                 dstCollectionId.mapType,
                 dstCollectionId.sort,
                 setOfKeys.collectionId.setRegionId().uncheckedCast(),

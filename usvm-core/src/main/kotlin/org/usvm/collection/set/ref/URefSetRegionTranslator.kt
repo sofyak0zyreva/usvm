@@ -7,8 +7,12 @@ import org.usvm.UBoolSort
 import org.usvm.UHeapRef
 import org.usvm.collection.set.UAllocatedSetUpdatesTranslator
 import org.usvm.collection.set.UInputSetUpdatesTranslator
+import org.usvm.collection.set.UNonAliasingSetCollectionDecoder
+import org.usvm.collection.set.UNonAliasingSetUpdatesTranslator
 import org.usvm.collection.set.USetCollectionDecoder
+import org.usvm.collection.set.USetUpdatesTranslator
 import org.usvm.collection.set.USymbolicSetElement
+import org.usvm.collection.set.primitive.UNonAliasingSetModelRegion
 import org.usvm.memory.UReadOnlyMemoryRegion
 import org.usvm.memory.USymbolicCollection
 import org.usvm.model.UModelEvaluator
@@ -28,6 +32,15 @@ class URefSetRegionDecoder<SetType>(
     private val inputWithAllocatedRegionTranslator =
         mutableMapOf<UInputRefSetWithAllocatedElementsId<SetType>, UInputRefSetWithAllocatedElementsTranslator<SetType>>()
 
+    private val allocatedWithNonAliasingRegionTranslator =
+        mutableMapOf<UAllocatedRefSetWithNonAliasingElementsId<SetType>, UAllocatedRefSetWithNonAliasingElementsTranslator<SetType>>()
+
+    private val nonAliasingWithAllocatedRegionTranslator =
+        mutableMapOf<UNonAliasingRefSetWithAllocatedElementsId<SetType>, UNonAliasingRefSetWithAllocatedElementsTranslator<SetType>>()
+
+    private val nonAliasingWithNonAliasingRegionTranslator =
+        mutableMapOf<UNonAliasingRefSetWithNonAliasingElementsId<SetType>, UNonAliasingRefSetWithNonAliasingElementsTranslator<SetType>>()
+
     private var inputWithInputRegionTranslator: UInputRefSetWithInputElementsTranslator<SetType>? = null
 
     fun allocatedRefSetWithInputElementsTranslator(
@@ -37,11 +50,32 @@ class URefSetRegionDecoder<SetType>(
             UAllocatedRefSetWithInputElementsTranslator(exprTranslator)
         }
 
+    fun allocatedRefSetWithNonAliasingElementsTranslator(
+        collectionId: UAllocatedRefSetWithNonAliasingElementsId<SetType>
+    ): URegionTranslator<UAllocatedRefSetWithNonAliasingElementsId<SetType>, UHeapRef, UBoolSort> =
+        allocatedWithNonAliasingRegionTranslator.getOrPut(collectionId) {
+            UAllocatedRefSetWithNonAliasingElementsTranslator(exprTranslator)
+        }
+
+    fun nonAliasingRefSetWithAllocatedElementsTranslator(
+        collectionId: UNonAliasingRefSetWithAllocatedElementsId<SetType>
+    ): URegionTranslator<UNonAliasingRefSetWithAllocatedElementsId<SetType>, UHeapRef, UBoolSort> =
+        nonAliasingWithAllocatedRegionTranslator.getOrPut(collectionId) {
+            UNonAliasingRefSetWithAllocatedElementsTranslator(exprTranslator)
+        }
+
     fun inputRefSetWithAllocatedElementsTranslator(
         collectionId: UInputRefSetWithAllocatedElementsId<SetType>
     ): URegionTranslator<UInputRefSetWithAllocatedElementsId<SetType>, UHeapRef, UBoolSort> =
         inputWithAllocatedRegionTranslator.getOrPut(collectionId) {
             UInputRefSetWithAllocatedElementsTranslator(exprTranslator)
+        }
+
+    fun nonAliasingRefSetWithNonAliasingElementsTranslator(
+        collectionId: UNonAliasingRefSetWithNonAliasingElementsId<SetType>
+    ): URegionTranslator<UNonAliasingRefSetWithNonAliasingElementsId<SetType>, USymbolicSetElement<UAddressSort>, UBoolSort> =
+        nonAliasingWithNonAliasingRegionTranslator.getOrPut(collectionId) {
+            UNonAliasingRefSetWithNonAliasingElementsTranslator(collectionId, exprTranslator)
         }
 
     fun inputRefSetTranslator(
@@ -58,6 +92,9 @@ class URefSetRegionDecoder<SetType>(
         assertions: List<KExpr<KBoolSort>>
     ): UReadOnlyMemoryRegion<URefSetEntryLValue<SetType>, UBoolSort>? =
         inputWithInputRegionTranslator?.let { URefSetLazyModelRegion(regionId, model, assertions, it) }
+            ?: if (nonAliasingWithNonAliasingRegionTranslator.isNotEmpty()) {
+                UNonAliasingRefSetModelRegion(regionId, model, assertions, nonAliasingWithNonAliasingRegionTranslator) }
+            else null
 }
 
 private class UAllocatedRefSetWithInputElementsTranslator<SetType>(
@@ -65,6 +102,30 @@ private class UAllocatedRefSetWithInputElementsTranslator<SetType>(
 ) : URegionTranslator<UAllocatedRefSetWithInputElementsId<SetType>, UHeapRef, UBoolSort> {
     override fun translateReading(
         region: USymbolicCollection<UAllocatedRefSetWithInputElementsId<SetType>, UHeapRef, UBoolSort>,
+        key: UHeapRef
+    ): KExpr<UBoolSort> {
+        val updatesTranslator = UAllocatedSetUpdatesTranslator(exprTranslator, key)
+        return region.updates.accept(updatesTranslator, IdentityHashMap())
+    }
+}
+
+private class UAllocatedRefSetWithNonAliasingElementsTranslator<SetType>(
+    private val exprTranslator: UExprTranslator<*, *>
+) : URegionTranslator<UAllocatedRefSetWithNonAliasingElementsId<SetType>, UHeapRef, UBoolSort> {
+    override fun translateReading(
+        region: USymbolicCollection<UAllocatedRefSetWithNonAliasingElementsId<SetType>, UHeapRef, UBoolSort>,
+        key: UHeapRef
+    ): KExpr<UBoolSort> {
+        val updatesTranslator = UAllocatedSetUpdatesTranslator(exprTranslator, key)
+        return region.updates.accept(updatesTranslator, IdentityHashMap())
+    }
+}
+
+private class UNonAliasingRefSetWithAllocatedElementsTranslator<SetType>(
+    private val exprTranslator: UExprTranslator<*, *>
+) : URegionTranslator<UNonAliasingRefSetWithAllocatedElementsId<SetType>, UHeapRef, UBoolSort> {
+    override fun translateReading(
+        region: USymbolicCollection<UNonAliasingRefSetWithAllocatedElementsId<SetType>, UHeapRef, UBoolSort>,
         key: UHeapRef
     ): KExpr<UBoolSort> {
         val updatesTranslator = UAllocatedSetUpdatesTranslator(exprTranslator, key)
@@ -80,6 +141,25 @@ private class UInputRefSetWithAllocatedElementsTranslator<SetType>(
         key: UHeapRef
     ): KExpr<UBoolSort> {
         val updatesTranslator = UAllocatedSetUpdatesTranslator(exprTranslator, key)
+        return region.updates.accept(updatesTranslator, IdentityHashMap())
+    }
+}
+
+private class UNonAliasingRefSetWithNonAliasingElementsTranslator<SetType>(
+    collectionId: UNonAliasingRefSetWithNonAliasingElementsId<SetType>,
+    private val exprTranslator: UExprTranslator<*, *>
+) : URegionTranslator<UNonAliasingRefSetWithNonAliasingElementsId<SetType>, USymbolicSetElement<UAddressSort>, UBoolSort>,
+    USetCollectionDecoder<UAddressSort>() {
+
+    override val inputFunction = with(collectionId.sort.uctx) {
+        mkFuncDecl(collectionId.toString(), boolSort, listOf(addressSort, addressSort))
+    }
+
+    override fun translateReading(
+        region: USymbolicCollection<UNonAliasingRefSetWithNonAliasingElementsId<SetType>, USymbolicSetElement<UAddressSort>, UBoolSort>,
+        key: USymbolicSetElement<UAddressSort>
+    ): KExpr<UBoolSort> {
+        val updatesTranslator = UInputSetUpdatesTranslator(exprTranslator, inputFunction, key)
         return region.updates.accept(updatesTranslator, IdentityHashMap())
     }
 }
