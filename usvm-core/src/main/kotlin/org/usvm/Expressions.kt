@@ -165,6 +165,7 @@ class UNonAliasingHeapRef(
 //        }
 //    }
     val symbol = originalSymbol
+
     override val sort: UAddressSort
         get() = uctx.addressSort
 
@@ -184,9 +185,6 @@ class UNonAliasingHeapRef(
         if (id == -1) printer.append("null") else printer.append("%$id")
     }
 }
-
-fun UContext<*>.mkNonAliasingHeapRef(id: Int): UNonAliasingHeapRef =
-    UNonAliasingHeapRef(this, id)
 
 class UNullRef internal constructor(
     ctx: UContext<*>,
