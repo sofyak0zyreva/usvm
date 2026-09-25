@@ -3,6 +3,8 @@ package org.usvm.collection.array
 import io.ksmt.KAst
 import io.ksmt.decl.KDecl
 import io.ksmt.decl.KUninterpretedConstDecl
+import io.ksmt.expr.KArrayConst
+import io.ksmt.expr.KBitVec32Value
 import io.ksmt.expr.KExpr
 import io.ksmt.expr.KUninterpretedSortValue
 import io.ksmt.solver.model.KFuncInterp
@@ -10,6 +12,8 @@ import io.ksmt.solver.model.KFuncInterpVarsFree
 import io.ksmt.sort.KSort
 import io.ksmt.sort.KUninterpretedSort
 import kotlinx.collections.immutable.persistentMapOf
+import org.usvm.NAHeapRefMap
+import org.usvm.NAReadingIdMap
 import org.usvm.UAddressSort
 import org.usvm.UConcreteHeapRef
 import org.usvm.UExpr
@@ -28,6 +32,9 @@ abstract class UArrayModelRegion<ArrayType, Sort : USort, USizeSort : USort>(
     abstract val inputArray: UReadOnlyMemoryRegion<USymbolicArrayIndex<USizeSort>, Sort>
 
     override fun read(key: UArrayIndexLValue<ArrayType, Sort, USizeSort>): UExpr<Sort> {
+        if (key.index is KBitVec32Value && key.index.intValue == 2) {
+            println()
+        }
         val ref = modelEnsureConcreteInputRef(key.ref)
         return inputArray.read(ref to key.index)
     }
@@ -60,6 +67,11 @@ class UNonAliasingArrayModelRegion<ArrayType, Sort : USort, USizeSort : USort>(
     }
 
     override fun read(key: UArrayIndexLValue<ArrayType, Sort, USizeSort>): UExpr<Sort> {
+        if (key.index is KBitVec32Value && (key.index.intValue == 1 || key.index.intValue == 16)) {
+            println()
+        }
+
+//        val y = trimPrefixAndSuffix(x[-3]?.symbol.toString())
         modelEnsureRightInputRef(key.ref)
         val defValue = nonAliasingArrays.values.firstOrNull()!!.read(key.index)
         if (key.ref is UConcreteHeapRef) {
@@ -68,7 +80,19 @@ class UNonAliasingArrayModelRegion<ArrayType, Sort : USort, USizeSort : USort>(
                 ?.key
 
             val rIdx = rAddressIdx(model, valAddress)
-            return nonAliasingArrays[rIdx]?.read(key.index) ?: defValue
+            if (rIdx != null) {
+                return nonAliasingArrays[rIdx]?.read(key.index)
+                    ?: defValue
+            }
+            else {
+                val x = NAHeapRefMap
+                val collections = x.mapValues { (_, v) -> trimPrefixAndSuffix(v.symbol.toString()) }
+                val decl = findDecl(model, valAddress).toString()
+                val z = extractId(decl)
+                val key1 = collections.entries.find { it.value == z }?.key
+                return nonAliasingArrays[key1]?.read(key.index)
+                    ?: defValue
+            }
         }
         else if (key.ref is UNonAliasingHeapRef) {
             return  (nonAliasingArrays[key.ref.id]?.read(key.index)
@@ -77,6 +101,30 @@ class UNonAliasingArrayModelRegion<ArrayType, Sort : USort, USizeSort : USort>(
         }
         return defValue
     }
+}
+fun extractId(input: String): String {
+    return input.trim()
+        .removePrefix("(")
+        .substringBefore(" ")
+}
+fun trimPrefixAndSuffix(input: String): String {
+    return input.replace(Regex("""^<>@|\[.*]$"""), "")
+}
+
+fun findDecl(model: UModelEvaluator<*>, valAddress: UExpr<UAddressSort>?): KDecl<*>? {
+    for (decl in model.model.declarations) {
+        val interp = model.model.interpretation(decl)
+        val x = interp?.default
+        val y = if (x is KArrayConst<*,*>) x.value.toString() else x.toString()
+        if (y == valAddress.toString()) {
+            return decl
+        }
+    }
+    return null
+}
+
+fun collectionIdx(model: UModelEvaluator<*>, valAddress: UExpr<UAddressSort>?) {
+
 }
 
 fun rAddressIdx(model: UModelEvaluator<*>, valAddress: UExpr<UAddressSort>?): Int? {
