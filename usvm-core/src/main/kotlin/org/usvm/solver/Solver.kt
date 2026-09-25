@@ -55,14 +55,16 @@ open class USolverBase<Type>(
         }
 
         smtSolver.withAssertionsScope {
-            val assertions = pc.constraints(translator).toList()
-            smtSolver.assert(assertions)
+            val pcAssertions = pc.constraints(translator).toList()
 
             val translatedSoftConstraints = softConstraints
                 .asSequence()
                 .map(translator::translate)
                 .filterNot(UBoolExpr::isFalse)
                 .toMutableList()
+
+            val assertions = pcAssertions + translator.nonAliasingAxioms
+            smtSolver.assert(assertions)
 
             // DPLL(T)-like solve procedure
             var iter = 0

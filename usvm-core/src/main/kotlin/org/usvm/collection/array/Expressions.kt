@@ -55,6 +55,7 @@ fun makeNonAliasingIdForReading(ctx: UContext<*>, key: Pair<UNonAliasingHeapAddr
 class UNonAliasingArrayReading<ArrayType, Sort : USort, USizeSort : USort> internal constructor(
     ctx: UContext<USizeSort>,
     collection: UNonAliasingArray<ArrayType, Sort, USizeSort>,
+    val address: UHeapRef,
     val index: UExpr<USizeSort>,
 ) : UCollectionReading<UNonAliasingArrayId<ArrayType, Sort, USizeSort>, UExpr<USizeSort>, Sort>(ctx, collection) {
 
@@ -68,11 +69,12 @@ class UNonAliasingArrayReading<ArrayType, Sort : USort, USizeSort : USort> inter
     override fun internEquals(other: Any): Boolean =
         structurallyEqual(
             other,
+            { id },
             { collection },
             { index },
         )
 
-    override fun internHashCode(): Int = hash(collection, index)
+    override fun internHashCode(): Int = hash(id, collection, index)
 
     override fun print(printer: ExpressionPrinter) {
         printer.append(collection.toString())

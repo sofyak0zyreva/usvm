@@ -91,7 +91,7 @@ open class UContext<USizeSort : USort>(
     val sizeExprs by lazy { components.mkSizeExprProvider(this) }
     val statesForkProvider by lazy { components.mkStatesForkProvider() }
 
-    val runInAliasingMode: Boolean = true
+    val runInAliasingMode: Boolean = false
 
     private var currentStateId = 0u
 
@@ -173,7 +173,8 @@ open class UContext<USizeSort : USort>(
             }
 
             if (symbolicRefLhs != null && symbolicRefRhs != null) {
-                val refsEq = super.mkEq(symbolicRefLhs.expr, symbolicRefRhs.expr, order = true)
+                val refsEq = mkNonAliasingRefEq(symbolicRefLhs.expr, symbolicRefRhs.expr)
+                    ?: super.mkEq(symbolicRefLhs.expr, symbolicRefRhs.expr, order = true)
                 // mkAnd instead of mkAnd with flat=false here is OK
                 val conjunct = mkAnd(symbolicRefLhs.guard, symbolicRefRhs.guard, refsEq)
                 conjuncts += conjunct
@@ -183,12 +184,64 @@ open class UContext<USizeSort : USort>(
             mkOr(conjuncts)
         }
 
+    private fun mkNonAliasingRefEq(lhs: UHeapRef, rhs: UHeapRef): UBoolExpr? {
+        if (runInAliasingMode) return null
+        if (lhs is UNullRef || rhs is UNullRef) return null
+
+        val pathEq = mkNonAliasingPathEq(lhs, rhs) ?: return null
+        if (pathEq == trueExpr) return trueExpr
+
+        val bothNull = mkAnd(
+            super.mkEq(lhs, nullRef, order = true),
+            super.mkEq(rhs, nullRef, order = true),
+        )
+        return mkOr(pathEq, bothNull)
+    }
+
+    private fun mkNonAliasingPathEq(lhs: UHeapRef, rhs: UHeapRef): UBoolExpr? {
+        val l = unwrapNonAliasingRef(lhs)
+        val r = unwrapNonAliasingRef(rhs)
+
+        if (l === r) return trueExpr
+        if (!isNonAliasingPathRef(l) || !isNonAliasingPathRef(r)) return null
+
+        return when {
+            l is UNonAliasingArrayReading<*, *, *> && r is UNonAliasingArrayReading<*, *, *> -> {
+                if (!l.collection.updates.isEmpty() || !r.collection.updates.isEmpty()) return null
+                val sameArray = mkNonAliasingPathEq(l.address, r.address) ?: return null
+                val sameIndex = super.mkEq(l.index.asExpr(sizeSort), r.index.asExpr(sizeSort), order = true)
+                mkAnd(sameArray, sameIndex)
+            }
+
+            l is UNonAliasingFieldReading<*, *> && r is UNonAliasingFieldReading<*, *> -> {
+                if (l.collection.collectionId.field != r.collection.collectionId.field) return falseExpr
+                if (!l.collection.updates.isEmpty() || !r.collection.updates.isEmpty()) return null
+                mkNonAliasingPathEq(l.address, r.address)
+            }
+
+            l is UNonAliasingHeapRef && r is UNonAliasingHeapRef -> mkBool(l.id == r.id)
+
+            else -> falseExpr
+        }
+    }
+
+    private fun unwrapNonAliasingRef(ref: UHeapRef): UHeapRef =
+        if (ref is UNonAliasingHeapRef && ref.symbol != null) ref.symbol else ref
+
+    private fun isNonAliasingPathRef(ref: UHeapRef): Boolean =
+        ref is UNonAliasingArrayReading<*, *, *> ||
+            ref is UNonAliasingFieldReading<*, *> ||
+            ref is UNonAliasingHeapRef ||
+            ref is URegisterReading<*>
+
+
     private inline fun mkHeapEqWithFastChecks(
         lhs: UHeapRef,
         rhs: UHeapRef,
         blockOnFailedFastChecks: () -> UBoolExpr,
     ): UBoolExpr = when {
-        lhs is USymbolicHeapRef && rhs is USymbolicHeapRef -> super.mkEq(lhs, rhs, order = true)
+        lhs is USymbolicHeapRef && rhs is USymbolicHeapRef ->
+            mkNonAliasingRefEq(lhs, rhs) ?: super.mkEq(lhs, rhs, order = true)
         isAllocatedConcreteHeapRef(lhs) && isAllocatedConcreteHeapRef(rhs) -> mkBool(lhs == rhs)
         isStaticHeapRef(lhs) && isStaticHeapRef(rhs) -> mkBool(lhs == rhs)
 

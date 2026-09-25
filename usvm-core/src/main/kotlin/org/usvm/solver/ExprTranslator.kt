@@ -4,6 +4,7 @@ import io.ksmt.decl.KDecl
 import io.ksmt.expr.KExpr
 import io.ksmt.expr.KTrue
 import io.ksmt.sort.KBoolSort
+import io.ksmt.sort.KArraySort
 import io.ksmt.utils.mkConst
 import io.ksmt.utils.uncheckedCast
 import org.usvm.*
@@ -68,6 +69,30 @@ open class UExprTranslator<Type, USizeSort : USort>(
     override val ctx: UContext<USizeSort>,
 ) : UExprTransformer<Type, USizeSort>(ctx) {
     open fun <Sort : USort> translate(expr: UExpr<Sort>): KExpr<Sort> = apply(expr)
+
+    private val _nonAliasingAxioms = linkedSetOf<UBoolExpr>()
+    val nonAliasingAxioms: Set<UBoolExpr> get() = _nonAliasingAxioms
+
+    private val naOriginIndexDecl by lazy {
+        ctx.mkFuncDecl("na_origin_index", ctx.sizeSort, listOf(ctx.addressSort))
+    }
+
+    private val naOriginArrayDecl by lazy {
+        ctx.mkFuncDecl("na_origin_array", ctx.bv32Sort, listOf(ctx.addressSort))
+    }
+
+
+    fun addNonAliasingArrayElementAxiom(
+        arrayId: Int,
+        baseArray: KExpr<KArraySort<USizeSort, UAddressSort>>,
+        index: KExpr<USizeSort>,
+    ) = with(ctx) {
+        val elem = mkArraySelect(baseArray, index)
+        val isNull = mkEqNoSimplify(elem, translate(nullRef))
+        val sameIndex = mkEq(mkApp(naOriginIndexDecl, listOf(elem)), index)
+        val sameArray = mkEq(mkApp(naOriginArrayDecl, listOf(elem)), mkBv(arrayId))
+        _nonAliasingAxioms += mkOr(isNull, mkAnd(sameIndex, sameArray))
+    }
 
     override fun <Sort : USort> transform(expr: URegisterReading<Sort>): KExpr<Sort> {
         val registerConst = expr.sort.mkConst("r${expr.idx}_${expr.sort}")

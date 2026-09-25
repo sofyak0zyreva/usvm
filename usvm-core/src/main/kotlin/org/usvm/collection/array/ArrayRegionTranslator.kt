@@ -6,6 +6,7 @@ import io.ksmt.sort.KArray2Sort
 import io.ksmt.sort.KArraySort
 import io.ksmt.sort.KBoolSort
 import io.ksmt.utils.mkConst
+import io.ksmt.utils.uncheckedCast
 import org.usvm.UAddressSort
 import org.usvm.UConcreteHeapAddress
 import org.usvm.UExpr
@@ -47,6 +48,7 @@ class UArrayRegionDecoder<ArrayType, Sort : USort, USizeSort : USort>(
         }
 
     fun nonAliasingArrayRegionTranslator(
+        id : UNonAliasingHeapAddress,
         collectionId: UNonAliasingArrayId<ArrayType, Sort, USizeSort>
     ): URegionTranslator<UNonAliasingArrayId<ArrayType, Sort, USizeSort>, UExpr<USizeSort>, Sort>
     =
@@ -107,7 +109,7 @@ private class UAllocatedArrayRegionTranslator<ArrayType, Sort : USort, USizeSort
 
 private class UNonAliasingArrayRegionTranslator<ArrayType, Sort : USort, USizeSort : USort>(
     private val collectionId: UNonAliasingArrayId<ArrayType, Sort, USizeSort>,
-    exprTranslator: UExprTranslator<*, USizeSort>
+    private val exprTranslator: UExprTranslator<*, USizeSort>
 ): URegionTranslator<UNonAliasingArrayId<ArrayType, Sort, USizeSort>, UExpr<USizeSort>, Sort>,
     UCollectionDecoder<UExpr<USizeSort>, Sort>
 {
@@ -126,6 +128,15 @@ private class UNonAliasingArrayRegionTranslator<ArrayType, Sort : USort, USizeSo
         key: UExpr<USizeSort>
     ): KExpr<Sort> {
         val translatedCollection = region.updates.accept(updatesTranslator, visitorCache)
+
+        if (collectionId.sort == exprTranslator.ctx.addressSort) {
+            exprTranslator.addNonAliasingArrayElementAxiom(
+                collectionId.id,
+                initialValue.uncheckedCast(),
+                exprTranslator.translate(key),
+            )
+        }
+
         return updatesTranslator.visitSelect(translatedCollection, key)
     }
 
