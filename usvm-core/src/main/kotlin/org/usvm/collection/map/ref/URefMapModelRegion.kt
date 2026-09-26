@@ -1,12 +1,12 @@
 package org.usvm.collection.map.ref
 
 import org.usvm.UAddressSort
-import org.usvm.UConcreteHeapRef
 import org.usvm.UExpr
+import io.ksmt.utils.uncheckedCast
+import org.usvm.UHeapRef
 import org.usvm.UNonAliasingHeapAddress
 import org.usvm.UNonAliasingHeapRef
 import org.usvm.USort
-import org.usvm.collection.array.rAddressIdx
 import org.usvm.collection.map.USymbolicMapKey
 import org.usvm.memory.UReadOnlyMemoryRegion
 import org.usvm.model.UModelEvaluator
@@ -40,35 +40,39 @@ class URefMapEagerModelRegion<MapType, ValueSort : USort>(
     override val inputMap: UReadOnlyMemoryRegion<USymbolicMapKey<UAddressSort>, ValueSort>
 ) : URefMapModelRegion<MapType, ValueSort>(regionId)
 
-class UNonAliasingRefMapModelRegion<MapType, ValueSort : USort>(
+class UNonAliasingRefMapModelRegion<MapType, ValueSort : USort> internal constructor(
     private val regionId: URefMapRegionId<MapType, ValueSort>,
     private val model: UModelEvaluator<*>,
-    private val nonAliasingMapDecoders:  Map<UNonAliasingHeapAddress, UCollectionDecoder<USymbolicMapKey<UAddressSort>, ValueSort>>
+    private val cells: List<UNonAliasingRefMapCell<ValueSort>>,
 ) : UReadOnlyMemoryRegion<URefMapEntryLValue<MapType, ValueSort>, ValueSort> {
 
-    val nonAliasingMaps: MutableMap<UNonAliasingHeapAddress, UReadOnlyMemoryRegion<USymbolicMapKey<UAddressSort>, ValueSort>> by lazy {
-        nonAliasingMapDecoders
-            .mapValues { (_, decoder) -> decoder.decodeCollection(model)  }
-            .toMutableMap()
+    private val cellsByIds: Map<Pair<UNonAliasingHeapAddress, UNonAliasingHeapAddress>, UNonAliasingRefMapCell<ValueSort>> =
+        cells.associateBy { it.mapAddress to it.keyAddress }
+
+    private val cellRefs: List<Pair<Pair<UExpr<UAddressSort>, UExpr<UAddressSort>>, UNonAliasingRefMapCell<ValueSort>>> by lazy {
+        cells.mapNotNull { cell -> cell.evalCellRefs(model)?.let { it to cell } }
     }
+
+    private val defaultValue: UExpr<ValueSort> by lazy { regionId.sort.accept(model).uncheckedCast() }
 
     override fun read(key: URefMapEntryLValue<MapType, ValueSort>): UExpr<ValueSort> {
         modelEnsureRightInputRef(key.mapRef)
-        val defValue = nonAliasingMaps.values.firstOrNull()!!.read(key.mapRef to key.mapKey)
-        if (key.mapRef is UConcreteHeapRef) {
-            val valAddress = model.addressesMapping.entries
-                .firstOrNull { (_, value) -> value == key.mapRef }
-                ?.key
+        val mapRef = key.mapRef
+        val keyRef = key.mapKey
 
-            val rIdx = rAddressIdx(model, valAddress)
-            return nonAliasingMaps[rIdx]?.read(key.mapRef to key.mapKey) ?: defValue
+        val cell = if (mapRef is UNonAliasingHeapRef && keyRef is UNonAliasingHeapRef) {
+            cellsByIds[mapRef.id to keyRef.id]
+        } else {
+            cells.firstOrNull { it.matches(mapRef, keyRef) }
         }
-        else if (key.mapRef is UNonAliasingHeapRef) {
-            return  (nonAliasingMaps[key.mapRef.id]?.read(key.mapRef to key.mapKey)
-                ?: defValue
-                    )
-        }
-        return defValue
+
+        return cell?.evalCell(model) ?: defaultValue
     }
 
+    private fun UNonAliasingRefMapCell<ValueSort>.matches(mapRef: UHeapRef, keyRef: UHeapRef): Boolean {
+        val refs by lazy { cellRefs.firstOrNull { it.second === this }?.first }
+        val mapMatches = if (mapRef is UNonAliasingHeapRef) mapRef.id == mapAddress else refs?.first == mapRef
+        if (!mapMatches) return false
+        return if (keyRef is UNonAliasingHeapRef) keyRef.id == keyAddress else refs?.second == keyRef
+    }
 }

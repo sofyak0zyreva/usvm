@@ -7,12 +7,8 @@ import org.usvm.UBoolSort
 import org.usvm.UHeapRef
 import org.usvm.collection.set.UAllocatedSetUpdatesTranslator
 import org.usvm.collection.set.UInputSetUpdatesTranslator
-import org.usvm.collection.set.UNonAliasingSetCollectionDecoder
-import org.usvm.collection.set.UNonAliasingSetUpdatesTranslator
 import org.usvm.collection.set.USetCollectionDecoder
-import org.usvm.collection.set.USetUpdatesTranslator
 import org.usvm.collection.set.USymbolicSetElement
-import org.usvm.collection.set.primitive.UNonAliasingSetModelRegion
 import org.usvm.memory.UReadOnlyMemoryRegion
 import org.usvm.memory.USymbolicCollection
 import org.usvm.model.UModelEvaluator
@@ -93,7 +89,7 @@ class URefSetRegionDecoder<SetType>(
     ): UReadOnlyMemoryRegion<URefSetEntryLValue<SetType>, UBoolSort>? =
         inputWithInputRegionTranslator?.let { URefSetLazyModelRegion(regionId, model, assertions, it) }
             ?: if (nonAliasingWithNonAliasingRegionTranslator.isNotEmpty()) {
-                UNonAliasingRefSetModelRegion(regionId, model, assertions, nonAliasingWithNonAliasingRegionTranslator) }
+                UNonAliasingRefSetModelRegion(regionId, model, assertions, nonAliasingWithNonAliasingRegionTranslator.values) }
             else null
 }
 

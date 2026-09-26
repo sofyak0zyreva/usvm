@@ -8,12 +8,12 @@ import org.usvm.UConcreteHeapAddress
 import org.usvm.UExpr
 import org.usvm.UHeapRef
 import org.usvm.UNonAliasingHeapAddress
+import org.usvm.NAHeapRefMap
 import org.usvm.USort
 import org.usvm.collection.field.getId
 import org.usvm.collection.map.USymbolicMapKey
 import org.usvm.collection.map.USymbolicMapKeyInfo
 import org.usvm.collection.map.USymbolicMapKeyRegion
-import org.usvm.collection.set.USymbolicSetElement
 import org.usvm.collection.set.ref.UAllocatedRefSetWithInputElementsId
 import org.usvm.collection.set.ref.UAllocatedRefSetWithNonAliasingElementsId
 import org.usvm.collection.set.ref.UInputRefSetWithAllocatedElementsId
@@ -391,8 +391,11 @@ class UNonAliasingRefMapWithNonAliasingKeysId<MapType, ValueSort : USort>(
         memory.write(mkLValue(key), value, guard)
     }
 
-    private fun mkLValue(key: USymbolicMapKey<UAddressSort>): ULValue<*, ValueSort> =
-        URefMapEntryLValue(sort, key.first, key.second, mapType)
+    private fun mkLValue(@Suppress("UNUSED_PARAMETER") key: USymbolicMapKey<UAddressSort>): ULValue<*, ValueSort> =
+        URefMapEntryLValue(sort, nonAliasingRef(mapAddress), nonAliasingRef(keyAddress), mapType)
+
+    private fun nonAliasingRef(id: UNonAliasingHeapAddress): UHeapRef =
+        NAHeapRefMap[id] ?: sort.uctx.mkNonAliasingHeapRef(id)
 
     override fun instantiate(
         collection: USymbolicCollection<UNonAliasingRefMapWithNonAliasingKeysId<MapType, ValueSort>, USymbolicMapKey<UAddressSort>, ValueSort>,
