@@ -4,6 +4,7 @@ import io.ksmt.utils.asExpr
 import mu.KLogging
 import org.jacodb.api.jvm.JcClassType
 import org.jacodb.api.jvm.JcMethod
+import org.jacodb.api.jvm.JcPrimitiveType
 import org.jacodb.api.jvm.JcRefType
 import org.jacodb.api.jvm.JcType
 import org.jacodb.api.jvm.cfg.JcArgument
@@ -127,6 +128,25 @@ class JcInterpreter(
                     val ref = state.memory.read(argumentLValue).asExpr(addressSort)
                     state.pathConstraints += mkIsSubtypeExpr(ref, type)
 
+                    if (!ctx.runInAliasingMode) {
+                        entrypointArguments.forEach { (prevType, prevRef) ->
+                            if (type == prevType && type !is JcPrimitiveType) {
+                                if (type.nullable == false) {
+                                    state.pathConstraints += mkEq(ref, nullRef).not()
+                                    state.pathConstraints += mkEq(prevRef, nullRef).not()
+                                    state.pathConstraints += mkEq(ref, prevRef).not()
+                                }
+                                else {
+                                    val isEitherNotNull = mkOr(
+                                        mkEq(ref, nullRef).not(),
+                                        mkEq(prevRef, nullRef).not()
+                                    )
+                                    val areNotEqual = mkEq(ref, prevRef).not()
+                                    state.pathConstraints += mkImplies(isEitherNotNull, areNotEqual)
+                                }
+                            }
+                        }
+                    }
                     entrypointArguments += type to ref
                 }
             }
@@ -410,6 +430,11 @@ class JcInterpreter(
             }
         } ?: observer?.onAssignStatement(exprResolver.simpleValueResolver, stmt, scope)
 
+        val x = stmt.lhv
+        if (x is JcLocalVar && x.name == "%4") {
+            println()
+        }
+        val r = scope.calcOnState { methodResult }
         val lvalue = exprResolver.resolveLValue(stmt.lhv) ?: return
         val expr = exprResolver.resolveJcExpr(stmt.rhv, stmt.lhv.type) ?: return
 
@@ -463,10 +488,13 @@ class JcInterpreter(
 
         observer?.onIfStatement(exprResolver.simpleValueResolver, stmt, scope)
 
-        val boolExpr = exprResolver
-            .resolveJcExpr(stmt.condition)
-            ?.asExpr(ctx.boolSort)
-            ?: return
+        val x = stmt.condition
+        val y = exprResolver.resolveJcExpr(x)
+        val boolExpr = y?.asExpr(ctx.boolSort) ?: return
+//        val boolExpr = exprResolver
+//            .resolveJcExpr(stmt.condition)
+//            ?.asExpr(ctx.boolSort)
+//            ?: return
 
         val instList = stmt.location.method.instList
         val (posStmt, negStmt) = instList[stmt.trueBranch.index] to instList[stmt.falseBranch.index]
