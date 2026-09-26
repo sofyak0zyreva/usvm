@@ -1,5 +1,6 @@
 package org.usvm.collection.set.ref
 
+import org.usvm.NAHeapRefMap
 import org.usvm.UAddressSort
 import org.usvm.UBoolExpr
 import org.usvm.UBoolSort
@@ -568,14 +569,13 @@ internal class URefSetMemoryRegion<SetType>(
             updatedRegion2.unionAllocatedSetNonAliasingElements(
                 initial = updatedRegion2,
                 srcSetRef = srcConcrete,
-                guard = guard,
-                read = { elemId, elemRef ->
-                    region.getAllocatedSetWithNonAliasingElements(elemId).read(srcConcrete) },
+                read = { id -> region.getAllocatedSetWithNonAliasingElements(id) },
                 mkDstKeyId = { allocatedSetWithNonAliasingElementsId(srcConcrete.address, it) },
-                write = { result, dstKeyId, elemRef, value, g ->
-                    val newMap = result.getAllocatedSetWithNonAliasingElements(dstKeyId)
-                        .write(dstConcrete, value, g, ownership)
-                    result.updateAllocatedSetWithNonAliasingElements(dstKeyId, newMap, ownership)
+                write = { result, dstKeyId, srcCollection2 ->
+                    val dstCollection2 = result.getAllocatedSetWithNonAliasingElements(dstKeyId)
+                    val adapter2 = UAllocatedToAllocatedNARefSetUnionAdapter(srcCollection2)
+                    val updated2 = dstCollection2.copyRange(srcCollection2, adapter2, guard)
+                    result.updateAllocatedSetWithNonAliasingElements(dstKeyId, updated2, ownership)
                 }
             )
 
@@ -599,8 +599,7 @@ internal class URefSetMemoryRegion<SetType>(
 
             val adapter = UInputToAllocatedSymbolicRefSetUnionAdapter(srcSymbolic, srcCollection)
             val updated = dstCollection.copyRange(srcCollection, adapter, guard)
-            val x = updatedRegion.updateAllocatedSetWithInputElements(dstId, updated, ownership)
-            x
+            updatedRegion.updateAllocatedSetWithInputElements(dstId, updated, ownership)
         },
         blockOnNonAliasing0Concrete1 = {region, srcNonAliasing, dstConcrete, guard ->
             val updatedAllocatedSet = region.unionNonAliasingSetAllocatedElements(
@@ -614,23 +613,18 @@ internal class URefSetMemoryRegion<SetType>(
                 }
             )
             val updatedRegion = region.updateAllocatedSetWithAllocatedElements(updatedAllocatedSet)
-
-//            val srcCollection = updatedRegion.getNonAliasingSetWithNonAliasingElements()
-//            TODO()
-            val x = updatedRegion.unionNonAliasingSetNonAliasingElements(
+            updatedRegion.unionNonAliasingSetNonAliasingElements(
                 initial = updatedRegion,
                 srcSetRef = srcNonAliasing,
-                guard = guard,
-                read = { elemId, elemRef ->
-                    updatedRegion.getNonAliasingSetWithNonAliasingElements(elemId).read(srcNonAliasing to elemRef) },
+                read = { id -> updatedRegion.getNonAliasingSetWithNonAliasingElements(id) },
                 mkDstKeyId = { allocatedSetWithNonAliasingElementsId(dstConcrete.address, it) },
-                write = { result, dstKeyId, elemRef, value, g ->
-                    val newMap = result.getAllocatedSetWithNonAliasingElements(dstKeyId)
-                        .write(elemRef, value, g, ownership)
-                    result.updateAllocatedSetWithNonAliasingElements(dstKeyId, newMap, ownership)
+                write = { result, dstKeyId, srcCollection ->
+                    val dstCollection = result.getAllocatedSetWithNonAliasingElements(dstKeyId)
+                    val adapter = UNonAliasingToAllocatedSymbolicRefSetUnionAdapter(srcNonAliasing, srcCollection)
+                    val updated = dstCollection.copyRange(srcCollection, adapter, guard)
+                    result.updateAllocatedSetWithNonAliasingElements(dstKeyId, updated, ownership)
                 }
             )
-            x
         },
         blockOnConcrete0Symbolic1 = { region, srcConcrete, dstSymbolic, guard ->
             val initialAllocatedSetState = region.allocatedSetWithAllocatedElements
@@ -656,7 +650,6 @@ internal class URefSetMemoryRegion<SetType>(
         },
         blockOnConcrete0NonAliasing1 = { region, srcConcrete, dstNonAliasing, guard ->
             val initialAllocatedSetState = region.allocatedSetWithAllocatedElements
-            // source ref type, allocated elements
             val updatedRegion = region.unionAllocatedSetAllocatedElements(
                 initial = region,
                 srcAddress = srcConcrete.address,
@@ -669,21 +662,18 @@ internal class URefSetMemoryRegion<SetType>(
                     result.updateNonAliasingSetWithAllocatedElements(dstKeyId, newMap, ownership)
                 }
             )
-//            TODO()
-            val x = updatedRegion.unionAllocatedSetNonAliasingElements(
+            updatedRegion.unionAllocatedSetNonAliasingElements(
                 initial = updatedRegion,
                 srcSetRef = srcConcrete,
-                guard = guard,
-                read = { elemId, elemRef ->
-                    region.getAllocatedSetWithNonAliasingElements(elemId).read(srcConcrete) },
+                read = { id -> updatedRegion.getAllocatedSetWithNonAliasingElements(id) },
                 mkDstKeyId = { nonAliasingSetWithNonAliasingElementsId(getId(dstNonAliasing), it) },
-                write = { result, dstKeyId, elemRef, value, g ->
-                    val newMap = result.getNonAliasingSetWithNonAliasingElements(dstKeyId)
-                        .write(dstNonAliasing to elemRef, value, g, ownership)
-                    result.updateNonAliasingSetWithNonAliasingElements(dstKeyId, newMap, ownership)
+                write = { result, dstKeyId, srcCollection ->
+                    val dstCollection = result.getNonAliasingSetWithNonAliasingElements(dstKeyId)
+                    val adapter = UAllocatedToNonAliasingSymbolicRefSetUnionAdapter(dstNonAliasing, srcCollection)
+                    val updated = dstCollection.copyRange(srcCollection, adapter, guard)
+                    result.updateNonAliasingSetWithNonAliasingElements(dstKeyId, updated, ownership)
                 }
             )
-            x
         },
         blockOnNonAliasing0NonAliasing1 = {region, srcNonAliasing, dstNonAliasing, guard ->
             val updatedRegion = region.unionNonAliasingSetAllocatedElements(
@@ -698,21 +688,18 @@ internal class URefSetMemoryRegion<SetType>(
                     result.updateNonAliasingSetWithAllocatedElements(dstKeyId, newMap, ownership)
                 }
             )
-//            TODO()
-            val x = updatedRegion.unionNonAliasingSetNonAliasingElements(
+            updatedRegion.unionNonAliasingSetNonAliasingElements(
                 initial = updatedRegion,
                 srcSetRef = srcNonAliasing,
-                guard = guard,
-                read = { elemId, elemRef ->
-                    region.getNonAliasingSetWithNonAliasingElements(elemId).read(srcNonAliasing to elemRef) },
+                read = { id -> region.getNonAliasingSetWithNonAliasingElements(id) },
                 mkDstKeyId = { nonAliasingSetWithNonAliasingElementsId(getId(dstNonAliasing), it) },
-                write = { result, dstKeyId, elemRef, value, g ->
-                    val newMap = updatedRegion.getNonAliasingSetWithNonAliasingElements(dstKeyId)
-                        .write(dstNonAliasing to elemRef, value, g, ownership)
-                    result.updateNonAliasingSetWithNonAliasingElements(dstKeyId, newMap, ownership)
+                write = { result, dstKeyId, srcCollection ->
+                    val dstCollection = updatedRegion.getNonAliasingSetWithNonAliasingElements(dstKeyId)
+                    val adapter = UNonAliasingToNonAliasingSymbolicRefSetUnionAdapter(srcNonAliasing, dstNonAliasing, srcCollection)
+                    val updated = dstCollection.copyRange(srcCollection, adapter, guard)
+                    result.updateNonAliasingSetWithNonAliasingElements(dstKeyId, updated, ownership)
                 }
             )
-            x
         },
         blockOnSymbolic0Symbolic1 = { region, srcSymbolic, dstSymbolic, guard ->
             val updatedRegion = region.unionInputSetAllocatedElements(
@@ -784,16 +771,12 @@ internal class URefSetMemoryRegion<SetType>(
     private inline fun <R, DstKeyId> unionAllocatedSetNonAliasingElements(
         initial: R,
         srcSetRef: UHeapRef,
-        guard: UBoolExpr,
-        read: (UAllocatedRefSetWithNonAliasingElementsId<SetType>, UHeapRef) -> UBoolExpr,
+        read: (UAllocatedRefSetWithNonAliasingElementsId<SetType>) -> UAllocatedRefSetWithNonAliasingElements<SetType>,
         mkDstKeyId: (UNonAliasingHeapAddress) -> DstKeyId,
-        write: (R, DstKeyId, UHeapRef, UBoolExpr, UBoolExpr) -> R
+        write: (R, DstKeyId,  UAllocatedRefSetWithNonAliasingElements<SetType>) -> R
     ) = unionNonAliasingElements(
         initial,
         allocatedSetWithNonAliasingElements.keys.filterTo(mutableListOf()) { it.setAddress == getId(srcSetRef) },
-        guard,
-        srcSetRef,
-        { it.elementId },
         read,
         { mkDstKeyId(it.elementId) },
         write
@@ -802,16 +785,12 @@ internal class URefSetMemoryRegion<SetType>(
     private inline fun <R, DstKeyId> unionNonAliasingSetNonAliasingElements(
         initial: R,
         srcSetRef: UHeapRef,
-        guard: UBoolExpr,
-        read: (UNonAliasingRefSetWithNonAliasingElementsId<SetType>, UHeapRef) -> UBoolExpr,
+        read: (UNonAliasingRefSetWithNonAliasingElementsId<SetType>) -> UNonAliasingRefSetWithNonAliasingElements<SetType>,
         mkDstKeyId: (UNonAliasingHeapAddress) -> DstKeyId,
-        write: (R, DstKeyId, UHeapRef, UBoolExpr, UBoolExpr) -> R
+        write: (R, DstKeyId, UNonAliasingRefSetWithNonAliasingElements<SetType>) -> R
     ) = unionNonAliasingElements(
         initial,
         nonAliasingSetWithNonAliasingElements.keys.filterTo(mutableListOf()) { it.setId == getId(srcSetRef) },
-        guard,
-        srcSetRef,
-        { it.elementId },
         read,
         { mkDstKeyId(it.elementId) },
         write
@@ -820,7 +799,6 @@ internal class URefSetMemoryRegion<SetType>(
     private inline fun <R, SrcKeyId, DstKeyId> unionAllocatedElements(
         initial: R,
         keys: List<SrcKeyId>,
-//        srcSetRef: UHeapRef,
         guard: UBoolExpr,
         read: (SrcKeyId) -> UBoolExpr,
         mkDstKeyId: (SrcKeyId) -> DstKeyId,
@@ -829,35 +807,18 @@ internal class URefSetMemoryRegion<SetType>(
         val srcContains = read(srcKeyId)
 
         val mergedGuard = guard.uctx.mkAnd(srcContains, guard)
-
-        val y = mkDstKeyId(srcKeyId)
         write(result, mkDstKeyId(srcKeyId), guard.uctx.trueExpr, mergedGuard)
     }
 
-    private inline fun <R, SrcKeyId, DstKeyId> unionNonAliasingElements(
+    private inline fun <R, SrcKeyId, DstKeyId, SrcCollection> unionNonAliasingElements(
         initial: R,
         keys: List<SrcKeyId>,
-        guard: UBoolExpr,
-        srcSetRef: UHeapRef,
-        srcElemNonAliasingAddress: (SrcKeyId) -> UNonAliasingHeapAddress,
-        read: (SrcKeyId, UHeapRef) -> UBoolExpr,
+        read: (SrcKeyId) -> SrcCollection,
         mkDstKeyId: (SrcKeyId) -> DstKeyId,
-        write: (R, DstKeyId, UHeapRef, UBoolExpr, UBoolExpr) -> R
+        write: (R, DstKeyId, SrcCollection) -> R
     ): R = keys.fold(initial) { result, srcKeyId ->
-
-        val srcElemAddress = srcElemNonAliasingAddress(srcKeyId)
-
-
-        // 1. Construct element reference using ONLY element address
-        val elemRef = guard.uctx.mkConcreteHeapRef(srcElemAddress)
-//        val srcContains = read(srcKeyId, elemRef)
-//        val mergedGuard = guard
-
-        val y = mkDstKeyId(srcKeyId)
-
-//        val m = write(result, mkDstKeyId(srcKeyId), srcSetRef, guard.uctx.trueExpr, mergedGuard)
-        val x = write(result, mkDstKeyId(srcKeyId), elemRef, guard.uctx.trueExpr, guard)
-        x
+        val srcCollection = read(srcKeyId)
+        write(result, mkDstKeyId(srcKeyId), srcCollection)
     }
 
     override fun setEntries(ref: UHeapRef): URefSetEntries<SetType> =

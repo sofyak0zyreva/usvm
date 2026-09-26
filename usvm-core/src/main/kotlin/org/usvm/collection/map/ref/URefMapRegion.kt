@@ -464,7 +464,7 @@ internal class URefMapMemoryRegion<MapType, ValueSort : USort>(
             val updatedRegion2 = updatedRegion.updateAllocatedMapWithInputKeys(dstInputKeysId, updatedDstCollection, ownership)
 
             updatedRegion2.mergeAllocatedMapNonAliasingKeys(
-                initial = updatedRegion2, srcMapRef = srcConcrete, guard = guard, keySet = keySet,
+                initial = updatedRegion2, srcMapRef = srcConcrete, guard = guard,
                 getSrcKeys = { keyRef ->
                     keySet.allocatedSetWithNonAliasingElements(getId(srcConcrete), getId(keyRef))
                 },
@@ -516,9 +516,8 @@ internal class URefMapMemoryRegion<MapType, ValueSort : USort>(
                     result.updateNonAliasingMapWithAllocatedKeys(dstKeyId, newMap, ownership)
                 }
             )
-//            TODO()
             updatedRegion.mergeAllocatedMapNonAliasingKeys(
-                initial = updatedRegion, srcMapRef = srcConcrete, guard = guard, keySet = keySet,
+                initial = updatedRegion, srcMapRef = srcConcrete, guard = guard,
                 getSrcKeys = { keyRef ->
                     keySet.allocatedSetWithNonAliasingElements(getId(srcConcrete), getId(keyRef))
                 },
@@ -554,8 +553,7 @@ internal class URefMapMemoryRegion<MapType, ValueSort : USort>(
 
             val adapter = UInputToAllocatedSymbolicRefMapMergeAdapter(srcSymbolic, srcKeys)
             val updatedDstCollection = dstInputKeysCollection.copyRange(srcInputKeysCollection, adapter, guard)
-            val x = updatedRegion.updateAllocatedMapWithInputKeys(dstInputKeysId, updatedDstCollection, ownership)
-            return x
+            updatedRegion.updateAllocatedMapWithInputKeys(dstInputKeysId, updatedDstCollection, ownership)
         },
         blockOnNonAliasing0Concrete1 = {region, srcNonAliasing, dstConcrete, guard ->
             val updatedAllocatedMap = region.mergeNonAliasingMapAllocatedKeys(
@@ -568,9 +566,8 @@ internal class URefMapMemoryRegion<MapType, ValueSort : USort>(
                 }
             )
             val updatedRegion = region.updateAllocatedMapWithAllocatedKeys(updatedAllocatedMap)
-//            TODO()
-            val x = updatedRegion.mergeNonAliasingMapNonAliasingKeys(
-                initial = updatedRegion, srcMapRef = srcNonAliasing, guard = guard, keySet = keySet,
+            updatedRegion.mergeNonAliasingMapNonAliasingKeys(
+                initial = updatedRegion, srcMapRef = srcNonAliasing, guard = guard,
                 getSrcKeys = { keyRef ->
                     keySet.nonAliasingSetWithNonAliasingElements(getId(srcNonAliasing), getId(keyRef))
                 },
@@ -585,7 +582,6 @@ internal class URefMapMemoryRegion<MapType, ValueSort : USort>(
                     result.updateAllocatedMapWithNonAliasingKeys(dstKeyId, updatedDstCollection, ownership)
                 }
             )
-            return x
         },
         blockOnNonAliasing0NonAliasing1 = {region, srcNonAliasing, dstNonAliasing, guard ->
             val updatedRegion = region.mergeNonAliasingMapAllocatedKeys(
@@ -598,9 +594,8 @@ internal class URefMapMemoryRegion<MapType, ValueSort : USort>(
                     result.updateNonAliasingMapWithAllocatedKeys(dstKeyId, newMap, ownership)
                 }
             )
-//            TODO()
             updatedRegion.mergeNonAliasingMapNonAliasingKeys(
-                initial = updatedRegion, srcMapRef = srcNonAliasing, guard = guard, keySet = keySet,
+                initial = updatedRegion, srcMapRef = srcNonAliasing, guard = guard,
                 getSrcKeys = { keyRef ->
                     keySet.nonAliasingSetWithNonAliasingElements(getId(srcNonAliasing), getId(keyRef))
                 },
@@ -722,7 +717,6 @@ internal class URefMapMemoryRegion<MapType, ValueSort : USort>(
         initial: R,
         srcMapRef: UHeapRef,
         guard: UBoolExpr,
-        keySet: URefSetRegion<MapType>,
         getSrcKeys: (UHeapRef) -> UNonAliasingRefSetWithNonAliasingElements<MapType>,
         read: (UNonAliasingRefMapWithNonAliasingKeysId<MapType, ValueSort>) -> UNonAliasingRefMapWithNonAliasingKeys<MapType, ValueSort>,
         mkDstKeyId: (UNonAliasingHeapAddress) -> DstKeyId,
@@ -731,8 +725,6 @@ internal class URefMapMemoryRegion<MapType, ValueSort : USort>(
         initial,
         nonAliasingMapWithNonAliasingKeys.keys.toList(),
         guard,
-        keySet,
-        srcMapRef,
         { it.keyAddress },
         getSrcKeys,
         read,
@@ -764,7 +756,6 @@ internal class URefMapMemoryRegion<MapType, ValueSort : USort>(
         initial: R,
         srcMapRef: UConcreteHeapRef,
         guard: UBoolExpr,
-        keySet: URefSetRegion<MapType>,
         getSrcKeys: (UHeapRef) ->  UAllocatedRefSetWithNonAliasingElements<MapType>,
         read: (UAllocatedRefMapWithNonAliasingKeysId<MapType, ValueSort>) -> UAllocatedRefMapWithNonAliasingKeys<MapType, ValueSort>,
         mkDstKeyId: (UNonAliasingHeapAddress) -> DstKeyId,
@@ -773,8 +764,6 @@ internal class URefMapMemoryRegion<MapType, ValueSort : USort>(
         initial,
         allocatedMapWithNonAliasingKeys.keys.filterTo(mutableListOf()) { it.mapAddress == srcMapRef.address },
         guard,
-        keySet,
-        srcMapRef,
         { it.keyAddress },
         getSrcKeys,
         read,
@@ -807,8 +796,6 @@ internal class URefMapMemoryRegion<MapType, ValueSort : USort>(
         initial: R,
         keys: List<SrcKeyId>,
         guard: UBoolExpr,
-        keySet: URefSetRegion<MapType>,
-        srcMapRef: UHeapRef,
         srcKeyConcreteAddress: (SrcKeyId) -> UConcreteHeapAddress,
         getSrcKeys: (UHeapRef) -> Keys,
         read: (SrcKeyId) -> SrcCollection,
@@ -820,33 +807,7 @@ internal class URefMapMemoryRegion<MapType, ValueSort : USort>(
         val keyRef = guard.uctx.mkConcreteHeapRef(srcKeyAddress)
         val srcKeys = getSrcKeys(keyRef)
         val srcCollection = read(srcKeyId)
-        val dDstKeyId = mkDstKeyId(srcKeyAddress)
         val x = write(result, mkDstKeyId(srcKeyAddress), srcCollection, srcKeys, guard)
         x
     }
-//    private inline fun <R, SrcKeyId, DstKeyId> mergeNonAliasingKeys(
-//        initial: R,
-//        keys: List<SrcKeyId>,
-//        guard: UBoolExpr,
-//        keySet: URefSetRegion<MapType>,
-//        srcMapRef: UHeapRef,
-//        srcKeyNonAliasingAddress: (SrcKeyId) -> UNonAliasingHeapAddress,
-//        read: (SrcKeyId, UNonAliasingHeapRef) -> UExpr<ValueSort>,
-//        mkDstKeyId: (UNonAliasingHeapAddress) -> DstKeyId,
-//        write: (R, DstKeyId, UNonAliasingHeapRef, UExpr<ValueSort>, UBoolExpr) -> R
-//    ): R = keys.fold(initial) { result, srcKeyId ->
-//        val ctx = guard.uctx
-//        val srcKeyAddress = srcKeyNonAliasingAddress(srcKeyId)
-//
-//        // 1. Construct keyRef
-//        val keyRef = ctx.mkNonAliasingHeapRef(srcKeyAddress)
-//
-//        // 2. Check if the map actually contains this key
-//        val srcContains = keySet.read(URefSetEntryLValue(srcMapRef, keyRef, mapType))
-//        val mergedGuard = ctx.mkAnd(srcContains, guard)
-//
-//        // 3. Read & Write passing keyRef
-//        val srcValue = read(srcKeyId, keyRef)
-//        write(result, mkDstKeyId(srcKeyAddress), keyRef, srcValue, mergedGuard)
-//    }
 }
