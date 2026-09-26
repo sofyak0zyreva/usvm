@@ -50,7 +50,6 @@ typealias UIntepretedValue<Sort> = KInterpretedValue<Sort>
 typealias UAddressSort = KUninterpretedSort
 
 //endregion
-//abstract class UNASymbol<Sort : USort>(ctx: UContext<*>, open val id: Int) : UExpr<Sort>(ctx)
 
 abstract class USymbol<Sort : USort>(ctx: UContext<*>, open val id: Int = -2) : UExpr<Sort>(ctx)
 
@@ -69,15 +68,13 @@ typealias UHeapRef = UExpr<UAddressSort>
  */
 typealias USymbolicHeapRef = USymbol<UAddressSort>
 typealias UConcreteHeapAddress = Int
-// Non-aliasing
-typealias UNASymbolicHeapRef = USymbol<UAddressSort>
 
 typealias UNonAliasingHeapAddress = Int
 
 val NAHeapRefMap: MutableMap<Int, UNonAliasingHeapRef> = mutableMapOf()
 val NAReadingIdMap: MutableMap<Any, Int> = mutableMapOf()
 
-fun castToNAHeapRef(naSymbol: UNASymbolicHeapRef): UNonAliasingHeapRef {
+fun castToNAHeapRef(naSymbol: USymbolicHeapRef): UNonAliasingHeapRef {
     if (naSymbol is URegisterReading<*> && NAHeapRefMap[naSymbol.idx] == null) {
         NAHeapRefMap[naSymbol.idx] = UNonAliasingHeapRef(naSymbol.uctx, naSymbol.idx, naSymbol)
     }
@@ -151,19 +148,12 @@ class UConcreteHeapRef internal constructor(
     override fun internHashCode(): Int = hash(address)
 }
 
-
 class UNonAliasingHeapRef(
     ctx: UContext<*>,
     id: UNonAliasingHeapAddress,
     originalSymbol: USymbol<UAddressSort>? = null
 ): USymbol<UAddressSort>(ctx, id) {
-//    companion object {
-//        private val counter = AtomicInteger(0)
-//
-//        fun fresh(ctx: UContext<*>): UNonAliasingHeapRef {
-//            return UNonAliasingHeapRef(ctx, counter.getAndIncrement())
-//        }
-//    }
+
     val symbol = originalSymbol
 
     override val sort: UAddressSort
