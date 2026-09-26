@@ -846,10 +846,15 @@ internal class URefSetMemoryRegion<SetType>(
                     entries.markAsInput()
                 }
 
+                allocatedSetWithNonAliasingElements.keys.forEach { entry ->
+                    if (entry.setAddress == concreteRef.address) {
+                        val elem = NAHeapRefMap[entry.elementId] ?: ref.uctx.mkConcreteHeapRef(entry.elementId)
+                        entries.add(URefSetEntryLValue(concreteRef, elem, setType))
+                    }
+                }
+
                 entries
             },
-            // all these cases needs serious rewrites maybe (copy-paste from above)
-
             blockOnSymbolic = { entries, (symbolicRef, _) ->
                 inputSetWithAllocatedElements.keys.forEach { entry ->
                     val elem = ref.uctx.mkConcreteHeapRef(entry.elementAddress)
@@ -865,15 +870,19 @@ internal class URefSetMemoryRegion<SetType>(
 
                 entries
             },
-            blockOnNonAliasing = { entries, (symbolicRef, _) ->
+            blockOnNonAliasing = { entries, (nonAliasingRef, _) ->
+                val setId = getId(nonAliasingRef)
                 nonAliasingSetWithAllocatedElements.keys.forEach { entry ->
-                    val elem = ref.uctx.mkConcreteHeapRef(entry.elementAddress)
-                    entries.add(URefSetEntryLValue(symbolicRef, elem, setType))
+                    if (entry.setId == setId) {
+                        val elem = ref.uctx.mkConcreteHeapRef(entry.elementAddress)
+                        entries.add(URefSetEntryLValue(nonAliasingRef, elem, setType))
+                    }
                 }
-
-                val elements = USymbolicSetElementsCollector.collect(inputSetWithInputElements().updates)
-                elements.elements.forEach { entry ->
-                    entries.add(URefSetEntryLValue(symbolicRef, entry.second, setType))
+                nonAliasingSetWithNonAliasingElements.keys.forEach { entry ->
+                    if (entry.setId == setId) {
+                        val elem = NAHeapRefMap[entry.elementId] ?: ref.uctx.mkConcreteHeapRef(entry.elementId)
+                        entries.add(URefSetEntryLValue(nonAliasingRef, elem, setType))
+                    }
                 }
 
                 entries.markAsInput()
