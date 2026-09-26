@@ -2,7 +2,6 @@ package org.usvm.solver
 
 import io.ksmt.decl.KDecl
 import io.ksmt.expr.KExpr
-import io.ksmt.expr.KTrue
 import io.ksmt.sort.KBoolSort
 import io.ksmt.sort.KArraySort
 import io.ksmt.utils.mkConst
@@ -81,7 +80,6 @@ open class UExprTranslator<Type, USizeSort : USort>(
         ctx.mkFuncDecl("na_origin_array", ctx.bv32Sort, listOf(ctx.addressSort))
     }
 
-
     fun addNonAliasingArrayElementAxiom(
         arrayId: Int,
         baseArray: KExpr<KArraySort<USizeSort, UAddressSort>>,
@@ -119,30 +117,10 @@ open class UExprTranslator<Type, USizeSort : USort>(
         return ctx.mkUninterpretedSortValue(ctx.addressSort, expr.address)
     }
 
-
     override fun transform(expr: UNonAliasingHeapRef): UExpr<UAddressSort> {
-        return when (val ref = expr.symbol) {
-            is UNullRef -> transform(ref)
-            is UIndexedMethodReturnValue<*, UAddressSort> -> transform(ref)
-            is UTrackedSymbol<UAddressSort> -> transform(ref)
-            is UNonAliasingFieldReading<*, *> -> {
-                val casted = ref.uncheckedCast<Any?, UNonAliasingFieldReading<*, UAddressSort>>()
-                transform(casted)
-            }
-            is UNonAliasingArrayReading<*, *, *> -> {
-                val casted = ref.uncheckedCast<Any?, UNonAliasingArrayReading<Type, UAddressSort, USizeSort>>()
-                transform(casted)
-            }
-            is UNonAliasingMapReading<*,*,*,*> -> {
-                val casted = ref.uncheckedCast<Any?, UNonAliasingMapReading<Type, UAddressSort, UAddressSort,*>>()
-                transform(casted)
-            }
-            else -> {
-                expr.sort.mkConst("r${expr.id}_${expr.sort}")
-            }
-        }
+        val symbol = checkNotNull(expr.symbol) { "Non-aliasing ref ${expr.id} has no symbol" }
 
-
+        return transformExprAfterTransformed(expr, symbol) { it }
     }
 
     private val _declToIsExpr = mutableMapOf<KDecl<UBoolSort>, UIsExpr<Type>>()
@@ -347,14 +325,13 @@ open class UExprTranslator<Type, USizeSort : USort>(
             translator.translateReading(expr.collection, element)
         }
 
-    override fun transform(expr: UNonAliasingRefSetWithNonAliasingElementsReading<Type>): UBoolExpr {
-        val x = transformExprAfterTransformed(expr, expr.setRef, expr.elementRef) { setRef, elemRef ->
+    override fun transform(expr: UNonAliasingRefSetWithNonAliasingElementsReading<Type>): UBoolExpr =
+        transformExprAfterTransformed(expr, expr.setRef, expr.elementRef) { setRef, elemRef ->
             val translator = refSetRegionDecoder(expr.collection.collectionId)
                 .nonAliasingRefSetWithNonAliasingElementsTranslator(expr.collection.collectionId)
             translator.translateReading(expr.collection, setRef to elemRef)
         }
-        return x
-    }
+
 
 
 

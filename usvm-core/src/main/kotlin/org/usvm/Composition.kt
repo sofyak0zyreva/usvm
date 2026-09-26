@@ -1,8 +1,5 @@
 package org.usvm
 
-import io.ksmt.expr.KExpr
-import io.ksmt.sort.KSort
-import io.ksmt.utils.cast
 import io.ksmt.utils.uncheckedCast
 import org.usvm.collection.array.UAllocatedArrayReading
 import org.usvm.collection.array.UInputArrayReading
@@ -27,9 +24,7 @@ import org.usvm.collection.set.ref.UAllocatedRefSetWithInputElementsReading
 import org.usvm.collection.set.ref.UAllocatedRefSetWithNonAliasingElementsReading
 import org.usvm.collection.set.ref.UInputRefSetWithAllocatedElementsReading
 import org.usvm.collection.set.ref.UInputRefSetWithInputElementsReading
-//import org.usvm.collection.set.ref.UInputRefSetWithNonAliasingElementsReading
 import org.usvm.collection.set.ref.UNonAliasingRefSetWithAllocatedElementsReading
-//import org.usvm.collection.set.ref.UNonAliasingRefSetWithInputElementsReading
 import org.usvm.collection.set.ref.UNonAliasingRefSetWithNonAliasingElementsReading
 import org.usvm.collections.immutable.internal.MutabilityOwnership
 import org.usvm.memory.UReadOnlyMemory
@@ -75,8 +70,6 @@ open class UComposer<Type, USizeSort : USort>(
             memory.types.evalIsSupertype(ref, expr.subtype)
         }
 
-
-
     fun <CollectionId : USymbolicCollectionId<Key, Sort, CollectionId>, Key, Sort : USort> transformCollectionReading(
         expr: UCollectionReading<CollectionId, Key, Sort>,
         key: Key,
@@ -94,10 +87,7 @@ open class UComposer<Type, USizeSort : USort>(
             key
         }
         val mappedKey = collection.collectionId.keyInfo().mapKey(sym, this@UComposer)
-//        val mappedKey = collection.collectionId.keyInfo().mapKey(key, this@UComposer)
-
-        val x = collection.read(mappedKey, this@UComposer)
-        return x
+        collection.read(mappedKey, this@UComposer)
     }
 
     override fun transform(expr: UInputArrayLengthReading<Type, USizeSort>): UExpr<USizeSort> =
@@ -187,48 +177,12 @@ open class UComposer<Type, USizeSort : USort>(
     override fun transform(expr: UNonAliasingRefSetWithNonAliasingElementsReading<Type>): UBoolExpr =
         transformCollectionReading(expr, expr.setRef to expr.elementRef)
 
-//    override fun transform(expr: UInputRefSetWithNonAliasingElementsReading<Type>): UBoolExpr =
-//        transformCollectionReading(expr, expr.setRef)
-//
-//    override fun transform(expr: UNonAliasingRefSetWithInputElementsReading<Type>): UBoolExpr =
-//        transformCollectionReading(expr, expr.elementRef)
-
     override fun transform(expr: UConcreteHeapRef): UExpr<UAddressSort> = expr
 
     override fun transform(expr: UNonAliasingHeapRef): UExpr<UAddressSort> {
-        return when (val ref = expr.symbol) {
-            is UNullRef -> transform(ref)
-            is UIndexedMethodReturnValue<*, UAddressSort> -> transform(ref)
-            is UTrackedSymbol<UAddressSort> -> transform(ref)
-            is UNonAliasingArrayReading<*, *, *> -> {
-                val casted = ref.uncheckedCast<Any?, UNonAliasingArrayReading<Type, UAddressSort, USizeSort>>()
-                transformCollectionReading(casted, casted.index)
-            }
-            is UNonAliasingFieldReading<*, *> -> {
-                val casted = ref.uncheckedCast<Any?, UNonAliasingFieldReading<*, UAddressSort>>()
-                transformCollectionReading(casted, casted.address)
-            }
-            is UNonAliasingMapReading<*,*,*,*> -> {
-                val casted = ref.uncheckedCast<Any?, UNonAliasingMapReading<*, UAddressSort, UAddressSort,*>>()
-                transformCollectionReading(casted, casted.key)
-            }
-            is UNonAliasingRefMapWithNonAliasingKeysReading<*, *> -> {
-                val casted = ref.uncheckedCast<Any?, UNonAliasingRefMapWithNonAliasingKeysReading<*, UAddressSort>>()
-                transformCollectionReading(casted, casted.mapRef to casted.keyRef)
-            }
-            is UNonAliasingRefMapWithAllocatedKeysReading<*, *> -> {
-                val casted = ref.uncheckedCast<Any?, UNonAliasingRefMapWithAllocatedKeysReading<*, UAddressSort>>()
-                transformCollectionReading(casted, casted.mapRef)
-            }
-            is UAllocatedRefMapWithNonAliasingKeysReading<*, *> -> {
-                val casted = ref.uncheckedCast<Any?, UAllocatedRefMapWithNonAliasingKeysReading<*, UAddressSort>>()
-                transformCollectionReading(casted, casted.keyRef)
-            }
-            else -> with(expr) { memory.stack.readRegister(id, sort) }
-        }
+        val symbol = checkNotNull(expr.symbol) { "Non-aliasing ref ${expr.id} has no symbol" }
+        return transformExprAfterTransformed(expr, symbol) { it }
     }
-//    =
-//        with(expr) { memory.stack.readRegister(id, sort) }
 
     override fun transform(expr: UNullRef): UExpr<UAddressSort> = memory.nullRef()
 }
