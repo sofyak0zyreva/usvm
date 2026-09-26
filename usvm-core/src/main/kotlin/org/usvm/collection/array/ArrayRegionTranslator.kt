@@ -10,6 +10,7 @@ import io.ksmt.utils.uncheckedCast
 import org.usvm.UAddressSort
 import org.usvm.UConcreteHeapAddress
 import org.usvm.UExpr
+import org.usvm.NAHeapRefMap
 import org.usvm.UNonAliasingHeapAddress
 import org.usvm.USort
 import org.usvm.memory.URangedUpdateNode
@@ -36,7 +37,6 @@ class UArrayRegionDecoder<ArrayType, Sort : USort, USizeSort : USort>(
 
     private val nonAliasingRegions =
         mutableMapOf<UNonAliasingHeapAddress, UNonAliasingArrayRegionTranslator<ArrayType, Sort, USizeSort>>()
-//    private var nonAliasingRegionTranslator: UNonAliasingArrayRegionTranslator<ArrayType, Sort, USizeSort>? = null
 
     private var inputRegionTranslator: UInputArrayRegionTranslator<ArrayType, Sort, USizeSort>? = null
 
@@ -55,12 +55,6 @@ class UArrayRegionDecoder<ArrayType, Sort : USort, USizeSort : USort>(
         nonAliasingRegions.getOrPut(collectionId.id) {
             UNonAliasingArrayRegionTranslator(collectionId, exprTranslator)
         }
-//    {
-//        if (nonAliasingRegionTranslator == null) {
-//            nonAliasingRegionTranslator = UNonAliasingArrayRegionTranslator(collectionId, exprTranslator)
-//        }
-//        return nonAliasingRegionTranslator!!
-//    }
 
     fun inputArrayRegionTranslator(
         collectionId: UInputArrayId<ArrayType, Sort, USizeSort>
@@ -79,9 +73,6 @@ class UArrayRegionDecoder<ArrayType, Sort : USort, USizeSort : USort>(
     }
         ?: if (nonAliasingRegions.isNotEmpty()) { UNonAliasingArrayModelRegion(regionId, model, nonAliasingRegions) }
     else null
-//        ?: nonAliasingRegionTranslator?.let {
-//            UNonAliasingArrayModelRegion(regionId, model, it)
-//        }
 
 }
 
@@ -107,17 +98,32 @@ private class UAllocatedArrayRegionTranslator<ArrayType, Sort : USort, USizeSort
     }
 }
 
+internal interface UNonAliasingArrayCell<USizeSort : USort, Sort : USort> {
+    val id: UNonAliasingHeapAddress
+
+    fun evalElement(model: UModelEvaluator<*>, index: UExpr<USizeSort>): UExpr<Sort>
+
+    fun evalArrayRef(model: UModelEvaluator<*>): UExpr<UAddressSort>?
+}
+
 private class UNonAliasingArrayRegionTranslator<ArrayType, Sort : USort, USizeSort : USort>(
     private val collectionId: UNonAliasingArrayId<ArrayType, Sort, USizeSort>,
     private val exprTranslator: UExprTranslator<*, USizeSort>
 ): URegionTranslator<UNonAliasingArrayId<ArrayType, Sort, USizeSort>, UExpr<USizeSort>, Sort>,
-    UCollectionDecoder<UExpr<USizeSort>, Sort>
+    UCollectionDecoder<UExpr<USizeSort>, Sort>,
+    UNonAliasingArrayCell<USizeSort, Sort>
 {
+    override val id: UNonAliasingHeapAddress get() = collectionId.id
+
+    override fun evalElement(model: UModelEvaluator<*>, index: UExpr<USizeSort>): UExpr<Sort> =
+        model.evalAndComplete(initialValue.ctx.mkArraySelect(initialValue, index))
+
+    override fun evalArrayRef(model: UModelEvaluator<*>): UExpr<UAddressSort>? {
+        val ref = NAHeapRefMap[collectionId.id] ?: return null
+        return model.evalAndComplete(exprTranslator.translate(ref))
+    }
 
     private val initialValue = with(exprTranslator.ctx) {
-//        val sort = mkArraySort(sizeSort, collectionId.sort)
-//        val translatedDefaultValue = exprTranslator.translate(collectionId.defaultValue)
-//        mkArrayConst(sort, translatedDefaultValue)
         mkArraySort(sizeSort, collectionId.sort).mkConst(collectionId.toString())
     }
     private val visitorCache = IdentityHashMap<Any?, KExpr<KArraySort<USizeSort, Sort>>>()

@@ -7,6 +7,7 @@ import kotlinx.collections.immutable.PersistentMap
 import kotlinx.collections.immutable.adapters.ImmutableListAdapter
 import kotlinx.collections.immutable.adapters.ImmutableSetAdapter
 import kotlinx.collections.immutable.persistentMapOf
+import org.usvm.NAHeapRefMap
 import org.usvm.UBoolExpr
 import org.usvm.UComposer
 import org.usvm.UConcreteHeapAddress
@@ -17,7 +18,6 @@ import org.usvm.compose
 import org.usvm.memory.UPinpointUpdateNode
 import org.usvm.memory.USymbolicCollection
 import org.usvm.memory.USymbolicCollectionId
-import org.usvm.memory.USymbolicCollectionKeyInfo
 import org.usvm.memory.UTreeUpdates
 import org.usvm.memory.UUpdateNode
 import org.usvm.memory.UWritableMemory
@@ -26,7 +26,6 @@ import org.usvm.regions.RegionTree
 import org.usvm.regions.emptyRegionTree
 import org.usvm.sampleUValue
 import org.usvm.memory.key.USizeExprKeyInfo
-import org.usvm.mkNonAliasingHeapRef
 import org.usvm.mkSizeExpr
 import org.usvm.uctx
 import org.usvm.withSizeSort
@@ -281,16 +280,19 @@ class UNonAliasingArrayId<ArrayType, Sort : USort, USizeSort : USort> internal c
         key: UExpr<USizeSort>,
         composer: UComposer<*, *>?
     ): UExpr<Sort> {
-        //there's another case in concrete
         if (composer == null) {
-            return key.uctx.withSizeSort<USizeSort>().mkNonAliasingArrayReading(collection, key)
+            val heapRef = NAHeapRefMap[id] ?: key.uctx.mkNonAliasingHeapRef(id)
+//            throw IllegalStateException("unknown NA")
+            return key.uctx.withSizeSort<USizeSort>().mkNonAliasingArrayReading(collection, heapRef, key)
             }
         val memory = composer.memory.toWritableMemory(composer.ownership)
+        collection.applyTo(memory, key, composer)
         return memory.read(mkLValue(key))
     }
 
     private fun mkLValue(key: UExpr<USizeSort>) =
         UArrayIndexLValue(sort, key.uctx.mkNonAliasingHeapRef(id), key, arrayType)
+
     override fun <Type> write(
         memory: UWritableMemory<Type>,
         key: UExpr<USizeSort>,
