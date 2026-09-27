@@ -5,13 +5,13 @@ import io.ksmt.expr.KExpr
 import io.ksmt.expr.KFunctionApp
 import io.ksmt.sort.KBoolSort
 import io.ksmt.utils.uncheckedCast
-import org.usvm.collections.immutable.persistentHashMapOf
 import org.usvm.UAddressSort
 import org.usvm.UBoolExpr
 import org.usvm.UBoolSort
 import org.usvm.UExpr
 import org.usvm.UHeapRef
 import org.usvm.USort
+import org.usvm.collections.immutable.persistentHashMapOf
 import org.usvm.isTrue
 import org.usvm.model.FunctionAppCollector
 import org.usvm.model.UMemory1DArray

@@ -21,11 +21,13 @@ import org.usvm.memory.USymbolicCollectionId
 import org.usvm.memory.UUpdateNode
 import org.usvm.memory.UWritableMemory
 import org.usvm.memory.key.UHeapRefKeyInfo
-import org.usvm.uctx
 import org.usvm.regions.Region
+import org.usvm.uctx
 
 sealed class USymbolicRefMapMergeAdapter<
-    MapType, SrcKey, DstKey,
+    MapType,
+    SrcKey,
+    DstKey,
     out SetId : USymbolicRefSetId<MapType, SrcKey, *, SetId>,
     >(
     val setOfKeys: USymbolicCollection<SetId, SrcKey, UBoolSort>,
@@ -91,8 +93,12 @@ class UAllocatedToAllocatedSymbolicRefMapMergeAdapter<MapType>(
 class UAllocatedToInputSymbolicRefMapMergeAdapter<MapType>(
     val dstMapRef: UHeapRef,
     setOfKeys: USymbolicCollection<UAllocatedRefSetWithInputElementsId<MapType>, UHeapRef, UBoolSort>,
-) : USymbolicRefMapMergeAdapter<MapType, UHeapRef, USymbolicMapKey<UAddressSort>,
-    UAllocatedRefSetWithInputElementsId<MapType>>(setOfKeys) {
+) : USymbolicRefMapMergeAdapter<
+    MapType,
+    UHeapRef,
+    USymbolicMapKey<UAddressSort>,
+    UAllocatedRefSetWithInputElementsId<MapType>
+    >(setOfKeys) {
 
     override fun convert(key: USymbolicMapKey<UAddressSort>, composer: UComposer<*, *>?): UHeapRef = key.second
 
@@ -134,7 +140,9 @@ class UAllocatedToInputSymbolicRefMapMergeAdapter<MapType>(
 
 class UAllocatedToAllocatedNARefMapMergeAdapter<MapType>(
     setOfKeys: USymbolicCollection<UAllocatedRefSetWithNonAliasingElementsId<MapType>, UHeapRef, UBoolSort>,
-) : USymbolicRefMapMergeAdapter<MapType, UHeapRef, UHeapRef, UAllocatedRefSetWithNonAliasingElementsId<MapType>>(setOfKeys) {
+) : USymbolicRefMapMergeAdapter<MapType, UHeapRef, UHeapRef, UAllocatedRefSetWithNonAliasingElementsId<MapType>>(
+    setOfKeys
+) {
     override fun convert(key: UHeapRef, composer: UComposer<*, *>?): UHeapRef = key
 
     @Suppress("UNCHECKED_CAST")
@@ -152,8 +160,12 @@ class UAllocatedToAllocatedNARefMapMergeAdapter<MapType>(
         srcKey: UHeapRef,
         composer: UComposer<*, *>,
     ) {
-        check(srcCollectionId is UAllocatedRefMapWithNonAliasingKeysId<*, *>) { "Unexpected collection: $srcCollectionId" }
-        check(dstCollectionId is UAllocatedRefMapWithNonAliasingKeysId<*, *>) { "Unexpected collection: $dstCollectionId" }
+        check(
+            srcCollectionId is UAllocatedRefMapWithNonAliasingKeysId<*, *>
+        ) { "Unexpected collection: $srcCollectionId" }
+        check(
+            dstCollectionId is UAllocatedRefMapWithNonAliasingKeysId<*, *>
+        ) { "Unexpected collection: $dstCollectionId" }
 
         setOfKeys.applyTo(memory, srcKey, composer)
 
@@ -173,8 +185,12 @@ class UAllocatedToAllocatedNARefMapMergeAdapter<MapType>(
 class UAllocatedToNonAliasingSymbolicRefMapMergeAdapter<MapType>(
     val dstMapRef: UHeapRef,
     setOfKeys: USymbolicCollection<UAllocatedRefSetWithNonAliasingElementsId<MapType>, UHeapRef, UBoolSort>,
-) : USymbolicRefMapMergeAdapter<MapType, UHeapRef, USymbolicMapKey<UAddressSort>,
-        UAllocatedRefSetWithNonAliasingElementsId<MapType>>(setOfKeys) {
+) : USymbolicRefMapMergeAdapter<
+    MapType,
+    UHeapRef,
+    USymbolicMapKey<UAddressSort>,
+    UAllocatedRefSetWithNonAliasingElementsId<MapType>
+    >(setOfKeys) {
 
     override fun convert(key: USymbolicMapKey<UAddressSort>, composer: UComposer<*, *>?): UHeapRef = key.second
 
@@ -196,8 +212,12 @@ class UAllocatedToNonAliasingSymbolicRefMapMergeAdapter<MapType>(
         srcKey: UHeapRef,
         composer: UComposer<*, *>,
     ) {
-        check(srcCollectionId is UAllocatedRefMapWithNonAliasingKeysId<*, *>) { "Unexpected collection: $srcCollectionId" }
-        check(dstCollectionId is UNonAliasingRefMapWithNonAliasingKeysId<*, *>) { "Unexpected collection: $dstCollectionId" }
+        check(
+            srcCollectionId is UAllocatedRefMapWithNonAliasingKeysId<*, *>
+        ) { "Unexpected collection: $srcCollectionId" }
+        check(
+            dstCollectionId is UNonAliasingRefMapWithNonAliasingKeysId<*, *>
+        ) { "Unexpected collection: $dstCollectionId" }
 
         setOfKeys.applyTo(memory, srcKey, composer)
 
@@ -217,8 +237,12 @@ class UAllocatedToNonAliasingSymbolicRefMapMergeAdapter<MapType>(
 class UInputToAllocatedSymbolicRefMapMergeAdapter<MapType>(
     val srcMapRef: UHeapRef,
     setOfKeys: USymbolicCollection<UInputRefSetWithInputElementsId<MapType>, USymbolicMapKey<UAddressSort>, UBoolSort>,
-) : USymbolicRefMapMergeAdapter<MapType, USymbolicMapKey<UAddressSort>, UHeapRef,
-    UInputRefSetWithInputElementsId<MapType>>(setOfKeys) {
+) : USymbolicRefMapMergeAdapter<
+    MapType,
+    USymbolicMapKey<UAddressSort>,
+    UHeapRef,
+    UInputRefSetWithInputElementsId<MapType>
+    >(setOfKeys) {
 
     override fun convert(key: UHeapRef, composer: UComposer<*, *>?): USymbolicMapKey<UAddressSort> =
         composer.compose(srcMapRef) to key
@@ -260,9 +284,14 @@ class UInputToAllocatedSymbolicRefMapMergeAdapter<MapType>(
 
 class UNonAliasingToAllocatedSymbolicRefMapMergeAdapter<MapType>(
     val srcMapRef: UHeapRef,
-    setOfKeys: USymbolicCollection<UNonAliasingRefSetWithNonAliasingElementsId<MapType>, USymbolicMapKey<UAddressSort>, UBoolSort>,
-) : USymbolicRefMapMergeAdapter<MapType, USymbolicMapKey<UAddressSort>, UHeapRef,
-        UNonAliasingRefSetWithNonAliasingElementsId<MapType>>(setOfKeys) {
+    setOfKeys:
+    USymbolicCollection<UNonAliasingRefSetWithNonAliasingElementsId<MapType>, USymbolicMapKey<UAddressSort>, UBoolSort>,
+) : USymbolicRefMapMergeAdapter<
+    MapType,
+    USymbolicMapKey<UAddressSort>,
+    UHeapRef,
+    UNonAliasingRefSetWithNonAliasingElementsId<MapType>
+    >(setOfKeys) {
 
     override fun convert(key: UHeapRef, composer: UComposer<*, *>?): USymbolicMapKey<UAddressSort> =
         composer.compose(srcMapRef) to key
@@ -284,8 +313,12 @@ class UNonAliasingToAllocatedSymbolicRefMapMergeAdapter<MapType>(
         srcKey: USymbolicMapKey<UAddressSort>,
         composer: UComposer<*, *>,
     ) {
-        check(srcCollectionId is UNonAliasingRefMapWithNonAliasingKeysId<*, *>) { "Unexpected collection: $srcCollectionId" }
-        check(dstCollectionId is UAllocatedRefMapWithNonAliasingKeysId<*, *>) { "Unexpected collection: $dstCollectionId" }
+        check(
+            srcCollectionId is UNonAliasingRefMapWithNonAliasingKeysId<*, *>
+        ) { "Unexpected collection: $srcCollectionId" }
+        check(
+            dstCollectionId is UAllocatedRefMapWithNonAliasingKeysId<*, *>
+        ) { "Unexpected collection: $dstCollectionId" }
 
         setOfKeys.applyTo(memory, srcKey, composer)
 
@@ -305,9 +338,14 @@ class UNonAliasingToAllocatedSymbolicRefMapMergeAdapter<MapType>(
 class UNonAliasingToNonAliasingSymbolicRefMapMergeAdapter<MapType>(
     val srcMapRef: UHeapRef,
     val dstMapRef: UHeapRef,
-    setOfKeys: USymbolicCollection<UNonAliasingRefSetWithNonAliasingElementsId<MapType>, USymbolicMapKey<UAddressSort>, UBoolSort>,
-) : USymbolicRefMapMergeAdapter<MapType, USymbolicMapKey<UAddressSort>, USymbolicMapKey<UAddressSort>,
-        UNonAliasingRefSetWithNonAliasingElementsId<MapType>>(setOfKeys) {
+    setOfKeys:
+    USymbolicCollection<UNonAliasingRefSetWithNonAliasingElementsId<MapType>, USymbolicMapKey<UAddressSort>, UBoolSort>,
+) : USymbolicRefMapMergeAdapter<
+    MapType,
+    USymbolicMapKey<UAddressSort>,
+    USymbolicMapKey<UAddressSort>,
+    UNonAliasingRefSetWithNonAliasingElementsId<MapType>
+    >(setOfKeys) {
 
     override fun convert(key: USymbolicMapKey<UAddressSort>, composer: UComposer<*, *>?): USymbolicMapKey<UAddressSort> =
         composer.compose(srcMapRef) to key.second
@@ -352,8 +390,12 @@ class UInputToInputSymbolicRefMapMergeAdapter<MapType>(
     val srcMapRef: UHeapRef,
     val dstMapRef: UHeapRef,
     setOfKeys: USymbolicCollection<UInputRefSetWithInputElementsId<MapType>, USymbolicMapKey<UAddressSort>, UBoolSort>,
-) : USymbolicRefMapMergeAdapter<MapType, USymbolicMapKey<UAddressSort>, USymbolicMapKey<UAddressSort>,
-    UInputRefSetWithInputElementsId<MapType>>(setOfKeys) {
+) : USymbolicRefMapMergeAdapter<
+    MapType,
+    USymbolicMapKey<UAddressSort>,
+    USymbolicMapKey<UAddressSort>,
+    UInputRefSetWithInputElementsId<MapType>
+    >(setOfKeys) {
 
     override fun convert(key: USymbolicMapKey<UAddressSort>, composer: UComposer<*, *>?): USymbolicMapKey<UAddressSort> =
         composer.compose(srcMapRef) to key.second

@@ -59,7 +59,8 @@ class UTypeConstraints<Type>(
     private val typeSystem: UTypeSystem<Type>,
     private val equalityConstraints: UEqualityConstraints,
     private var concreteRefToType: UPersistentHashMap<UConcreteHeapAddress, Type> = persistentHashMapOf(),
-    private var symbolicRefToTypeRegion: UPersistentHashMap<USymbolicHeapRef, UTypeRegion<Type>> = persistentHashMapOf(),
+    private var symbolicRefToTypeRegion: UPersistentHashMap<USymbolicHeapRef, UTypeRegion<Type>> =
+        persistentHashMapOf(),
 ) : UTypeEvaluator<Type>, UOwnedMergeable<UTypeConstraints<Type>, MutableMergeGuard> {
     private val ctx: UContext<*> get() = equalityConstraints.ctx
 
@@ -489,7 +490,7 @@ class UTypeConstraints<Type>(
     fun clone(
         equalityConstraints: UEqualityConstraints,
         thisOwnership: MutabilityOwnership,
-        cloneOwnership: MutabilityOwnership
+        cloneOwnership: MutabilityOwnership,
     ) = UTypeConstraints(
         cloneOwnership,
         typeSystem,
@@ -511,7 +512,7 @@ class UTypeConstraints<Type>(
         by: MutableMergeGuard,
         thisOwnership: MutabilityOwnership,
         otherOwnership: MutabilityOwnership,
-        mergedOwnership: MutabilityOwnership
+        mergedOwnership: MutabilityOwnership,
     ): UTypeConstraints<Type>? {
         // TODO: should we check equality constraints?
         if (symbolicRefToTypeRegion != other.symbolicRefToTypeRegion) {
@@ -520,7 +521,13 @@ class UTypeConstraints<Type>(
         val mergedConcreteRefs = concreteRefToType.putAll(other.concreteRefToType, mergedOwnership)
         this.ownership = thisOwnership
         other.ownership = otherOwnership
-        return UTypeConstraints(mergedOwnership, typeSystem, equalityConstraints, mergedConcreteRefs, symbolicRefToTypeRegion)
+        return UTypeConstraints(
+            mergedOwnership,
+            typeSystem,
+            equalityConstraints,
+            mergedConcreteRefs,
+            symbolicRefToTypeRegion
+        )
     }
 
     @Suppress("UNUSED_PARAMETER")

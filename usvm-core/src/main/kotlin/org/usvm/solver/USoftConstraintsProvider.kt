@@ -51,7 +51,7 @@ import org.usvm.constraints.UPathConstraints
 import org.usvm.regions.Region
 
 open class USoftConstraintsProvider<Type, USizeSort : USort>(
-    override val ctx: UContext<USizeSort>
+    override val ctx: UContext<USizeSort>,
 ) : UTransformer<Type, USizeSort> {
     // We have a list here since sometimes we want to add several soft constraints
     // to make it possible to drop only a part of them, not the whole soft constraint
@@ -105,7 +105,7 @@ open class USoftConstraintsProvider<Type, USizeSort : USort>(
     ): UExpr<Sort> = transformAppIfPossible(expr)
 
     override fun <Sort : USort> transform(
-        expr: UTrackedSymbol<Sort>
+        expr: UTrackedSymbol<Sort>,
     ): UExpr<Sort> = transformAppIfPossible(expr)
 
     override fun transform(
@@ -157,43 +157,43 @@ open class USoftConstraintsProvider<Type, USizeSort : USort>(
     }
 
     override fun <KeySort : USort, Sort : USort, Reg : Region<Reg>> transform(
-        expr: UAllocatedMapReading<Type, KeySort, Sort, Reg>
+        expr: UAllocatedMapReading<Type, KeySort, Sort, Reg>,
     ): UExpr<Sort> = readingWithSingleArgumentTransform(expr, expr.key)
 
     override fun <KeySort : USort, Sort : USort, Reg : Region<Reg>> transform(
-        expr: UInputMapReading<Type, KeySort, Sort, Reg>
+        expr: UInputMapReading<Type, KeySort, Sort, Reg>,
     ): UExpr<Sort> = readingWithTwoArgumentsTransform(expr, expr.key, expr.address)
 
     override fun <KeySort : USort, Sort : USort, Reg : Region<Reg>> transform(
-        expr: UNonAliasingMapReading<Type, KeySort, Sort, Reg>
+        expr: UNonAliasingMapReading<Type, KeySort, Sort, Reg>,
     ): UExpr<Sort> = readingWithSingleArgumentTransform(expr, expr.key)
 
     override fun <Sort : USort> transform(
-        expr: UAllocatedRefMapWithInputKeysReading<Type, Sort>
+        expr: UAllocatedRefMapWithInputKeysReading<Type, Sort>,
     ): UExpr<Sort> = readingWithSingleArgumentTransform(expr, expr.keyRef)
 
     override fun <Sort : USort> transform(
-        expr: UAllocatedRefMapWithNonAliasingKeysReading<Type, Sort>
+        expr: UAllocatedRefMapWithNonAliasingKeysReading<Type, Sort>,
     ): UExpr<Sort> = readingWithSingleArgumentTransform(expr, expr.keyRef)
 
     override fun <Sort : USort> transform(
-        expr: UInputRefMapWithAllocatedKeysReading<Type, Sort>
+        expr: UInputRefMapWithAllocatedKeysReading<Type, Sort>,
     ): UExpr<Sort> = readingWithSingleArgumentTransform(expr, expr.mapRef)
 
     override fun <Sort : USort> transform(
-        expr: UNonAliasingRefMapWithAllocatedKeysReading<Type, Sort>
+        expr: UNonAliasingRefMapWithAllocatedKeysReading<Type, Sort>,
     ): UExpr<Sort> = readingWithSingleArgumentTransform(expr, expr.mapRef)
 
     override fun <Sort : USort> transform(
-        expr: UInputRefMapWithInputKeysReading<Type, Sort>
+        expr: UInputRefMapWithInputKeysReading<Type, Sort>,
     ): UExpr<Sort> = readingWithTwoArgumentsTransform(expr, expr.mapRef, expr.keyRef)
 
     override fun <Sort : USort> transform(
-        expr: UNonAliasingRefMapWithNonAliasingKeysReading<Type, Sort>
+        expr: UNonAliasingRefMapWithNonAliasingKeysReading<Type, Sort>,
     ): UExpr<Sort> = readingWithTwoArgumentsTransform(expr, expr.mapRef, expr.keyRef)
 
     override fun transform(
-        expr: UInputMapLengthReading<Type, USizeSort>
+        expr: UInputMapLengthReading<Type, USizeSort>,
     ): UExpr<USizeSort> = computeSideEffect(expr) {
         with(ctx) {
             val addressConstraints = provide(expr.address)
@@ -204,15 +204,15 @@ open class USoftConstraintsProvider<Type, USizeSort : USort>(
     }
 
     override fun <ElemSort : USort, Reg : Region<Reg>> transform(
-        expr: UAllocatedSetReading<Type, ElemSort, Reg>
+        expr: UAllocatedSetReading<Type, ElemSort, Reg>,
     ): UBoolExpr = readingWithSingleArgumentTransform(expr, expr.element)
 
     override fun <ElemSort : USort, Reg : Region<Reg>> transform(
-        expr: UInputSetReading<Type, ElemSort, Reg>
+        expr: UInputSetReading<Type, ElemSort, Reg>,
     ): UBoolExpr = readingWithTwoArgumentsTransform(expr, expr.address, expr.element)
 
     override fun <ElemSort : USort, Reg : Region<Reg>> transform(
-        expr: UNonAliasingSetReading<Type, ElemSort, Reg>
+        expr: UNonAliasingSetReading<Type, ElemSort, Reg>,
     ): UBoolExpr = readingWithSingleArgumentTransform(expr, expr.element)
 
     override fun transform(expr: UAllocatedRefSetWithInputElementsReading<Type>): UBoolExpr =
@@ -245,7 +245,9 @@ open class USoftConstraintsProvider<Type, USizeSort : USort>(
     private fun unpackNAHeapRef(ref: UExpr<*>): UExpr<*> {
         return if (ref is UNonAliasingHeapRef && ref.symbol != null) {
             (ref.symbol)
-        }  else ref
+        } else {
+            ref
+        }
     }
 
     private fun <Sort : USort> readingWithTwoArgumentsTransform(
@@ -372,7 +374,8 @@ private class SortPreferredValuesProvider : KSortVisitor<(KExpr<*>) -> KExpr<KBo
     override fun visit(sort: KIntSort): (KExpr<*>) -> KExpr<KBoolSort> =
         caches.getOrPut(sort) {
             with(sort.uctx) {
-                { expr ->
+                {
+                        expr ->
                     mkAnd(
                         mkArithLe(INT_MIN_VALUE.expr, expr.asExpr(sort)),
                         mkArithGe(INT_MAX_VALUE.expr, expr.asExpr(sort))
@@ -385,7 +388,8 @@ private class SortPreferredValuesProvider : KSortVisitor<(KExpr<*>) -> KExpr<KBo
     override fun visit(sort: KRealSort): (KExpr<*>) -> KExpr<KBoolSort> =
         caches.getOrPut(sort) {
             with(sort.uctx) {
-                { expr ->
+                {
+                        expr ->
                     mkAnd(
                         mkArithLe(mkRealNum(INT_MIN_VALUE), expr.asExpr(sort)),
                         mkArithGe(mkRealNum(INT_MAX_VALUE), expr.asExpr(sort))

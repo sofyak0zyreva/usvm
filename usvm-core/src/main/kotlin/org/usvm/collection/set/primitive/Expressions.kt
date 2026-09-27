@@ -4,7 +4,6 @@ import io.ksmt.cache.hash
 import io.ksmt.cache.structurallyEqual
 import io.ksmt.expr.printer.ExpressionPrinter
 import io.ksmt.expr.transformer.KTransformerBase
-import org.usvm.NAReadingIdMap
 import org.usvm.UBoolExpr
 import org.usvm.UBoolSort
 import org.usvm.UCollectionReading
@@ -55,7 +54,8 @@ class UNonAliasingSetReading<SetType, ElementSort : USort, Reg : Region<Reg>> in
     val element: UExpr<ElementSort>,
 ) : UCollectionReading<UNonAliasingSetId<SetType, ElementSort, Reg>, UExpr<ElementSort>, UBoolSort>(ctx, collection) {
 
-    override val id : UNonAliasingHeapAddress = makeNonAliasingIdForReading(ctx, Pair(collection.collectionId.id, Pair(element, "set")))
+    override val id: UNonAliasingHeapAddress =
+        makeNonAliasingIdForReading(ctx, Pair(collection.collectionId.id, Pair(element, "set")))
 
     override fun accept(transformer: KTransformerBase): UBoolExpr {
         require(transformer is UTransformer<*, *>) { "Expected a UTransformer, but got: $transformer" }
@@ -84,7 +84,7 @@ class UInputSetReading<SetType, ElementSort : USort, Reg : Region<Reg>> internal
     ctx: UContext<*>,
     collection: UInputSet<SetType, ElementSort, Reg>,
     val address: UHeapRef,
-    val element: UExpr<ElementSort>
+    val element: UExpr<ElementSort>,
 ) : UCollectionReading<UInputSetId<SetType, ElementSort, Reg>, USymbolicSetElement<ElementSort>, UBoolSort>(
     ctx,
     collection

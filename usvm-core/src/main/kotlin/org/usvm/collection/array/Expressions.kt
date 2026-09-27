@@ -5,7 +5,6 @@ import io.ksmt.cache.structurallyEqual
 import io.ksmt.expr.KExpr
 import io.ksmt.expr.printer.ExpressionPrinter
 import io.ksmt.expr.transformer.KTransformerBase
-import org.usvm.NAReadingIdMap
 import org.usvm.UCollectionReading
 import org.usvm.UContext
 import org.usvm.UExpr
@@ -43,13 +42,8 @@ class UAllocatedArrayReading<ArrayType, Sort : USort, USizeSort : USort> interna
     }
 }
 
-fun makeNonAliasingIdForReading(ctx: UContext<*>, key: Pair<UNonAliasingHeapAddress, *>,): UNonAliasingHeapAddress {
-    val address = if (NAReadingIdMap[key] == null)
-        ctx.addressCounter.freshNAAddress()
-    else
-        NAReadingIdMap[key]!!
-    NAReadingIdMap[key] = address
-    return address
+fun makeNonAliasingIdForReading(ctx: UContext<*>, key: Pair<UNonAliasingHeapAddress, *>): UNonAliasingHeapAddress {
+    return ctx.nonAliasingReadingIds.getOrPut(key) { ctx.addressCounter.freshNAAddress() }
 }
 
 class UNonAliasingArrayReading<ArrayType, Sort : USort, USizeSort : USort> internal constructor(
@@ -59,7 +53,10 @@ class UNonAliasingArrayReading<ArrayType, Sort : USort, USizeSort : USort> inter
     val index: UExpr<USizeSort>,
 ) : UCollectionReading<UNonAliasingArrayId<ArrayType, Sort, USizeSort>, UExpr<USizeSort>, Sort>(ctx, collection) {
 
-    override val id : UNonAliasingHeapAddress = makeNonAliasingIdForReading(ctx, Pair(collection.collectionId.id, Pair(index, collection.collectionId.arrayType)))
+    override val id: UNonAliasingHeapAddress = makeNonAliasingIdForReading(
+        ctx,
+        Pair(collection.collectionId.id, Pair(index, collection.collectionId.arrayType))
+    )
 
     override fun accept(transformer: KTransformerBase): KExpr<Sort> {
         require(transformer is UTransformer<*, *>) { "Expected a UTransformer, but got: $transformer" }
@@ -88,8 +85,11 @@ class UInputArrayReading<ArrayType, Sort : USort, USizeSort : USort> internal co
     ctx: UContext<USizeSort>,
     collection: UInputArray<ArrayType, Sort, USizeSort>,
     val address: UHeapRef,
-    val index: UExpr<USizeSort>
-) : UCollectionReading<UInputArrayId<ArrayType, Sort, USizeSort>, USymbolicArrayIndex<USizeSort>, Sort>(ctx, collection) {
+    val index: UExpr<USizeSort>,
+) : UCollectionReading<UInputArrayId<ArrayType, Sort, USizeSort>, USymbolicArrayIndex<USizeSort>, Sort>(
+    ctx,
+    collection
+) {
     init {
         require(address !is UNullRef)
     }

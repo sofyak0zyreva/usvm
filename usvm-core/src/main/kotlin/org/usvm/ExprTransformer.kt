@@ -25,9 +25,7 @@ import org.usvm.collection.set.ref.UAllocatedRefSetWithInputElementsReading
 import org.usvm.collection.set.ref.UAllocatedRefSetWithNonAliasingElementsReading
 import org.usvm.collection.set.ref.UInputRefSetWithAllocatedElementsReading
 import org.usvm.collection.set.ref.UInputRefSetWithInputElementsReading
-//import org.usvm.collection.set.ref.UInputRefSetWithNonAliasingElementsReading
 import org.usvm.collection.set.ref.UNonAliasingRefSetWithAllocatedElementsReading
-//import org.usvm.collection.set.ref.UNonAliasingRefSetWithInputElementsReading
 import org.usvm.collection.set.ref.UNonAliasingRefSetWithNonAliasingElementsReading
 import org.usvm.regions.Region
 
@@ -47,15 +45,15 @@ interface UTransformer<Type, USizeSort : USort> : KTransformer {
     fun transform(expr: UInputArrayLengthReading<Type, USizeSort>): UExpr<USizeSort>
 
     fun <KeySort : USort, Sort : USort, Reg : Region<Reg>> transform(
-        expr: UAllocatedMapReading<Type, KeySort, Sort, Reg>
+        expr: UAllocatedMapReading<Type, KeySort, Sort, Reg>,
     ): UExpr<Sort>
 
     fun <KeySort : USort, Sort : USort, Reg : Region<Reg>> transform(
-        expr: UNonAliasingMapReading<Type, KeySort, Sort, Reg>
+        expr: UNonAliasingMapReading<Type, KeySort, Sort, Reg>,
     ): UExpr<Sort>
 
     fun <KeySort : USort, Sort : USort, Reg : Region<Reg>> transform(
-        expr: UInputMapReading<Type, KeySort, Sort, Reg>
+        expr: UInputMapReading<Type, KeySort, Sort, Reg>,
     ): UExpr<Sort>
 
     fun <Sort : USort> transform(expr: UAllocatedRefMapWithInputKeysReading<Type, Sort>): UExpr<Sort>
@@ -84,19 +82,15 @@ interface UTransformer<Type, USizeSort : USort> : KTransformer {
 
     fun transform(expr: UInputRefSetWithInputElementsReading<Type>): UBoolExpr
 
-//    fun  transform(expr: UNonAliasingRefSetWithInputElementsReading<Type>): UBoolExpr
-//
-//    fun  transform(expr: UInputRefSetWithNonAliasingElementsReading<Type>): UBoolExpr
+    fun transform(expr: UNonAliasingRefSetWithNonAliasingElementsReading<Type>): UBoolExpr
 
-    fun  transform(expr: UNonAliasingRefSetWithNonAliasingElementsReading<Type>): UBoolExpr
+    fun transform(expr: UAllocatedRefSetWithNonAliasingElementsReading<Type>): UBoolExpr
 
-    fun  transform(expr: UAllocatedRefSetWithNonAliasingElementsReading<Type>): UBoolExpr
-
-    fun  transform(expr: UNonAliasingRefSetWithAllocatedElementsReading<Type>): UBoolExpr
+    fun transform(expr: UNonAliasingRefSetWithAllocatedElementsReading<Type>): UBoolExpr
 
     fun <Method, Sort : USort> transform(expr: UIndexedMethodReturnValue<Method, Sort>): UExpr<Sort>
 
-    fun <Sort : USort> transform(expr: UTrackedSymbol<Sort>) : UExpr<Sort>
+    fun <Sort : USort> transform(expr: UTrackedSymbol<Sort>): UExpr<Sort>
 
     fun transform(expr: UIsSubtypeExpr<Type>): UBoolExpr
 
@@ -110,7 +104,7 @@ interface UTransformer<Type, USizeSort : USort> : KTransformer {
 }
 
 abstract class UExprTransformer<Type, USizeSort : USort>(
-    ctx: UContext<USizeSort>
+    ctx: UContext<USizeSort>,
 ) : KNonRecursiveTransformer(ctx), UTransformer<Type, USizeSort>
 
 @Suppress("UNCHECKED_CAST")

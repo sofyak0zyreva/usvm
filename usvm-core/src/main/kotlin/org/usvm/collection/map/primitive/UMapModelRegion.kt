@@ -1,9 +1,9 @@
 package org.usvm.collection.map.primitive
 
-import org.usvm.UConcreteHeapRef
-import org.usvm.UExpr
 import io.ksmt.utils.uncheckedCast
 import org.usvm.UAddressSort
+import org.usvm.UConcreteHeapRef
+import org.usvm.UExpr
 import org.usvm.UNonAliasingHeapAddress
 import org.usvm.UNonAliasingHeapRef
 import org.usvm.USort
@@ -12,11 +12,11 @@ import org.usvm.memory.UReadOnlyMemoryRegion
 import org.usvm.model.UModelEvaluator
 import org.usvm.model.modelEnsureConcreteInputRef
 import org.usvm.model.modelEnsureRightInputRef
-import org.usvm.solver.UCollectionDecoder
 import org.usvm.regions.Region
+import org.usvm.solver.UCollectionDecoder
 
 abstract class UMapModelRegion<MapType, KeySort : USort, ValueSort : USort, Reg : Region<Reg>>(
-    private val regionId: UMapRegionId<MapType, KeySort, ValueSort, Reg>
+    private val regionId: UMapRegionId<MapType, KeySort, ValueSort, Reg>,
 ) : UReadOnlyMemoryRegion<UMapEntryLValue<MapType, KeySort, ValueSort, Reg>, ValueSort> {
     abstract val inputMap: UReadOnlyMemoryRegion<USymbolicMapKey<KeySort>, ValueSort>
 
@@ -29,7 +29,7 @@ abstract class UMapModelRegion<MapType, KeySort : USort, ValueSort : USort, Reg 
 class UMapLazyModelRegion<MapType, KeySort : USort, ValueSort : USort, Reg : Region<Reg>>(
     regionId: UMapRegionId<MapType, KeySort, ValueSort, Reg>,
     private val model: UModelEvaluator<*>,
-    private val inputMapDecoder: UCollectionDecoder<USymbolicMapKey<KeySort>, ValueSort>
+    private val inputMapDecoder: UCollectionDecoder<USymbolicMapKey<KeySort>, ValueSort>,
 ) : UMapModelRegion<MapType, KeySort, ValueSort, Reg>(regionId) {
     override val inputMap: UReadOnlyMemoryRegion<USymbolicMapKey<KeySort>, ValueSort> by lazy {
         inputMapDecoder.decodeCollection(model)
@@ -38,7 +38,7 @@ class UMapLazyModelRegion<MapType, KeySort : USort, ValueSort : USort, Reg : Reg
 
 class UMapEagerModelRegion<MapType, KeySort : USort, ValueSort : USort, Reg : Region<Reg>>(
     regionId: UMapRegionId<MapType, KeySort, ValueSort, Reg>,
-    override val inputMap: UReadOnlyMemoryRegion<USymbolicMapKey<KeySort>, ValueSort>
+    override val inputMap: UReadOnlyMemoryRegion<USymbolicMapKey<KeySort>, ValueSort>,
 ) : UMapModelRegion<MapType, KeySort, ValueSort, Reg>(regionId)
 
 class UNonAliasingMapModelRegion<MapType, KeySort : USort, ValueSort : USort, Reg : Region<Reg>> internal constructor(

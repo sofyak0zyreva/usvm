@@ -7,8 +7,8 @@ import org.usvm.UBoolExpr
 import org.usvm.UBoolSort
 import org.usvm.UExpr
 import org.usvm.UHeapRef
-import org.usvm.collections.immutable.persistentHashMapOf
 import org.usvm.collection.set.USetCollectionDecoder
+import org.usvm.collections.immutable.persistentHashMapOf
 import org.usvm.isFalse
 import org.usvm.memory.UReadOnlyMemoryRegion
 import org.usvm.model.UMemory2DArray
@@ -16,7 +16,7 @@ import org.usvm.model.UModelEvaluator
 import org.usvm.model.modelEnsureConcreteInputRef
 
 abstract class URefSetModelRegion<SetType>(
-    private val regionId: URefSetRegionId<SetType>
+    private val regionId: URefSetRegionId<SetType>,
 ) : UReadOnlyMemoryRegion<URefSetEntryLValue<SetType>, UBoolSort>, URefSetReadOnlyRegion<SetType> {
     abstract val inputSet: UMemory2DArray<UAddressSort, UAddressSort, UBoolSort>
 
@@ -45,7 +45,7 @@ class URefSetLazyModelRegion<SetType>(
     regionId: URefSetRegionId<SetType>,
     model: UModelEvaluator<*>,
     assertions: List<KExpr<KBoolSort>>,
-    inputSetDecoder: USetCollectionDecoder<UAddressSort>
+    inputSetDecoder: USetCollectionDecoder<UAddressSort>,
 ) : URefSetModelRegion<SetType>(regionId) {
     override val inputSet: UMemory2DArray<UAddressSort, UAddressSort, UBoolSort> by lazy {
         inputSetDecoder.decodeCollection(model, assertions)
@@ -53,7 +53,8 @@ class URefSetLazyModelRegion<SetType>(
 }
 
 class URefSetEagerModelRegion<SetType>(
-    regionId: URefSetRegionId<SetType>, override val inputSet: UMemory2DArray<UAddressSort, UAddressSort, UBoolSort>
+    regionId: URefSetRegionId<SetType>,
+    override val inputSet: UMemory2DArray<UAddressSort, UAddressSort, UBoolSort>,
 ) : URefSetModelRegion<SetType>(regionId)
 
 class UNonAliasingRefSetModelRegion<SetType>(

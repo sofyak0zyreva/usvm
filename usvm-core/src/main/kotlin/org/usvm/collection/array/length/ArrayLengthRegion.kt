@@ -6,7 +6,6 @@ import org.usvm.UExpr
 import org.usvm.UHeapRef
 import org.usvm.UNonAliasingHeapAddress
 import org.usvm.USort
-import org.usvm.collection.field.getId
 import org.usvm.collections.immutable.implementations.immutableMap.UPersistentHashMap
 import org.usvm.collections.immutable.internal.MutabilityOwnership
 import org.usvm.collections.immutable.persistentHashMapOf
@@ -46,19 +45,18 @@ internal class UArrayLengthsMemoryRegion<ArrayType, USizeSort : USort>(
     private val sort: USizeSort,
     private val arrayType: ArrayType,
     private val allocatedLengths: UPersistentHashMap<UConcreteHeapAddress, UExpr<USizeSort>> = persistentHashMapOf(),
-    private val nonAliasingLengths: UPersistentHashMap<UNonAliasingHeapAddress, UExpr<USizeSort>> = persistentHashMapOf(),
-    private var inputLengths: UInputArrayLengths<ArrayType, USizeSort>? = null
+    private val nonAliasingLengths: UPersistentHashMap<UNonAliasingHeapAddress, UExpr<USizeSort>> =
+        persistentHashMapOf(),
+    private var inputLengths: UInputArrayLengths<ArrayType, USizeSort>? = null,
 ) : UArrayLengthsRegion<ArrayType, USizeSort> {
 
     private fun updateAllocated(updated: UPersistentHashMap<UConcreteHeapAddress, UExpr<USizeSort>>) =
         UArrayLengthsMemoryRegion(sort, arrayType, updated, nonAliasingLengths, inputLengths)
 
-//    private fun updateNonAliasing(updated: UPersistentHashMap<UNonAliasingHeapAddress, UExpr<USizeSort>>) =
-//        UArrayLengthsMemoryRegion(sort, arrayType, allocatedLengths, updated, inputLengths)
-
     private fun getInputLength(ref: UArrayLengthLValue<ArrayType, USizeSort>): UInputArrayLengths<ArrayType, USizeSort> {
-        if (inputLengths == null)
+        if (inputLengths == null) {
             inputLengths = UInputArrayLengthId(ref.arrayType, ref.sort).emptyRegion()
+        }
         return inputLengths!!
     }
 
@@ -67,7 +65,7 @@ internal class UArrayLengthsMemoryRegion<ArrayType, USizeSort : USort>(
 
     override fun read(key: UArrayLengthLValue<ArrayType, USizeSort>): UExpr<USizeSort> = key.ref.mapWithStaticAsSymbolic(
         concreteMapper = { concreteRef -> allocatedLengths[concreteRef.address] ?: sort.sampleUValue() },
-        nonAliasingMapper = {nonAliasingRef -> getInputLength(key).read(nonAliasingRef)},
+        nonAliasingMapper = { nonAliasingRef -> getInputLength(key).read(nonAliasingRef) },
         symbolicMapper = { symbolicRef -> getInputLength(key).read(symbolicRef) }
     )
 

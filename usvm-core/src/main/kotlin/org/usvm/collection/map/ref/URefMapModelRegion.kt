@@ -1,8 +1,8 @@
 package org.usvm.collection.map.ref
 
+import io.ksmt.utils.uncheckedCast
 import org.usvm.UAddressSort
 import org.usvm.UExpr
-import io.ksmt.utils.uncheckedCast
 import org.usvm.UHeapRef
 import org.usvm.UNonAliasingHeapAddress
 import org.usvm.UNonAliasingHeapRef
@@ -15,7 +15,7 @@ import org.usvm.model.modelEnsureRightInputRef
 import org.usvm.solver.UCollectionDecoder
 
 abstract class URefMapModelRegion<MapType, ValueSort : USort>(
-    private val regionId: URefMapRegionId<MapType, ValueSort>
+    private val regionId: URefMapRegionId<MapType, ValueSort>,
 ) : UReadOnlyMemoryRegion<URefMapEntryLValue<MapType, ValueSort>, ValueSort> {
     abstract val inputMap: UReadOnlyMemoryRegion<USymbolicMapKey<UAddressSort>, ValueSort>
 
@@ -28,7 +28,7 @@ abstract class URefMapModelRegion<MapType, ValueSort : USort>(
 class URefMapLazyModelRegion<MapType, ValueSort : USort>(
     regionId: URefMapRegionId<MapType, ValueSort>,
     private val model: UModelEvaluator<*>,
-    private val inputMapDecoder: UCollectionDecoder<USymbolicMapKey<UAddressSort>, ValueSort>
+    private val inputMapDecoder: UCollectionDecoder<USymbolicMapKey<UAddressSort>, ValueSort>,
 ) : URefMapModelRegion<MapType, ValueSort>(regionId) {
     override val inputMap: UReadOnlyMemoryRegion<USymbolicMapKey<UAddressSort>, ValueSort> by lazy {
         inputMapDecoder.decodeCollection(model)
@@ -37,7 +37,7 @@ class URefMapLazyModelRegion<MapType, ValueSort : USort>(
 
 class URefMapEagerModelRegion<MapType, ValueSort : USort>(
     regionId: URefMapRegionId<MapType, ValueSort>,
-    override val inputMap: UReadOnlyMemoryRegion<USymbolicMapKey<UAddressSort>, ValueSort>
+    override val inputMap: UReadOnlyMemoryRegion<USymbolicMapKey<UAddressSort>, ValueSort>,
 ) : URefMapModelRegion<MapType, ValueSort>(regionId)
 
 class UNonAliasingRefMapModelRegion<MapType, ValueSort : USort> internal constructor(
@@ -46,7 +46,8 @@ class UNonAliasingRefMapModelRegion<MapType, ValueSort : USort> internal constru
     private val cells: List<UNonAliasingRefMapCell<ValueSort>>,
 ) : UReadOnlyMemoryRegion<URefMapEntryLValue<MapType, ValueSort>, ValueSort> {
 
-    private val cellsByIds: Map<Pair<UNonAliasingHeapAddress, UNonAliasingHeapAddress>, UNonAliasingRefMapCell<ValueSort>> =
+    private val cellsByIds:
+        Map<Pair<UNonAliasingHeapAddress, UNonAliasingHeapAddress>, UNonAliasingRefMapCell<ValueSort>> =
         cells.associateBy { it.mapAddress to it.keyAddress }
 
     private val cellRefs: List<Pair<Pair<UExpr<UAddressSort>, UExpr<UAddressSort>>, UNonAliasingRefMapCell<ValueSort>>> by lazy {

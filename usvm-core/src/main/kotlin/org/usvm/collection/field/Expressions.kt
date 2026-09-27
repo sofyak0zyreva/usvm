@@ -5,7 +5,6 @@ import io.ksmt.cache.structurallyEqual
 import io.ksmt.expr.KExpr
 import io.ksmt.expr.printer.ExpressionPrinter
 import io.ksmt.expr.transformer.KTransformerBase
-import org.usvm.NAReadingIdMap
 import org.usvm.UCollectionReading
 import org.usvm.UContext
 import org.usvm.UHeapRef
@@ -48,7 +47,8 @@ class UNonAliasingFieldReading<Field, Sort : USort> internal constructor(
     val address: UHeapRef,
 ) : UCollectionReading<UNonAliasingFieldId<Field, Sort>, UHeapRef, Sort>(ctx, collection) {
 
-    override val id : UNonAliasingHeapAddress = makeNonAliasingIdForReading(ctx, Pair(collection.collectionId.id, collection.collectionId.field))
+    override val id: UNonAliasingHeapAddress =
+        makeNonAliasingIdForReading(ctx, Pair(collection.collectionId.id, collection.collectionId.field))
 
     init {
         require(address !is UNullRef)

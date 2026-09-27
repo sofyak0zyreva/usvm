@@ -22,7 +22,7 @@ import org.usvm.model.modelEnsureRightInputRef
 import org.usvm.regions.Region
 
 abstract class USetModelRegion<SetType, ElementSort : USort, Reg : Region<Reg>>(
-    private val regionId: USetRegionId<SetType, ElementSort, Reg>
+    private val regionId: USetRegionId<SetType, ElementSort, Reg>,
 ) : UReadOnlyMemoryRegion<USetEntryLValue<SetType, ElementSort, Reg>, UBoolSort>,
     USetReadOnlyRegion<SetType, ElementSort, Reg> {
     abstract val inputSet: UMemory2DArray<UAddressSort, ElementSort, UBoolSort>
@@ -52,7 +52,7 @@ class USetLazyModelRegion<SetType, ElementSort : USort, Reg : Region<Reg>>(
     regionId: USetRegionId<SetType, ElementSort, Reg>,
     model: UModelEvaluator<*>,
     assertions: List<KExpr<KBoolSort>>,
-    inputSetDecoder: USetCollectionDecoder<ElementSort>
+    inputSetDecoder: USetCollectionDecoder<ElementSort>,
 ) : USetModelRegion<SetType, ElementSort, Reg>(regionId) {
     override val inputSet: UMemory2DArray<UAddressSort, ElementSort, UBoolSort> by lazy {
         inputSetDecoder.decodeCollection(model, assertions)
@@ -61,7 +61,7 @@ class USetLazyModelRegion<SetType, ElementSort : USort, Reg : Region<Reg>>(
 
 class USetEagerModelRegion<SetType, ElementSort : USort, Reg : Region<Reg>>(
     regionId: USetRegionId<SetType, ElementSort, Reg>,
-    override val inputSet: UMemory2DArray<UAddressSort, ElementSort, UBoolSort>
+    override val inputSet: UMemory2DArray<UAddressSort, ElementSort, UBoolSort>,
 ) : USetModelRegion<SetType, ElementSort, Reg>(regionId)
 
 class UNonAliasingSetModelRegion<SetType, ElementSort : USort, Reg : Region<Reg>> internal constructor(

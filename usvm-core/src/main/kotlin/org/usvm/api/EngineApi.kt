@@ -22,7 +22,7 @@ fun <Type> UTypeEvaluator<Type>.evalTypeEquals(ref: UHeapRef, type: Type): UBool
 
 fun <Type> UState<Type, *, *, *, *, *>.objectTypeEquals(
     lhs: UHeapRef,
-    rhs: UHeapRef
+    rhs: UHeapRef,
 ): UBoolExpr = with(lhs.uctx) {
     mapTypeStream(
         ref = lhs,
@@ -44,7 +44,7 @@ fun <Type> UState<Type, *, *, *, *, *>.objectTypeEquals(
 
 fun <Type> UState<Type, *, *, *, *, *>.objectTypeSubtype(
     lhs: UHeapRef,
-    rhs: UHeapRef
+    rhs: UHeapRef,
 ): UBoolExpr = with(lhs.uctx) {
     mapTypeStream(
         ref = lhs,
@@ -63,7 +63,7 @@ fun <Type> UState<Type, *, *, *, *, *>.objectTypeSubtype(
 
 fun <Type, R : USort> UState<Type, *, *, *, *, *>.mapTypeStreamNotNull(
     ref: UHeapRef,
-    operation: (UHeapRef, UTypeStream<Type>) -> UExpr<R>?
+    operation: (UHeapRef, UTypeStream<Type>) -> UExpr<R>?,
 ): UExpr<R>? = mapTypeStream(
     ref = ref,
     onNull = { error("unexpected null") },
@@ -75,7 +75,7 @@ fun <Type, R : USort> UState<Type, *, *, *, *, *>.mapTypeStreamNotNull(
 
 fun <Type, R : USort> UState<Type, *, *, *, *, *>.mapTypeStream(
     ref: UHeapRef,
-    operation: (UHeapRef, UTypeStream<Type>) -> UExpr<R>?
+    operation: (UHeapRef, UTypeStream<Type>) -> UExpr<R>?,
 ): UExpr<R>? = mapTypeStream(
     ref = ref,
     onNull = { return null },
@@ -160,8 +160,8 @@ private inline fun <Type, R : USort> UState<Type, *, *, *, *, *>.mapTypeStream(
     nonAliasingMapper = { nonAliasingRef ->
         val sym = nonAliasingRef.symbol ?: throw IllegalStateException("symbol in NA is null")
         if (sym is UNullRef) {
-            onNull() }
-        else {
+            onNull()
+        } else {
             val types = memory.types.getTypeStream(sym)
             operation(sym, types)
         }

@@ -28,7 +28,7 @@ import org.usvm.uctx
 import org.usvm.utils.logAssertFailure
 
 object ObjectMapCollectionApi {
-    fun <MapType, USizeSort : USort, Ctx: UContext<USizeSort>> UState<MapType, *, *, Ctx, *, *>.mkSymbolicObjectMap(
+    fun <MapType, USizeSort : USort, Ctx : UContext<USizeSort>> UState<MapType, *, *, Ctx, *, *>.mkSymbolicObjectMap(
         mapType: MapType,
     ): UHeapRef = with(ctx) {
         val ref = memory.allocConcrete(mapType)
@@ -42,7 +42,7 @@ object ObjectMapCollectionApi {
      * Use [ensureObjectMapSizeCorrect] to guarantee that map size is correct.
      * todo: input map size can be inconsistent with contains
      * */
-    fun <MapType, USizeSort : USort, Ctx: UContext<USizeSort>> UState<MapType, *, *, Ctx, *, *>.symbolicObjectMapSize(
+    fun <MapType, USizeSort : USort, Ctx : UContext<USizeSort>> UState<MapType, *, *, Ctx, *, *>.symbolicObjectMapSize(
         mapRef: UHeapRef,
         mapType: MapType,
     ): UExpr<USizeSort> = memory.read(UMapLengthLValue(mapRef, mapType, ctx.sizeSort))
@@ -66,7 +66,8 @@ object ObjectMapCollectionApi {
                         .logAssertFailure { "Constraint violation: SymbolicMap size correctness constraint" }
                         ?: return null
                 }
-                symbolicMapRef},
+                symbolicMapRef
+            },
             symbolicMapper = { symbolicMapRef ->
                 val length = calcOnState { memory.read(UMapLengthLValue(symbolicMapRef, mapType, ctx.sizeSort)) }
                 val ctx = calcOnState { ctx }
@@ -126,7 +127,7 @@ object ObjectMapCollectionApi {
         }
     }
 
-    fun <MapType, Sort : USort, USizeSort : USort, Ctx: UContext<USizeSort>> UState<MapType, *, *, Ctx, *, *>.symbolicObjectMapPut(
+    fun <MapType, Sort : USort, USizeSort : USort, Ctx : UContext<USizeSort>> UState<MapType, *, *, Ctx, *, *>.symbolicObjectMapPut(
         mapRef: UHeapRef,
         key: UHeapRef,
         value: UExpr<Sort>,
@@ -146,7 +147,7 @@ object ObjectMapCollectionApi {
         memory.write(UMapLengthLValue(mapRef, mapType, sizeSort), updatedSize, keyIsNew)
     }
 
-    fun <MapType, USizeSort : USort, Ctx: UContext<USizeSort>> UState<MapType, *, *, Ctx, *, *>.symbolicObjectMapRemove(
+    fun <MapType, USizeSort : USort, Ctx : UContext<USizeSort>> UState<MapType, *, *, Ctx, *, *>.symbolicObjectMapRemove(
         mapRef: UHeapRef,
         key: UHeapRef,
         mapType: MapType,
@@ -163,7 +164,7 @@ object ObjectMapCollectionApi {
         memory.write(UMapLengthLValue(mapRef, mapType, sizeSort), updatedSize, keyIsInMap)
     }
 
-    fun <MapType, Sort : USort, USizeSort : USort, Ctx: UContext<USizeSort>> UState<MapType, *, *, Ctx, *, *>.symbolicObjectMapMergeInto(
+    fun <MapType, Sort : USort, USizeSort : USort, Ctx : UContext<USizeSort>> UState<MapType, *, *, Ctx, *, *>.symbolicObjectMapMergeInto(
         dstRef: UHeapRef,
         srcRef: UHeapRef,
         mapType: MapType,

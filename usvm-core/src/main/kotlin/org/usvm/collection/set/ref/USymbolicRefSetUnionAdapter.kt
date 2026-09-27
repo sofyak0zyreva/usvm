@@ -20,8 +20,12 @@ import org.usvm.memory.key.UHeapRefKeyInfo
 import org.usvm.regions.Region
 import org.usvm.uctx
 
-sealed class USymbolicRefSetUnionAdapter<SetType, SrcKey, DstKey,
-        out SetId : USymbolicRefSetId<SetType, SrcKey, *, SetId>>(
+sealed class USymbolicRefSetUnionAdapter<
+    SetType,
+    SrcKey,
+    DstKey,
+    out SetId : USymbolicRefSetId<SetType, SrcKey, *, SetId>,
+    >(
     val setOfKeys: USymbolicCollection<SetId, SrcKey, UBoolSort>,
 ) : USymbolicCollectionAdapter<SrcKey, DstKey>,
     USymbolicSetUnionElements<DstKey> {
@@ -48,9 +52,13 @@ sealed class USymbolicRefSetUnionAdapter<SetType, SrcKey, DstKey,
 }
 
 class UAllocatedToAllocatedSymbolicRefSetUnionAdapter<SetType>(
-    setOfKeys: USymbolicCollection<UAllocatedRefSetWithInputElementsId<SetType>, UHeapRef, UBoolSort>
-) : USymbolicRefSetUnionAdapter<SetType, UHeapRef, UHeapRef,
-    UAllocatedRefSetWithInputElementsId<SetType>>(setOfKeys) {
+    setOfKeys: USymbolicCollection<UAllocatedRefSetWithInputElementsId<SetType>, UHeapRef, UBoolSort>,
+) : USymbolicRefSetUnionAdapter<
+    SetType,
+    UHeapRef,
+    UHeapRef,
+    UAllocatedRefSetWithInputElementsId<SetType>
+    >(setOfKeys) {
 
     override fun convert(key: UHeapRef, composer: UComposer<*, *>?): UHeapRef = key
 
@@ -72,7 +80,7 @@ class UAllocatedToAllocatedSymbolicRefSetUnionAdapter<SetType>(
         dstCollectionId: USymbolicCollectionId<UHeapRef, *, *>,
         guard: UBoolExpr,
         srcKey: UHeapRef,
-        composer: UComposer<*, *>
+        composer: UComposer<*, *>,
     ) {
         check(srcCollectionId is UAllocatedRefSetWithInputElementsId<*>) { "Unexpected collection: $srcCollectionId" }
         check(dstCollectionId is UAllocatedRefSetWithInputElementsId<*>) { "Unexpected collection: $dstCollectionId" }
@@ -89,9 +97,13 @@ class UAllocatedToAllocatedSymbolicRefSetUnionAdapter<SetType>(
 }
 
 class UAllocatedToAllocatedNARefSetUnionAdapter<SetType>(
-    setOfKeys: USymbolicCollection<UAllocatedRefSetWithNonAliasingElementsId<SetType>, UHeapRef, UBoolSort>
-) : USymbolicRefSetUnionAdapter<SetType, UHeapRef, UHeapRef,
-        UAllocatedRefSetWithNonAliasingElementsId<SetType>>(setOfKeys) {
+    setOfKeys: USymbolicCollection<UAllocatedRefSetWithNonAliasingElementsId<SetType>, UHeapRef, UBoolSort>,
+) : USymbolicRefSetUnionAdapter<
+    SetType,
+    UHeapRef,
+    UHeapRef,
+    UAllocatedRefSetWithNonAliasingElementsId<SetType>
+    >(setOfKeys) {
 
     override fun convert(key: UHeapRef, composer: UComposer<*, *>?): UHeapRef = key
 
@@ -113,10 +125,14 @@ class UAllocatedToAllocatedNARefSetUnionAdapter<SetType>(
         dstCollectionId: USymbolicCollectionId<UHeapRef, *, *>,
         guard: UBoolExpr,
         srcKey: UHeapRef,
-        composer: UComposer<*, *>
+        composer: UComposer<*, *>,
     ) {
-        check(srcCollectionId is UAllocatedRefSetWithNonAliasingElementsId<*>) { "Unexpected collection: $srcCollectionId" }
-        check(dstCollectionId is UAllocatedRefSetWithNonAliasingElementsId<*>) { "Unexpected collection: $dstCollectionId" }
+        check(
+            srcCollectionId is UAllocatedRefSetWithNonAliasingElementsId<*>
+        ) { "Unexpected collection: $srcCollectionId" }
+        check(
+            dstCollectionId is UAllocatedRefSetWithNonAliasingElementsId<*>
+        ) { "Unexpected collection: $dstCollectionId" }
 
         with(guard.uctx) {
             memory.refSetUnion(
@@ -131,9 +147,13 @@ class UAllocatedToAllocatedNARefSetUnionAdapter<SetType>(
 
 class UAllocatedToInputSymbolicRefSetUnionAdapter<SetType>(
     val dstSetRef: UHeapRef,
-    setOfKeys: USymbolicCollection<UAllocatedRefSetWithInputElementsId<SetType>, UHeapRef, UBoolSort>
-) : USymbolicRefSetUnionAdapter<SetType, UHeapRef, USymbolicSetElement<UAddressSort>,
-    UAllocatedRefSetWithInputElementsId<SetType>>(setOfKeys) {
+    setOfKeys: USymbolicCollection<UAllocatedRefSetWithInputElementsId<SetType>, UHeapRef, UBoolSort>,
+) : USymbolicRefSetUnionAdapter<
+    SetType,
+    UHeapRef,
+    USymbolicSetElement<UAddressSort>,
+    UAllocatedRefSetWithInputElementsId<SetType>
+    >(setOfKeys) {
 
     override fun convert(key: USymbolicSetElement<UAddressSort>, composer: UComposer<*, *>?): UHeapRef = key.second
 
@@ -161,7 +181,7 @@ class UAllocatedToInputSymbolicRefSetUnionAdapter<SetType>(
         dstCollectionId: USymbolicCollectionId<USymbolicSetElement<UAddressSort>, *, *>,
         guard: UBoolExpr,
         srcKey: UHeapRef,
-        composer: UComposer<*, *>
+        composer: UComposer<*, *>,
     ) {
         check(srcCollectionId is UAllocatedRefSetWithInputElementsId<*>) { "Unexpected collection: $srcCollectionId" }
         check(dstCollectionId is USymbolicRefSetId<*, *, *, *>) { "Unexpected collection: $dstCollectionId" }
@@ -179,9 +199,13 @@ class UAllocatedToInputSymbolicRefSetUnionAdapter<SetType>(
 
 class UAllocatedToNonAliasingSymbolicRefSetUnionAdapter<SetType>(
     val dstSetRef: UHeapRef,
-    setOfKeys: USymbolicCollection<UAllocatedRefSetWithNonAliasingElementsId<SetType>, UHeapRef, UBoolSort>
-) : USymbolicRefSetUnionAdapter<SetType, UHeapRef, USymbolicSetElement<UAddressSort>,
-        UAllocatedRefSetWithNonAliasingElementsId<SetType>>(setOfKeys) {
+    setOfKeys: USymbolicCollection<UAllocatedRefSetWithNonAliasingElementsId<SetType>, UHeapRef, UBoolSort>,
+) : USymbolicRefSetUnionAdapter<
+    SetType,
+    UHeapRef,
+    USymbolicSetElement<UAddressSort>,
+    UAllocatedRefSetWithNonAliasingElementsId<SetType>
+    >(setOfKeys) {
 
     override fun convert(key: USymbolicSetElement<UAddressSort>, composer: UComposer<*, *>?): UHeapRef = key.second
 
@@ -209,9 +233,11 @@ class UAllocatedToNonAliasingSymbolicRefSetUnionAdapter<SetType>(
         dstCollectionId: USymbolicCollectionId<USymbolicSetElement<UAddressSort>, *, *>,
         guard: UBoolExpr,
         srcKey: UHeapRef,
-        composer: UComposer<*, *>
+        composer: UComposer<*, *>,
     ) {
-        check(srcCollectionId is UAllocatedRefSetWithNonAliasingElementsId<*>) { "Unexpected collection: $srcCollectionId" }
+        check(
+            srcCollectionId is UAllocatedRefSetWithNonAliasingElementsId<*>
+        ) { "Unexpected collection: $srcCollectionId" }
         check(dstCollectionId is USymbolicRefSetId<*, *, *, *>) { "Unexpected collection: $dstCollectionId" }
 
         with(guard.uctx) {
@@ -227,9 +253,14 @@ class UAllocatedToNonAliasingSymbolicRefSetUnionAdapter<SetType>(
 
 class UInputToAllocatedSymbolicRefSetUnionAdapter<SetType>(
     val srcSetRef: UHeapRef,
-    setOfKeys: USymbolicCollection<UInputRefSetWithInputElementsId<SetType>, USymbolicSetElement<UAddressSort>, UBoolSort>
-) : USymbolicRefSetUnionAdapter<SetType, USymbolicSetElement<UAddressSort>, UHeapRef,
-    UInputRefSetWithInputElementsId<SetType>>(setOfKeys) {
+    setOfKeys:
+    USymbolicCollection<UInputRefSetWithInputElementsId<SetType>, USymbolicSetElement<UAddressSort>, UBoolSort>,
+) : USymbolicRefSetUnionAdapter<
+    SetType,
+    USymbolicSetElement<UAddressSort>,
+    UHeapRef,
+    UInputRefSetWithInputElementsId<SetType>
+    >(setOfKeys) {
 
     override fun convert(key: UHeapRef, composer: UComposer<*, *>?): USymbolicSetElement<UAddressSort> =
         composer.compose(srcSetRef) to key
@@ -258,7 +289,7 @@ class UInputToAllocatedSymbolicRefSetUnionAdapter<SetType>(
         dstCollectionId: USymbolicCollectionId<UHeapRef, *, *>,
         guard: UBoolExpr,
         srcKey: USymbolicSetElement<UAddressSort>,
-        composer: UComposer<*, *>
+        composer: UComposer<*, *>,
     ) {
         check(srcCollectionId is USymbolicRefSetId<*, *, *, *>) { "Unexpected collection: $srcCollectionId" }
         check(dstCollectionId is UAllocatedRefSetWithInputElementsId<*>) { "Unexpected collection: $dstCollectionId" }
@@ -276,9 +307,14 @@ class UInputToAllocatedSymbolicRefSetUnionAdapter<SetType>(
 
 class UNonAliasingToAllocatedSymbolicRefSetUnionAdapter<SetType>(
     val srcSetRef: UHeapRef,
-    setOfKeys: USymbolicCollection<UNonAliasingRefSetWithNonAliasingElementsId<SetType>, USymbolicSetElement<UAddressSort>, UBoolSort>
-) : USymbolicRefSetUnionAdapter<SetType, USymbolicSetElement<UAddressSort>, UHeapRef,
-        UNonAliasingRefSetWithNonAliasingElementsId<SetType>>(setOfKeys) {
+    setOfKeys:
+    USymbolicCollection<UNonAliasingRefSetWithNonAliasingElementsId<SetType>, USymbolicSetElement<UAddressSort>, UBoolSort>,
+) : USymbolicRefSetUnionAdapter<
+    SetType,
+    USymbolicSetElement<UAddressSort>,
+    UHeapRef,
+    UNonAliasingRefSetWithNonAliasingElementsId<SetType>
+    >(setOfKeys) {
 
     override fun convert(key: UHeapRef, composer: UComposer<*, *>?): USymbolicSetElement<UAddressSort> =
         composer.compose(srcSetRef) to key
@@ -307,10 +343,12 @@ class UNonAliasingToAllocatedSymbolicRefSetUnionAdapter<SetType>(
         dstCollectionId: USymbolicCollectionId<UHeapRef, *, *>,
         guard: UBoolExpr,
         srcKey: USymbolicSetElement<UAddressSort>,
-        composer: UComposer<*, *>
+        composer: UComposer<*, *>,
     ) {
         check(srcCollectionId is USymbolicRefSetId<*, *, *, *>) { "Unexpected collection: $srcCollectionId" }
-        check(dstCollectionId is UAllocatedRefSetWithNonAliasingElementsId<*>) { "Unexpected collection: $dstCollectionId" }
+        check(
+            dstCollectionId is UAllocatedRefSetWithNonAliasingElementsId<*>
+        ) { "Unexpected collection: $dstCollectionId" }
 
         with(guard.uctx) {
             memory.refSetUnion(
@@ -326,13 +364,18 @@ class UNonAliasingToAllocatedSymbolicRefSetUnionAdapter<SetType>(
 class UInputToInputSymbolicRefSetUnionAdapter<SetType>(
     val srcSetRef: UHeapRef,
     val dstSetRef: UHeapRef,
-    setOfKeys: USymbolicCollection<UInputRefSetWithInputElementsId<SetType>, USymbolicSetElement<UAddressSort>, UBoolSort>
-) : USymbolicRefSetUnionAdapter<SetType, USymbolicSetElement<UAddressSort>, USymbolicSetElement<UAddressSort>,
-    UInputRefSetWithInputElementsId<SetType>>(setOfKeys) {
+    setOfKeys:
+    USymbolicCollection<UInputRefSetWithInputElementsId<SetType>, USymbolicSetElement<UAddressSort>, UBoolSort>,
+) : USymbolicRefSetUnionAdapter<
+    SetType,
+    USymbolicSetElement<UAddressSort>,
+    USymbolicSetElement<UAddressSort>,
+    UInputRefSetWithInputElementsId<SetType>
+    >(setOfKeys) {
 
     override fun convert(
         key: USymbolicSetElement<UAddressSort>,
-        composer: UComposer<*, *>?
+        composer: UComposer<*, *>?,
     ): USymbolicSetElement<UAddressSort> =
         composer.compose(srcSetRef) to key.second
 
@@ -361,7 +404,7 @@ class UInputToInputSymbolicRefSetUnionAdapter<SetType>(
         dstCollectionId: USymbolicCollectionId<USymbolicSetElement<UAddressSort>, *, *>,
         guard: UBoolExpr,
         srcKey: USymbolicSetElement<UAddressSort>,
-        composer: UComposer<*, *>
+        composer: UComposer<*, *>,
     ) {
         check(srcCollectionId is USymbolicRefSetId<*, *, *, *>) { "Unexpected collection: $srcCollectionId" }
         check(dstCollectionId is USymbolicRefSetId<*, *, *, *>) { "Unexpected collection: $dstCollectionId" }
@@ -378,13 +421,18 @@ class UInputToInputSymbolicRefSetUnionAdapter<SetType>(
 class UNonAliasingToNonAliasingSymbolicRefSetUnionAdapter<SetType>(
     val srcSetRef: UHeapRef,
     val dstSetRef: UHeapRef,
-    setOfKeys: USymbolicCollection<UNonAliasingRefSetWithNonAliasingElementsId<SetType>, USymbolicSetElement<UAddressSort>, UBoolSort>
-) : USymbolicRefSetUnionAdapter<SetType, USymbolicSetElement<UAddressSort>, USymbolicSetElement<UAddressSort>,
-        UNonAliasingRefSetWithNonAliasingElementsId<SetType>>(setOfKeys) {
+    setOfKeys:
+    USymbolicCollection<UNonAliasingRefSetWithNonAliasingElementsId<SetType>, USymbolicSetElement<UAddressSort>, UBoolSort>,
+) : USymbolicRefSetUnionAdapter<
+    SetType,
+    USymbolicSetElement<UAddressSort>,
+    USymbolicSetElement<UAddressSort>,
+    UNonAliasingRefSetWithNonAliasingElementsId<SetType>
+    >(setOfKeys) {
 
     override fun convert(
         key: USymbolicSetElement<UAddressSort>,
-        composer: UComposer<*, *>?
+        composer: UComposer<*, *>?,
     ): USymbolicSetElement<UAddressSort> =
         composer.compose(srcSetRef) to key.second
 
@@ -413,7 +461,7 @@ class UNonAliasingToNonAliasingSymbolicRefSetUnionAdapter<SetType>(
         dstCollectionId: USymbolicCollectionId<USymbolicSetElement<UAddressSort>, *, *>,
         guard: UBoolExpr,
         srcKey: USymbolicSetElement<UAddressSort>,
-        composer: UComposer<*, *>
+        composer: UComposer<*, *>,
     ) {
         check(srcCollectionId is USymbolicRefSetId<*, *, *, *>) { "Unexpected collection: $srcCollectionId" }
         check(dstCollectionId is USymbolicRefSetId<*, *, *, *>) { "Unexpected collection: $dstCollectionId" }

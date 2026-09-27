@@ -1,10 +1,10 @@
 package org.usvm.collection.array
 
 import io.ksmt.expr.KBitVec32Value
+import io.ksmt.utils.uncheckedCast
 import org.usvm.UAddressSort
 import org.usvm.UConcreteHeapRef
 import org.usvm.UExpr
-import io.ksmt.utils.uncheckedCast
 import org.usvm.UNonAliasingHeapAddress
 import org.usvm.UNonAliasingHeapRef
 import org.usvm.USort
@@ -31,7 +31,7 @@ abstract class UArrayModelRegion<ArrayType, Sort : USort, USizeSort : USort>(
 class UArrayLazyModelRegion<ArrayType, Sort : USort, USizeSort : USort>(
     regionId: UArrayRegionId<ArrayType, Sort, USizeSort>,
     private val model: UModelEvaluator<*>,
-    private val inputArrayDecoder: UCollectionDecoder<USymbolicArrayIndex<USizeSort>, Sort>
+    private val inputArrayDecoder: UCollectionDecoder<USymbolicArrayIndex<USizeSort>, Sort>,
 ) : UArrayModelRegion<ArrayType, Sort, USizeSort>(regionId) {
     override val inputArray: UReadOnlyMemoryRegion<USymbolicArrayIndex<USizeSort>, Sort> by lazy {
         inputArrayDecoder.decodeCollection(model)
@@ -40,7 +40,7 @@ class UArrayLazyModelRegion<ArrayType, Sort : USort, USizeSort : USort>(
 
 class UArrayEagerModelRegion<ArrayType, Sort : USort, USizeSort : USort>(
     regionId: UArrayRegionId<ArrayType, Sort, USizeSort>,
-    override val inputArray: UReadOnlyMemoryRegion<USymbolicArrayIndex<USizeSort>, Sort>
+    override val inputArray: UReadOnlyMemoryRegion<USymbolicArrayIndex<USizeSort>, Sort>,
 ) : UArrayModelRegion<ArrayType, Sort, USizeSort>(regionId)
 
 class UNonAliasingArrayModelRegion<ArrayType, Sort : USort, USizeSort : USort> internal constructor(

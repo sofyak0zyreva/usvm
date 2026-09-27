@@ -7,7 +7,6 @@ import org.usvm.UConcreteHeapRef
 import org.usvm.UExpr
 import org.usvm.UHeapRef
 import org.usvm.UNonAliasingHeapAddress
-import org.usvm.UNonAliasingHeapRef
 import org.usvm.USort
 import org.usvm.collection.field.getId
 import org.usvm.collection.map.USymbolicMapKey
@@ -15,7 +14,6 @@ import org.usvm.collection.set.ref.UAllocatedRefSetWithNonAliasingElements
 import org.usvm.collection.set.ref.UNonAliasingRefSetWithNonAliasingElements
 import org.usvm.collection.set.ref.URefSetEntryLValue
 import org.usvm.collection.set.ref.URefSetRegion
-import org.usvm.collection.set.ref.USymbolicRefSetId
 import org.usvm.collections.immutable.getOrPut
 import org.usvm.collections.immutable.implementations.immutableMap.UPersistentHashMap
 import org.usvm.collections.immutable.internal.MutabilityOwnership
@@ -29,14 +27,13 @@ import org.usvm.memory.foldHeapRefWithStaticAsSymbolic
 import org.usvm.memory.guardedWrite
 import org.usvm.memory.mapWithStaticAsSymbolic
 import org.usvm.sampleUValue
-import org.usvm.test.util.checkers.ge
 import org.usvm.uctx
 
 data class URefMapEntryLValue<MapType, ValueSort : USort>(
     override val sort: ValueSort,
     val mapRef: UHeapRef,
     val mapKey: UHeapRef,
-    val mapType: MapType
+    val mapType: MapType,
 ) : ULValue<URefMapEntryLValue<MapType, ValueSort>, ValueSort> {
     override val memoryRegionId: UMemoryRegionId<URefMapEntryLValue<MapType, ValueSort>, ValueSort> =
         URefMapRegionId(sort, mapType)
@@ -53,8 +50,8 @@ data class URefMapRegionId<MapType, ValueSort : USort>(
         URefMapMemoryRegion(sort, mapType)
 }
 
-interface URefMapRegion<MapType, ValueSort : USort>
-    : UMemoryRegion<URefMapEntryLValue<MapType, ValueSort>, ValueSort> {
+interface URefMapRegion<MapType, ValueSort : USort> :
+    UMemoryRegion<URefMapEntryLValue<MapType, ValueSort>, ValueSort> {
     fun merge(
         srcRef: UHeapRef,
         dstRef: UHeapRef,
@@ -67,45 +64,51 @@ interface URefMapRegion<MapType, ValueSort : USort>
 }
 
 typealias UAllocatedRefMapWithInputKeys<MapType, ValueSort> =
-        USymbolicCollection<UAllocatedRefMapWithInputKeysId<MapType, ValueSort>, UHeapRef, ValueSort>
+    USymbolicCollection<UAllocatedRefMapWithInputKeysId<MapType, ValueSort>, UHeapRef, ValueSort>
 
 typealias UAllocatedRefMapWithNonAliasingKeys<MapType, ValueSort> =
-        USymbolicCollection<UAllocatedRefMapWithNonAliasingKeysId<MapType, ValueSort>, UHeapRef, ValueSort>
+    USymbolicCollection<UAllocatedRefMapWithNonAliasingKeysId<MapType, ValueSort>, UHeapRef, ValueSort>
 
 typealias UInputRefMapWithAllocatedKeys<MapType, ValueSort> =
-        USymbolicCollection<UInputRefMapWithAllocatedKeysId<MapType, ValueSort>, UHeapRef, ValueSort>
+    USymbolicCollection<UInputRefMapWithAllocatedKeysId<MapType, ValueSort>, UHeapRef, ValueSort>
 
 typealias UNonAliasingRefMapWithAllocatedKeys<MapType, ValueSort> =
-        USymbolicCollection<UNonAliasingRefMapWithAllocatedKeysId<MapType, ValueSort>, UHeapRef, ValueSort>
+    USymbolicCollection<UNonAliasingRefMapWithAllocatedKeysId<MapType, ValueSort>, UHeapRef, ValueSort>
 
 typealias UInputRefMap<MapType, ValueSort> =
-        USymbolicCollection<UInputRefMapWithInputKeysId<MapType, ValueSort>, USymbolicMapKey<UAddressSort>, ValueSort>
+    USymbolicCollection<UInputRefMapWithInputKeysId<MapType, ValueSort>, USymbolicMapKey<UAddressSort>, ValueSort>
 
 typealias UNonAliasingRefMapWithNonAliasingKeys<MapType, ValueSort> =
-        USymbolicCollection<UNonAliasingRefMapWithNonAliasingKeysId<MapType, ValueSort>, USymbolicMapKey<UAddressSort>, ValueSort>
+    USymbolicCollection<UNonAliasingRefMapWithNonAliasingKeysId<MapType, ValueSort>, USymbolicMapKey<UAddressSort>, ValueSort>
 
 
 internal data class UAllocatedRefMapWithAllocatedKeysId(
     val mapAddress: UConcreteHeapAddress,
-    val keyAddress: UConcreteHeapAddress
+    val keyAddress: UConcreteHeapAddress,
 )
 
 internal class URefMapMemoryRegion<MapType, ValueSort : USort>(
     private val valueSort: ValueSort,
     private val mapType: MapType,
-    private var allocatedMapWithAllocatedKeys: UPersistentHashMap<UAllocatedRefMapWithAllocatedKeysId, UExpr<ValueSort>> = persistentHashMapOf(),
-    private var inputMapWithAllocatedKeys: UPersistentHashMap<UInputRefMapWithAllocatedKeysId<MapType, ValueSort>, UInputRefMapWithAllocatedKeys<MapType, ValueSort>> = persistentHashMapOf(),
-    private var allocatedMapWithInputKeys: UPersistentHashMap<UAllocatedRefMapWithInputKeysId<MapType, ValueSort>, UAllocatedRefMapWithInputKeys<MapType, ValueSort>> = persistentHashMapOf(),
+    private var allocatedMapWithAllocatedKeys: UPersistentHashMap<UAllocatedRefMapWithAllocatedKeysId, UExpr<ValueSort>> =
+        persistentHashMapOf(),
+    private var inputMapWithAllocatedKeys:
+    UPersistentHashMap<UInputRefMapWithAllocatedKeysId<MapType, ValueSort>, UInputRefMapWithAllocatedKeys<MapType, ValueSort>> = persistentHashMapOf(),
+    private var allocatedMapWithInputKeys:
+    UPersistentHashMap<UAllocatedRefMapWithInputKeysId<MapType, ValueSort>, UAllocatedRefMapWithInputKeys<MapType, ValueSort>> = persistentHashMapOf(),
     private var inputMapWithInputKeys: UInputRefMap<MapType, ValueSort>? = null,
-    private var allocatedMapWithNonAliasingKeys: UPersistentHashMap<UAllocatedRefMapWithNonAliasingKeysId<MapType, ValueSort>, UAllocatedRefMapWithNonAliasingKeys<MapType, ValueSort>> = persistentHashMapOf(),
-    private var nonAliasingMapWithAllocatedKeys: UPersistentHashMap<UNonAliasingRefMapWithAllocatedKeysId<MapType, ValueSort>, UNonAliasingRefMapWithAllocatedKeys<MapType, ValueSort>> = persistentHashMapOf(),
-    private var nonAliasingMapWithNonAliasingKeys: UPersistentHashMap<UNonAliasingRefMapWithNonAliasingKeysId<MapType, ValueSort>, UNonAliasingRefMapWithNonAliasingKeys<MapType, ValueSort>> = persistentHashMapOf(),
-    ) : URefMapRegion<MapType, ValueSort> {
+    private var allocatedMapWithNonAliasingKeys:
+    UPersistentHashMap<UAllocatedRefMapWithNonAliasingKeysId<MapType, ValueSort>, UAllocatedRefMapWithNonAliasingKeys<MapType, ValueSort>> = persistentHashMapOf(),
+    private var nonAliasingMapWithAllocatedKeys:
+    UPersistentHashMap<UNonAliasingRefMapWithAllocatedKeysId<MapType, ValueSort>, UNonAliasingRefMapWithAllocatedKeys<MapType, ValueSort>> = persistentHashMapOf(),
+    private var nonAliasingMapWithNonAliasingKeys:
+    UPersistentHashMap<UNonAliasingRefMapWithNonAliasingKeysId<MapType, ValueSort>, UNonAliasingRefMapWithNonAliasingKeys<MapType, ValueSort>> = persistentHashMapOf(),
+) : URefMapRegion<MapType, ValueSort> {
 
     private val defaultOwnership = valueSort.uctx.defaultOwnership
 
     private fun updateAllocatedMapWithAllocatedKeys(
-        updated: UPersistentHashMap<UAllocatedRefMapWithAllocatedKeysId, UExpr<ValueSort>>
+        updated: UPersistentHashMap<UAllocatedRefMapWithAllocatedKeysId, UExpr<ValueSort>>,
     ) = URefMapMemoryRegion(
         valueSort,
         mapType,
@@ -122,7 +125,7 @@ internal class URefMapMemoryRegion<MapType, ValueSort : USort>(
         UInputRefMapWithAllocatedKeysId(valueSort, mapType, keyAddress)
 
     private fun getInputMapWithAllocatedKeys(
-        id: UInputRefMapWithAllocatedKeysId<MapType, ValueSort>
+        id: UInputRefMapWithAllocatedKeysId<MapType, ValueSort>,
     ): UInputRefMapWithAllocatedKeys<MapType, ValueSort> {
         val (updatedMap, collection) = inputMapWithAllocatedKeys.getOrPut(id, defaultOwnership) { id.emptyRegion() }
         inputMapWithAllocatedKeys = updatedMap
@@ -149,9 +152,12 @@ internal class URefMapMemoryRegion<MapType, ValueSort : USort>(
         UNonAliasingRefMapWithAllocatedKeysId(valueSort, mapType, mapRef, keyAddress)
 
     private fun getNonAliasingMapWithAllocatedKeys(
-        id: UNonAliasingRefMapWithAllocatedKeysId<MapType, ValueSort>
+        id: UNonAliasingRefMapWithAllocatedKeysId<MapType, ValueSort>,
     ): UNonAliasingRefMapWithAllocatedKeys<MapType, ValueSort> {
-        val (updatedMap, collection) = nonAliasingMapWithAllocatedKeys.getOrPut(id, defaultOwnership) { id.emptyRegion() }
+        val (updatedMap, collection) = nonAliasingMapWithAllocatedKeys.getOrPut(
+            id,
+            defaultOwnership
+        ) { id.emptyRegion() }
         nonAliasingMapWithAllocatedKeys = updatedMap
         return collection
     }
@@ -176,7 +182,7 @@ internal class URefMapMemoryRegion<MapType, ValueSort : USort>(
         UAllocatedRefMapWithInputKeysId(valueSort, mapType, mapAddress)
 
     private fun getAllocatedMapWithInputKeys(
-        id: UAllocatedRefMapWithInputKeysId<MapType, ValueSort>
+        id: UAllocatedRefMapWithInputKeysId<MapType, ValueSort>,
     ): UAllocatedRefMapWithInputKeys<MapType, ValueSort> {
         val (updatedMap, collection) = allocatedMapWithInputKeys.getOrPut(id, defaultOwnership) { id.emptyRegion() }
         allocatedMapWithInputKeys = updatedMap
@@ -203,9 +209,12 @@ internal class URefMapMemoryRegion<MapType, ValueSort : USort>(
         UAllocatedRefMapWithNonAliasingKeysId(valueSort, mapType, mapAddress, keyAddress)
 
     private fun getAllocatedMapWithNonAliasingKeys(
-        id: UAllocatedRefMapWithNonAliasingKeysId<MapType, ValueSort>
+        id: UAllocatedRefMapWithNonAliasingKeysId<MapType, ValueSort>,
     ): UAllocatedRefMapWithNonAliasingKeys<MapType, ValueSort> {
-        val (updatedMap, collection) = allocatedMapWithNonAliasingKeys.getOrPut(id, defaultOwnership) { id.emptyRegion() }
+        val (updatedMap, collection) = allocatedMapWithNonAliasingKeys.getOrPut(
+            id,
+            defaultOwnership
+        ) { id.emptyRegion() }
         allocatedMapWithNonAliasingKeys = updatedMap
         return collection
     }
@@ -228,10 +237,11 @@ internal class URefMapMemoryRegion<MapType, ValueSort : USort>(
 
 
     private fun getInputMapWithInputKeys(): UInputRefMap<MapType, ValueSort> {
-        if (inputMapWithInputKeys == null)
+        if (inputMapWithInputKeys == null) {
             inputMapWithInputKeys = UInputRefMapWithInputKeysId(
                 valueSort, mapType
             ).emptyRegion()
+        }
         return inputMapWithInputKeys!!
     }
 
@@ -249,9 +259,12 @@ internal class URefMapMemoryRegion<MapType, ValueSort : USort>(
         UNonAliasingRefMapWithNonAliasingKeysId(valueSort, mapType, mapAddress, keyAddress)
 
     private fun getNonAliasingMapWithNonAliasingKeys(
-        id: UNonAliasingRefMapWithNonAliasingKeysId<MapType, ValueSort>
+        id: UNonAliasingRefMapWithNonAliasingKeysId<MapType, ValueSort>,
     ): UNonAliasingRefMapWithNonAliasingKeys<MapType, ValueSort> {
-        val (updatedMap, collection) = nonAliasingMapWithNonAliasingKeys.getOrPut(id, defaultOwnership) { id.emptyRegion() }
+        val (updatedMap, collection) = nonAliasingMapWithNonAliasingKeys.getOrPut(
+            id,
+            defaultOwnership
+        ) { id.emptyRegion() }
         nonAliasingMapWithNonAliasingKeys = updatedMap
         return collection
     }
@@ -274,7 +287,6 @@ internal class URefMapMemoryRegion<MapType, ValueSort : USort>(
 
     override fun read(key: URefMapEntryLValue<MapType, ValueSort>): UExpr<ValueSort> =
         key.mapRef.mapWithStaticAsSymbolic(
-            // all these cases needs serious rewrites maybe (copy-paste from above)
             concreteMapper = { concreteRef ->
                 key.mapKey.mapWithStaticAsSymbolic(
                     concreteMapper = { concreteKey ->
@@ -322,7 +334,6 @@ internal class URefMapMemoryRegion<MapType, ValueSort : USort>(
                     },
                     ignoreNullRefs = false
                 )
-
             }
         )
 
@@ -384,7 +395,7 @@ internal class URefMapMemoryRegion<MapType, ValueSort : USort>(
                 }
             )
         },
-        blockOnNonAliasing = {mapRegion, (nonAliasingMapRef, mapGuard) ->
+        blockOnNonAliasing = { mapRegion, (nonAliasingMapRef, mapGuard) ->
             foldHeapRefWithStaticAsSymbolic(
                 ref = key.mapKey,
                 initial = mapRegion,
@@ -406,7 +417,6 @@ internal class URefMapMemoryRegion<MapType, ValueSort : USort>(
                     region.updateNonAliasingMapWithNonAliasingKeys(id, newMap, ownership)
                 }
             )
-
         }
     )
 
@@ -461,10 +471,16 @@ internal class URefMapMemoryRegion<MapType, ValueSort : USort>(
 
             val adapter = UAllocatedToAllocatedSymbolicRefMapMergeAdapter(srcKeys)
             val updatedDstCollection = dstInputKeysCollection.copyRange(srcInputKeysCollection, adapter, guard)
-            val updatedRegion2 = updatedRegion.updateAllocatedMapWithInputKeys(dstInputKeysId, updatedDstCollection, ownership)
+            val updatedRegion2 = updatedRegion.updateAllocatedMapWithInputKeys(
+                dstInputKeysId,
+                updatedDstCollection,
+                ownership
+            )
 
             updatedRegion2.mergeAllocatedMapNonAliasingKeys(
-                initial = updatedRegion2, srcMapRef = srcConcrete, guard = guard,
+                initial = updatedRegion2,
+                srcMapRef = srcConcrete,
+                guard = guard,
                 getSrcKeys = { keyRef ->
                     keySet.allocatedSetWithNonAliasingElements(getId(srcConcrete), getId(keyRef))
                 },
@@ -475,7 +491,11 @@ internal class URefMapMemoryRegion<MapType, ValueSort : USort>(
                 write = { result, dstKeyId, srcNonAliasingKeysCollection, srcKeys2, g ->
                     val dstNonAliasingKeysCollection = result.getAllocatedMapWithNonAliasingKeys(dstKeyId)
                     val adapter2 = UAllocatedToAllocatedNARefMapMergeAdapter(srcKeys2)
-                    val updatedDstCollection2 = dstNonAliasingKeysCollection.copyRange(srcNonAliasingKeysCollection, adapter2, guard)
+                    val updatedDstCollection2 = dstNonAliasingKeysCollection.copyRange(
+                        srcNonAliasingKeysCollection,
+                        adapter2,
+                        guard
+                    )
 
                     result.updateAllocatedMapWithNonAliasingKeys(dstKeyId, updatedDstCollection2, ownership)
                 }
@@ -484,7 +504,10 @@ internal class URefMapMemoryRegion<MapType, ValueSort : USort>(
         blockOnConcrete0Symbolic1 = { region, srcConcrete, dstSymbolic, guard ->
             val initialAllocatedMapState = region.allocatedMapWithAllocatedKeys
             val updatedRegion = region.mergeAllocatedMapAllocatedKeys(
-                initial = region, srcMapRef = srcConcrete, guard = guard, keySet = keySet,
+                initial = region,
+                srcMapRef = srcConcrete,
+                guard = guard,
+                keySet = keySet,
                 read = { initialAllocatedMapState[it] ?: valueSort.sampleUValue() },
                 mkDstKeyId = { inputMapWithAllocatedKeyId(it) },
                 write = { result, dstKeyId, value, g ->
@@ -507,7 +530,10 @@ internal class URefMapMemoryRegion<MapType, ValueSort : USort>(
         blockOnConcrete0NonAliasing1 = { region, srcConcrete, dstNonAliasing, guard ->
             val initialAllocatedMapState = region.allocatedMapWithAllocatedKeys
             val updatedRegion = region.mergeAllocatedMapAllocatedKeys(
-                initial = region, srcMapRef = srcConcrete, guard = guard, keySet = keySet,
+                initial = region,
+                srcMapRef = srcConcrete,
+                guard = guard,
+                keySet = keySet,
                 read = { initialAllocatedMapState[it] ?: valueSort.sampleUValue() },
                 mkDstKeyId = { nonAliasingMapWithAllocatedKeyId(dstNonAliasing, it) },
                 write = { result, dstKeyId, value, g ->
@@ -517,17 +543,24 @@ internal class URefMapMemoryRegion<MapType, ValueSort : USort>(
                 }
             )
             updatedRegion.mergeAllocatedMapNonAliasingKeys(
-                initial = updatedRegion, srcMapRef = srcConcrete, guard = guard,
+                initial = updatedRegion,
+                srcMapRef = srcConcrete,
+                guard = guard,
                 getSrcKeys = { keyRef ->
                     keySet.allocatedSetWithNonAliasingElements(getId(srcConcrete), getId(keyRef))
                 },
                 read = { keyId ->
-                    updatedRegion.getAllocatedMapWithNonAliasingKeys(keyId) },
+                    updatedRegion.getAllocatedMapWithNonAliasingKeys(keyId)
+                },
                 mkDstKeyId = { nonAliasingMapWithNonAliasingKeyId(getId(dstNonAliasing), it) },
                 write = { result, dstKeyId, srcNonAliasingKeysCollection, srcKeys, g ->
                     val dstNonAliasingKeysCollection = result.getNonAliasingMapWithNonAliasingKeys(dstKeyId)
                     val adapter = UAllocatedToNonAliasingSymbolicRefMapMergeAdapter(dstNonAliasing, srcKeys)
-                    val updatedDstCollection = dstNonAliasingKeysCollection.copyRange(srcNonAliasingKeysCollection, adapter, guard)
+                    val updatedDstCollection = dstNonAliasingKeysCollection.copyRange(
+                        srcNonAliasingKeysCollection,
+                        adapter,
+                        guard
+                    )
 
                     result.updateNonAliasingMapWithNonAliasingKeys(dstKeyId, updatedDstCollection, ownership)
                 }
@@ -536,7 +569,9 @@ internal class URefMapMemoryRegion<MapType, ValueSort : USort>(
         blockOnSymbolic0Concrete1 = { region, srcSymbolic, dstConcrete, guard ->
             val updatedAllocatedMap = region.mergeInputMapAllocatedKeys(
                 initial = region.allocatedMapWithAllocatedKeys,
-                srcMapRef = srcSymbolic, guard = guard, keySet = keySet,
+                srcMapRef = srcSymbolic,
+                guard = guard,
+                keySet = keySet,
                 read = { region.getInputMapWithAllocatedKeys(it).read(srcSymbolic) },
                 mkDstKeyId = { UAllocatedRefMapWithAllocatedKeysId(dstConcrete.address, it) },
                 write = { result, dstKeyId, value, g ->
@@ -555,10 +590,12 @@ internal class URefMapMemoryRegion<MapType, ValueSort : USort>(
             val updatedDstCollection = dstInputKeysCollection.copyRange(srcInputKeysCollection, adapter, guard)
             updatedRegion.updateAllocatedMapWithInputKeys(dstInputKeysId, updatedDstCollection, ownership)
         },
-        blockOnNonAliasing0Concrete1 = {region, srcNonAliasing, dstConcrete, guard ->
+        blockOnNonAliasing0Concrete1 = { region, srcNonAliasing, dstConcrete, guard ->
             val updatedAllocatedMap = region.mergeNonAliasingMapAllocatedKeys(
                 initial = region.allocatedMapWithAllocatedKeys,
-                srcMapRef = srcNonAliasing, guard = guard, keySet = keySet,
+                srcMapRef = srcNonAliasing,
+                guard = guard,
+                keySet = keySet,
                 read = { region.getNonAliasingMapWithAllocatedKeys(it).read(srcNonAliasing) },
                 mkDstKeyId = { UAllocatedRefMapWithAllocatedKeysId(dstConcrete.address, it) },
                 write = { result, dstKeyId, value, g ->
@@ -567,25 +604,35 @@ internal class URefMapMemoryRegion<MapType, ValueSort : USort>(
             )
             val updatedRegion = region.updateAllocatedMapWithAllocatedKeys(updatedAllocatedMap)
             updatedRegion.mergeNonAliasingMapNonAliasingKeys(
-                initial = updatedRegion, srcMapRef = srcNonAliasing, guard = guard,
+                initial = updatedRegion,
+                srcMapRef = srcNonAliasing,
+                guard = guard,
                 getSrcKeys = { keyRef ->
                     keySet.nonAliasingSetWithNonAliasingElements(getId(srcNonAliasing), getId(keyRef))
                 },
                 read = { keyId ->
-                    updatedRegion.getNonAliasingMapWithNonAliasingKeys(keyId) },
+                    updatedRegion.getNonAliasingMapWithNonAliasingKeys(keyId)
+                },
                 mkDstKeyId = { allocatedMapWithNonAliasingKeyId(dstConcrete.address, it) },
                 write = { result, dstKeyId, srcNonAliasingKeysCollection, srcKeys, g ->
                     val dstNonAliasingKeysCollection = result.getAllocatedMapWithNonAliasingKeys(dstKeyId)
                     val adapter = UNonAliasingToAllocatedSymbolicRefMapMergeAdapter(srcNonAliasing, srcKeys)
-                    val updatedDstCollection = dstNonAliasingKeysCollection.copyRange(srcNonAliasingKeysCollection, adapter, guard)
+                    val updatedDstCollection = dstNonAliasingKeysCollection.copyRange(
+                        srcNonAliasingKeysCollection,
+                        adapter,
+                        guard
+                    )
 
                     result.updateAllocatedMapWithNonAliasingKeys(dstKeyId, updatedDstCollection, ownership)
                 }
             )
         },
-        blockOnNonAliasing0NonAliasing1 = {region, srcNonAliasing, dstNonAliasing, guard ->
+        blockOnNonAliasing0NonAliasing1 = { region, srcNonAliasing, dstNonAliasing, guard ->
             val updatedRegion = region.mergeNonAliasingMapAllocatedKeys(
-                initial = region, srcMapRef = srcNonAliasing, guard = guard, keySet = keySet,
+                initial = region,
+                srcMapRef = srcNonAliasing,
+                guard = guard,
+                keySet = keySet,
                 read = { region.getNonAliasingMapWithAllocatedKeys(it).read(srcNonAliasing) },
                 mkDstKeyId = { nonAliasingMapWithAllocatedKeyId(dstNonAliasing, it) },
                 write = { result, dstKeyId, value, g ->
@@ -595,24 +642,35 @@ internal class URefMapMemoryRegion<MapType, ValueSort : USort>(
                 }
             )
             updatedRegion.mergeNonAliasingMapNonAliasingKeys(
-                initial = updatedRegion, srcMapRef = srcNonAliasing, guard = guard,
+                initial = updatedRegion,
+                srcMapRef = srcNonAliasing,
+                guard = guard,
                 getSrcKeys = { keyRef ->
                     keySet.nonAliasingSetWithNonAliasingElements(getId(srcNonAliasing), getId(keyRef))
                 },
                 read = { keyId ->
-                    updatedRegion.getNonAliasingMapWithNonAliasingKeys(keyId) },
+                    updatedRegion.getNonAliasingMapWithNonAliasingKeys(keyId)
+                },
                 mkDstKeyId = { nonAliasingMapWithNonAliasingKeyId(getId(dstNonAliasing), it) },
                 write = { result, dstKeyId, srcNonAliasingKeysCollection, srcKeys, g ->
                     val dstNonAliasingKeysCollection = result.getNonAliasingMapWithNonAliasingKeys(dstKeyId)
-                    val adapter = UNonAliasingToNonAliasingSymbolicRefMapMergeAdapter(srcNonAliasing, dstNonAliasing, srcKeys)
-                    val updatedDstCollection = dstNonAliasingKeysCollection.copyRange(srcNonAliasingKeysCollection, adapter, guard)
+                    val adapter =
+                        UNonAliasingToNonAliasingSymbolicRefMapMergeAdapter(srcNonAliasing, dstNonAliasing, srcKeys)
+                    val updatedDstCollection = dstNonAliasingKeysCollection.copyRange(
+                        srcNonAliasingKeysCollection,
+                        adapter,
+                        guard
+                    )
                     result.updateNonAliasingMapWithNonAliasingKeys(dstKeyId, updatedDstCollection, ownership)
                 }
             )
         },
         blockOnSymbolic0Symbolic1 = { region, srcSymbolic, dstSymbolic, guard ->
             val updatedRegion = region.mergeInputMapAllocatedKeys(
-                initial = region, srcMapRef = srcSymbolic, guard = guard, keySet = keySet,
+                initial = region,
+                srcMapRef = srcSymbolic,
+                guard = guard,
+                keySet = keySet,
                 read = { region.getInputMapWithAllocatedKeys(it).read(srcSymbolic) },
                 mkDstKeyId = { inputMapWithAllocatedKeyId(it) },
                 write = { result, dstKeyId, value, g ->
@@ -630,47 +688,6 @@ internal class URefMapMemoryRegion<MapType, ValueSort : USort>(
             val updatedDstCollection = dstInputKeysCollection.copyRange(srcInputKeysCollection, adapter, guard)
             updatedRegion.updateInputMapWithInputKeys(updatedDstCollection)
         },
-
-
-
-//        blockOnNonAliasing0Symbolic1 = {region, srcSymbolic, dstSymbolic, guard ->
-//            val updatedRegion = region.mergeInputMapAllocatedKeys(
-//                initial = region, srcMapRef = srcSymbolic, guard = guard, keySet = keySet,
-//                read = { region.getInputMapWithAllocatedKeys(it).read(srcSymbolic) },
-//                mkDstKeyId = { inputMapWithAllocatedKeyId(it) },
-//                write = { result, dstKeyId, value, g ->
-//                    val newMap = result.getInputMapWithAllocatedKeys(dstKeyId)
-//                        .write(dstSymbolic, value, g, ownership)
-//                    result.updateInputMapWithAllocatedKeys(dstKeyId, newMap, ownership)
-//                }
-//            )
-//            val srcKeys = keySet.inputSetWithInputElements()
-//            val srcInputKeysCollection = updatedRegion.getInputMapWithInputKeys()
-//
-//            val dstInputKeysCollection = updatedRegion.getInputMapWithInputKeys()
-//
-//            val adapter = UInputToInputSymbolicRefMapMergeAdapter(srcSymbolic, dstSymbolic, srcKeys)
-//            val updatedDstCollection = dstInputKeysCollection.copyRange(srcInputKeysCollection, adapter, guard)
-//            updatedRegion.updateInputMapWithInputKeys(updatedDstCollection)},
-//        blockOnSymbolic0NonAliasing1 = {region, srcSymbolic, dstSymbolic, guard ->
-//            val updatedRegion = region.mergeInputMapAllocatedKeys(
-//                initial = region, srcMapRef = srcSymbolic, guard = guard, keySet = keySet,
-//                read = { region.getInputMapWithAllocatedKeys(it).read(srcSymbolic) },
-//                mkDstKeyId = { inputMapWithAllocatedKeyId(it) },
-//                write = { result, dstKeyId, value, g ->
-//                    val newMap = result.getInputMapWithAllocatedKeys(dstKeyId)
-//                        .write(dstSymbolic, value, g, ownership)
-//                    result.updateInputMapWithAllocatedKeys(dstKeyId, newMap, ownership)
-//                }
-//            )
-//            val srcKeys = keySet.inputSetWithInputElements()
-//            val srcInputKeysCollection = updatedRegion.getInputMapWithInputKeys()
-//
-//            val dstInputKeysCollection = updatedRegion.getInputMapWithInputKeys()
-//
-//            val adapter = UInputToInputSymbolicRefMapMergeAdapter(srcSymbolic, dstSymbolic, srcKeys)
-//            val updatedDstCollection = dstInputKeysCollection.copyRange(srcInputKeysCollection, adapter, guard)
-//            updatedRegion.updateInputMapWithInputKeys(updatedDstCollection)}
     )
 
     private inline fun <R, DstKeyId> mergeInputMapAllocatedKeys(
@@ -680,7 +697,7 @@ internal class URefMapMemoryRegion<MapType, ValueSort : USort>(
         keySet: URefSetRegion<MapType>,
         read: (UInputRefMapWithAllocatedKeysId<MapType, ValueSort>) -> UExpr<ValueSort>,
         mkDstKeyId: (UConcreteHeapAddress) -> DstKeyId,
-        write: (R, DstKeyId, UExpr<ValueSort>, UBoolExpr) -> R
+        write: (R, DstKeyId, UExpr<ValueSort>, UBoolExpr) -> R,
     ) = mergeAllocatedKeys(
         initial,
         inputMapWithAllocatedKeys.keys.toList(),
@@ -700,7 +717,7 @@ internal class URefMapMemoryRegion<MapType, ValueSort : USort>(
         keySet: URefSetRegion<MapType>,
         read: (UNonAliasingRefMapWithAllocatedKeysId<MapType, ValueSort>) -> UExpr<ValueSort>,
         mkDstKeyId: (UNonAliasingHeapAddress) -> DstKeyId,
-        write: (R, DstKeyId, UExpr<ValueSort>, UBoolExpr) -> R
+        write: (R, DstKeyId, UExpr<ValueSort>, UBoolExpr) -> R,
     ) = mergeAllocatedKeys(
         initial,
         nonAliasingMapWithAllocatedKeys.keys.toList(),
@@ -718,9 +735,17 @@ internal class URefMapMemoryRegion<MapType, ValueSort : USort>(
         srcMapRef: UHeapRef,
         guard: UBoolExpr,
         getSrcKeys: (UHeapRef) -> UNonAliasingRefSetWithNonAliasingElements<MapType>,
-        read: (UNonAliasingRefMapWithNonAliasingKeysId<MapType, ValueSort>) -> UNonAliasingRefMapWithNonAliasingKeys<MapType, ValueSort>,
+        read: (
+            UNonAliasingRefMapWithNonAliasingKeysId<MapType, ValueSort>,
+        ) -> UNonAliasingRefMapWithNonAliasingKeys<MapType, ValueSort>,
         mkDstKeyId: (UNonAliasingHeapAddress) -> DstKeyId,
-        write: (R, DstKeyId,  UNonAliasingRefMapWithNonAliasingKeys<MapType, ValueSort>, UNonAliasingRefSetWithNonAliasingElements<MapType>, UBoolExpr) -> R
+        write: (
+            R,
+            DstKeyId,
+            UNonAliasingRefMapWithNonAliasingKeys<MapType, ValueSort>,
+            UNonAliasingRefSetWithNonAliasingElements<MapType>,
+            UBoolExpr,
+        ) -> R,
     ) = mergeNonAliasingKeys(
         initial,
         nonAliasingMapWithNonAliasingKeys.keys.toList(),
@@ -739,7 +764,7 @@ internal class URefMapMemoryRegion<MapType, ValueSort : USort>(
         keySet: URefSetRegion<MapType>,
         read: (UAllocatedRefMapWithAllocatedKeysId) -> UExpr<ValueSort>,
         mkDstKeyId: (UConcreteHeapAddress) -> DstKeyId,
-        write: (R, DstKeyId, UExpr<ValueSort>, UBoolExpr) -> R
+        write: (R, DstKeyId, UExpr<ValueSort>, UBoolExpr) -> R,
     ) = mergeAllocatedKeys(
         initial,
         allocatedMapWithAllocatedKeys.keys.filterTo(mutableListOf()) { it.mapAddress == srcMapRef.address },
@@ -756,10 +781,18 @@ internal class URefMapMemoryRegion<MapType, ValueSort : USort>(
         initial: R,
         srcMapRef: UConcreteHeapRef,
         guard: UBoolExpr,
-        getSrcKeys: (UHeapRef) ->  UAllocatedRefSetWithNonAliasingElements<MapType>,
-        read: (UAllocatedRefMapWithNonAliasingKeysId<MapType, ValueSort>) -> UAllocatedRefMapWithNonAliasingKeys<MapType, ValueSort>,
+        getSrcKeys: (UHeapRef) -> UAllocatedRefSetWithNonAliasingElements<MapType>,
+        read: (
+            UAllocatedRefMapWithNonAliasingKeysId<MapType, ValueSort>,
+        ) -> UAllocatedRefMapWithNonAliasingKeys<MapType, ValueSort>,
         mkDstKeyId: (UNonAliasingHeapAddress) -> DstKeyId,
-        write: (R, DstKeyId, UAllocatedRefMapWithNonAliasingKeys<MapType, ValueSort>, UAllocatedRefSetWithNonAliasingElements<MapType>, UBoolExpr) -> R
+        write: (
+            R,
+            DstKeyId,
+            UAllocatedRefMapWithNonAliasingKeys<MapType, ValueSort>,
+            UAllocatedRefSetWithNonAliasingElements<MapType>,
+            UBoolExpr,
+        ) -> R,
     ) = mergeNonAliasingKeys(
         initial,
         allocatedMapWithNonAliasingKeys.keys.filterTo(mutableListOf()) { it.mapAddress == srcMapRef.address },
@@ -780,7 +813,7 @@ internal class URefMapMemoryRegion<MapType, ValueSort : USort>(
         srcKeyConcreteAddress: (SrcKeyId) -> UConcreteHeapAddress,
         read: (SrcKeyId) -> UExpr<ValueSort>,
         mkDstKeyId: (UConcreteHeapAddress) -> DstKeyId,
-        write: (R, DstKeyId, UExpr<ValueSort>, UBoolExpr) -> R
+        write: (R, DstKeyId, UExpr<ValueSort>, UBoolExpr) -> R,
     ): R = keys.fold(initial) { result, srcKeyId ->
         val srcKeyAddress = srcKeyConcreteAddress(srcKeyId)
         val srcValue = read(srcKeyId)
@@ -800,7 +833,7 @@ internal class URefMapMemoryRegion<MapType, ValueSort : USort>(
         getSrcKeys: (UHeapRef) -> Keys,
         read: (SrcKeyId) -> SrcCollection,
         mkDstKeyId: (UConcreteHeapAddress) -> DstKeyId,
-        write: (R, DstKeyId, SrcCollection, Keys, UBoolExpr) -> R
+        write: (R, DstKeyId, SrcCollection, Keys, UBoolExpr) -> R,
     ): R = keys.fold(initial) { result, srcKeyId ->
         val srcKeyAddress = srcKeyConcreteAddress(srcKeyId)
 

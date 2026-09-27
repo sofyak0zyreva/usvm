@@ -1,6 +1,5 @@
 package org.usvm.memory
 
-import io.ksmt.utils.cast
 import org.usvm.UAddressSort
 import org.usvm.UBoolExpr
 import org.usvm.UConcreteHeapRef
@@ -11,7 +10,6 @@ import org.usvm.UNonAliasingHeapRef
 import org.usvm.UNullRef
 import org.usvm.USort
 import org.usvm.USymbolicHeapRef
-import org.usvm.castToNAHeapRef
 import org.usvm.isFalse
 import org.usvm.isStaticHeapRef
 import org.usvm.uctx
@@ -118,17 +116,26 @@ inline fun <R> foldHeapRef(
         isStaticHeapRef(ref) -> if (staticIsConcrete) {
             blockOnConcrete(initial, ref with initialGuard)
         } else {
-            if (!ref.uctx.runInAliasingMode) blockOnNonAliasing(initial, ref with initialGuard)
-            else blockOnSymbolic(initial, ref with initialGuard)
+            if (!ref.uctx.runInAliasingMode) {
+                blockOnNonAliasing(initial, ref with initialGuard)
+            } else {
+                blockOnSymbolic(initial, ref with initialGuard)
+            }
         }
         ref is UConcreteHeapRef -> blockOnConcrete(initial, ref with initialGuard)
         ref is UNullRef -> if (!ignoreNullRefs) {
-            if (!ref.uctx.runInAliasingMode) blockOnNonAliasing(initial, castToNAHeapRef(ref) with initialGuard)
-            else blockOnSymbolic(initial, ref with initialGuard)
+            if (!ref.uctx.runInAliasingMode) {
+                blockOnNonAliasing(initial, ref.uctx.castToNAHeapRef(ref) with initialGuard)
+            } else {
+                blockOnSymbolic(initial, ref with initialGuard)
+            }
         } else {
             initial
         }
-        ref is USymbolicHeapRef && !ref.uctx.runInAliasingMode -> blockOnNonAliasing(initial, castToNAHeapRef(ref) with initialGuard)
+        ref is USymbolicHeapRef && !ref.uctx.runInAliasingMode -> blockOnNonAliasing(
+            initial,
+            ref.uctx.castToNAHeapRef(ref) with initialGuard
+        )
         ref is USymbolicHeapRef -> blockOnSymbolic(initial, ref with initialGuard)
         ref is UIteExpr<UAddressSort> -> {
             val (concreteHeapRefs, symbolicHeapRefs) = splitUHeapRef(
@@ -139,7 +146,7 @@ inline fun <R> foldHeapRef(
             )
 
             var acc = initial
-                symbolicHeapRefs.forEach { (ref, guard) -> acc = blockOnSymbolic(acc, ref with guard) }
+            symbolicHeapRefs.forEach { (ref, guard) -> acc = blockOnSymbolic(acc, ref with guard) }
             concreteHeapRefs.forEach { (ref, guard) -> acc = blockOnConcrete(acc, ref with guard) }
             acc
         }
@@ -160,21 +167,20 @@ inline fun <R> foldHeapRefWithStaticAsSymbolic(
     blockOnConcrete: (R, GuardedExpr<UConcreteHeapRef>) -> R,
     blockOnNonAliasing: (R, GuardedExpr<UHeapRef>) -> R,
     blockOnSymbolic: (R, GuardedExpr<UHeapRef>) -> R,
-): R
-    {
-        val x = foldHeapRef(
-            ref,
-            initial,
-            initialGuard,
-            ignoreNullRefs,
-            collapseHeapRefs,
-            staticIsConcrete = false,
-            blockOnConcrete = blockOnConcrete,
-            blockOnNonAliasing = blockOnNonAliasing,
-            blockOnSymbolic = blockOnSymbolic
-        )
-        return x
-    }
+): R {
+    val x = foldHeapRef(
+        ref,
+        initial,
+        initialGuard,
+        ignoreNullRefs,
+        collapseHeapRefs,
+        staticIsConcrete = false,
+        blockOnConcrete = blockOnConcrete,
+        blockOnNonAliasing = blockOnNonAliasing,
+        blockOnSymbolic = blockOnSymbolic
+    )
+    return x
+}
 
 inline fun <R> foldHeapRef2(
     ref0: UHeapRef,
@@ -187,9 +193,7 @@ inline fun <R> foldHeapRef2(
     blockOnConcrete0Symbolic1: (R, UConcreteHeapRef, UHeapRef, UBoolExpr) -> R,
     blockOnNonAliasing0Concrete1: (R, UHeapRef, UConcreteHeapRef, UBoolExpr) -> R,
     blockOnNonAliasing0NonAliasing1: (R, UHeapRef, UHeapRef, UBoolExpr) -> R,
-//    blockOnNonAliasing0Symbolic1: (R, UHeapRef, UHeapRef, UBoolExpr) -> R,
     blockOnSymbolic0Concrete1: (R, UHeapRef, UConcreteHeapRef, UBoolExpr) -> R,
-//    blockOnSymbolic0NonAliasing1: (R, UHeapRef, UHeapRef, UBoolExpr) -> R,
     blockOnSymbolic0Symbolic1: (R, UHeapRef, UHeapRef, UBoolExpr) -> R,
 ): R = foldHeapRefWithStaticAsSymbolic(
     ref = ref0,
@@ -229,7 +233,6 @@ inline fun <R> foldHeapRef2(
                 throw IllegalStateException("NA and input together")
             }
         )
-
     },
     blockOnSymbolic = { r0, (inputRef0, guard0) ->
         foldHeapRefWithStaticAsSymbolic(
@@ -277,9 +280,9 @@ internal inline fun <Sort : USort> UHeapRef.map(
         require(!ignoreNullRefs) { "Got nullRef on the top!" }
         symbolicMapper(this)
     }
-    this is USymbolicHeapRef && !this.uctx.runInAliasingMode -> nonAliasingMapper(castToNAHeapRef(this))
+    this is USymbolicHeapRef && !this.uctx.runInAliasingMode -> nonAliasingMapper(this.uctx.castToNAHeapRef(this))
 
-    this is USymbolicHeapRef  -> symbolicMapper(this)
+    this is USymbolicHeapRef -> symbolicMapper(this)
     this is UIteExpr<UAddressSort> -> {
         /**
          * This code simulates DFS on a binary tree without an explicit recursion. Pair.second represents the first
@@ -296,10 +299,10 @@ internal inline fun <Sort : USort> UHeapRef.map(
             when {
                 isStaticHeapRef(ref) -> completelyMapped += staticMapper(ref)
                 ref is UConcreteHeapRef -> completelyMapped += concreteMapper(ref)
-                ref is USymbolicHeapRef && !ref.uctx.runInAliasingMode -> completelyMapped += nonAliasingMapper(castToNAHeapRef(ref))
+                ref is USymbolicHeapRef && !ref.uctx.runInAliasingMode ->
+                    completelyMapped += nonAliasingMapper(ref.uctx.castToNAHeapRef(ref))
                 ref is USymbolicHeapRef -> completelyMapped += symbolicMapper(ref)
                 ref is UIteExpr<UAddressSort> -> {
-
                     when (state) {
                         LEFT_CHILD -> {
                             when {
@@ -365,8 +368,7 @@ internal inline fun <Sort : USort> UHeapRef.mapWithStaticAsSymbolic(
     crossinline nonAliasingMapper: (UHeapRef) -> UExpr<Sort>,
     crossinline symbolicMapper: (UHeapRef) -> UExpr<Sort>,
     ignoreNullRefs: Boolean = true,
-): UExpr<Sort>
-{
+): UExpr<Sort> {
     val staticMapper: (UConcreteHeapRef) -> UExpr<Sort> = { ref ->
         if (uctx.runInAliasingMode) {
             symbolicMapper(ref)
@@ -482,7 +484,6 @@ internal inline fun filter(
                     // USymbolicHeapRef, UConcreteHeapRef, KConst<UAddressSort>
                     else -> completelyMapped += (cur with trueExpr).takeIf { predicate(cur with guardFromTop) }
                 }
-
             }
 
             completelyMapped.single()?.withAlso(initialGuard)

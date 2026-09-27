@@ -51,7 +51,10 @@ class UAllocatedRefMapWithNonAliasingKeysReading<MapType, Sort : USort> internal
     val keyRef: UHeapRef,
 ) : UCollectionReading<UAllocatedRefMapWithNonAliasingKeysId<MapType, Sort>, UHeapRef, Sort>(ctx, collection) {
 
-    override val id : UNonAliasingHeapAddress = makeNonAliasingIdForReading(ctx, Pair(collection.collectionId.mapAddress, collection.collectionId.keyAddress))
+    override val id: UNonAliasingHeapAddress = makeNonAliasingIdForReading(
+        ctx,
+        Pair(collection.collectionId.mapAddress, collection.collectionId.keyAddress)
+    )
 
     override fun accept(transformer: KTransformerBase): KExpr<Sort> {
         require(transformer is UTransformer<*, *>) { "Expected a UTransformer, but got: $transformer" }
@@ -73,7 +76,6 @@ class UAllocatedRefMapWithNonAliasingKeysReading<MapType, Sort : USort> internal
         printer.append(keyRef)
         printer.append("]")
     }
-
 }
 
 class UInputRefMapWithAllocatedKeysReading<MapType, Sort : USort> internal constructor(
@@ -110,7 +112,10 @@ class UNonAliasingRefMapWithAllocatedKeysReading<MapType, Sort : USort> internal
     val mapRef: UHeapRef,
 ) : UCollectionReading<UNonAliasingRefMapWithAllocatedKeysId<MapType, Sort>, UHeapRef, Sort>(ctx, collection) {
 
-    override val id : UNonAliasingHeapAddress = makeNonAliasingIdForReading(ctx, Pair(collection.collectionId.mapAddress, collection.collectionId.keyAddress))
+    override val id: UNonAliasingHeapAddress = makeNonAliasingIdForReading(
+        ctx,
+        Pair(collection.collectionId.mapAddress, collection.collectionId.keyAddress)
+    )
 
     override fun accept(transformer: KTransformerBase): KExpr<Sort> {
         require(transformer is UTransformer<*, *>) { "Expected a UTransformer, but got: $transformer" }
@@ -132,16 +137,18 @@ class UNonAliasingRefMapWithAllocatedKeysReading<MapType, Sort : USort> internal
         printer.append(mapRef)
         printer.append(")")
     }
-
 }
 
 class UInputRefMapWithInputKeysReading<MapType, Sort : USort> internal constructor(
     ctx: UContext<*>,
     collection: UInputRefMap<MapType, Sort>,
     val mapRef: UHeapRef,
-    val keyRef: UHeapRef
-) : UCollectionReading<UInputRefMapWithInputKeysId<MapType, Sort>,
-        USymbolicMapKey<UAddressSort>, Sort>(ctx, collection) {
+    val keyRef: UHeapRef,
+) : UCollectionReading<
+    UInputRefMapWithInputKeysId<MapType, Sort>,
+    USymbolicMapKey<UAddressSort>,
+    Sort
+    >(ctx, collection) {
     init {
         require(mapRef !is UNullRef)
     }
@@ -176,10 +183,16 @@ class UNonAliasingRefMapWithNonAliasingKeysReading<MapType, Sort : USort> intern
     ctx: UContext<*>,
     collection: UNonAliasingRefMapWithNonAliasingKeys<MapType, Sort>,
     val mapRef: UHeapRef,
-    val keyRef: UHeapRef
-) : UCollectionReading<UNonAliasingRefMapWithNonAliasingKeysId<MapType, Sort>, USymbolicMapKey<UAddressSort>, Sort>(ctx, collection) {
+    val keyRef: UHeapRef,
+) : UCollectionReading<UNonAliasingRefMapWithNonAliasingKeysId<MapType, Sort>, USymbolicMapKey<UAddressSort>, Sort>(
+    ctx,
+    collection
+) {
 
-    override val id : UNonAliasingHeapAddress = makeNonAliasingIdForReading(ctx, Pair(collection.collectionId.mapAddress, Pair(collection.collectionId.keyAddress, "map")))
+    override val id: UNonAliasingHeapAddress = makeNonAliasingIdForReading(
+        ctx,
+        Pair(collection.collectionId.mapAddress, Pair(collection.collectionId.keyAddress, "map"))
+    )
 
     override fun accept(transformer: KTransformerBase): KExpr<Sort> {
         require(transformer is UTransformer<*, *>) { "Expected a UTransformer, but got: $transformer" }
@@ -191,7 +204,7 @@ class UNonAliasingRefMapWithNonAliasingKeysReading<MapType, Sort : USort> intern
             other,
             { collection },
             { mapRef },
-//            { keyRef }
+            { keyRef }
         )
 
     override fun internHashCode(): Int = hash(collection, mapRef)
@@ -202,7 +215,7 @@ class UNonAliasingRefMapWithNonAliasingKeysReading<MapType, Sort : USort> intern
         printer.append(mapRef)
         printer.append(")")
         printer.append("[")
-//        printer.append(keyRef)
+        printer.append(keyRef)
         printer.append("]")
     }
 }

@@ -121,7 +121,7 @@ class UMemory<Type, Method>(
 
     override fun <Key, Sort : USort> setRegion(
         regionId: UMemoryRegionId<Key, Sort>,
-        newRegion: UMemoryRegion<Key, Sort>
+        newRegion: UMemoryRegion<Key, Sort>,
     ) {
         if (regionId is URegisterStackId) {
             check(newRegion === stack) { "Stack is mutable" }
@@ -137,7 +137,7 @@ class UMemory<Type, Method>(
         regionId: UMemoryRegionId<Key, Sort>,
         key: Key,
         value: UExpr<Sort>,
-        guard: UBoolExpr
+        guard: UBoolExpr,
     ) {
         val region = getRegion(regionId)
         val newRegion = region.write(key, value, guard, ownership)
@@ -166,7 +166,12 @@ class UMemory<Type, Method>(
         cloneOwnership: MutabilityOwnership,
     ): UMemory<Type, Method> =
         UMemory(
-            ctx, cloneOwnership, typeConstraints, stack.clone(), mocks.clone(), regions
+            ctx,
+            cloneOwnership,
+            typeConstraints,
+            stack.clone(),
+            mocks.clone(),
+            regions
         ).also { ownership = thisOwnership }
 
     override fun toWritableMemory(ownership: MutabilityOwnership) =

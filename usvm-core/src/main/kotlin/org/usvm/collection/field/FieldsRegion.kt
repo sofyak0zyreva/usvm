@@ -8,7 +8,6 @@ import org.usvm.UHeapRef
 import org.usvm.UNonAliasingHeapAddress
 import org.usvm.UNonAliasingHeapRef
 import org.usvm.USort
-import org.usvm.collection.array.UNonAliasingArrayId
 import org.usvm.collections.immutable.getOrPut
 import org.usvm.collections.immutable.implementations.immutableMap.UPersistentHashMap
 import org.usvm.collections.immutable.internal.MutabilityOwnership
@@ -49,19 +48,20 @@ internal class UFieldsMemoryRegion<Field, Sort : USort>(
     private val field: Field,
     private val allocatedFields: UPersistentHashMap<UConcreteHeapAddress, UExpr<Sort>> = persistentHashMapOf(),
     private var inputFields: UInputFields<Field, Sort>? = null,
-    private var nonAliasingFields: UPersistentHashMap<UNonAliasingHeapAddress, UNonAliasingFields<Field, Sort>> = persistentHashMapOf(),
-    private var staticFields: UPersistentHashMap<UNonAliasingHeapAddress, UNonAliasingFields<Field, Sort>> = persistentHashMapOf()
-
+    private var nonAliasingFields: UPersistentHashMap<UNonAliasingHeapAddress, UNonAliasingFields<Field, Sort>> =
+        persistentHashMapOf(),
+    private var staticFields: UPersistentHashMap<UNonAliasingHeapAddress, UNonAliasingFields<Field, Sort>> =
+        persistentHashMapOf(),
 ) : UFieldsRegion<Field, Sort> {
 
     private fun updateAllocated(updated: UPersistentHashMap<UConcreteHeapAddress, UExpr<Sort>>) =
         UFieldsMemoryRegion(sort, field, updated, inputFields, nonAliasingFields, staticFields)
 
-    private fun getStaticFields(ref: UFieldLValue<Field, Sort>): UNonAliasingFields<Field, Sort>{
+    private fun getStaticFields(ref: UFieldLValue<Field, Sort>): UNonAliasingFields<Field, Sort> {
         val mapId = -2
         val (updatedFields, collection) = staticFields.getOrPut(mapId, sort.uctx.defaultOwnership) {
-                UNonAliasingFieldId<Field, Sort>(ref.field, ref.sort, mapId).emptyRegion()
-            }
+            UNonAliasingFieldId<Field, Sort>(ref.field, ref.sort, mapId).emptyRegion()
+        }
         staticFields = updatedFields
         return collection
     }
@@ -73,20 +73,22 @@ internal class UFieldsMemoryRegion<Field, Sort : USort>(
             val concrete = staticFields[-2]
             if (concrete != null && concrete.collectionId.field == ref.field && concrete.collectionId.sort == ref.sort) {
                 concrete
-            }
-            else {
+            } else {
                 UNonAliasingFieldId<Field, Sort>(ref.field, ref.sort, nonAliasingId).emptyRegion()
             }
         }
         nonAliasingFields = updatedFields
         return collection
     }
-    private fun updateNonAliasing(updated: UPersistentHashMap<UNonAliasingHeapAddress, UNonAliasingFields<Field, Sort>>) =
+    private fun updateNonAliasing(
+        updated: UPersistentHashMap<UNonAliasingHeapAddress, UNonAliasingFields<Field, Sort>>,
+    ) =
         UFieldsMemoryRegion(sort, field, allocatedFields, inputFields, updated, staticFields)
 
     private fun getInputFields(ref: UFieldLValue<Field, Sort>): UInputFields<Field, Sort> {
-        if (inputFields == null)
+        if (inputFields == null) {
             inputFields = UInputFieldId(ref.field, ref.sort).emptyRegion()
+        }
         return inputFields!!
     }
 
@@ -120,17 +122,18 @@ internal class UFieldsMemoryRegion<Field, Sort : USort>(
             val newRegion = oldRegion.write(nonAliasingRef, value, innerGuard, ownership)
             val reg = region.updateNonAliasing(nonAliasingFields.put(id, newRegion, ownership))
             val ret = if (nonAliasingRef is UConcreteHeapRef) {
-                    val oldRegion2 = reg.getStaticFields(key)
-                    val newRegion2 = oldRegion2.write(nonAliasingRef, value, innerGuard, ownership)
-                    reg.updateStatic(staticFields.put(-2, newRegion2, ownership))
-                } else reg
+                val oldRegion2 = reg.getStaticFields(key)
+                val newRegion2 = oldRegion2.write(nonAliasingRef, value, innerGuard, ownership)
+                reg.updateStatic(staticFields.put(-2, newRegion2, ownership))
+            } else {
+                reg
+            }
             ret
         },
         blockOnSymbolic = { region, (symbolicRef, innerGuard) ->
             val oldRegion = region.getInputFields(key)
             val newRegion = oldRegion.write(symbolicRef, value, innerGuard, ownership)
             region.updateInput(newRegion)
-
         }
     )
 }

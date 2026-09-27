@@ -68,7 +68,7 @@ open class UModelBase<Type>(
 
     override fun <Key, Sort : USort> setRegion(
         regionId: UMemoryRegionId<Key, Sort>,
-        newRegion: UMemoryRegion<Key, Sort>
+        newRegion: UMemoryRegion<Key, Sort>,
     ) {
         error("Illegal operation for a model")
     }
@@ -90,14 +90,16 @@ fun modelEnsureConcreteInputRef(ref: UHeapRef): UConcreteHeapRef {
     // All the expressions in the model are interpreted, therefore, they must
     // have concrete addresses. Moreover, the model knows only about input values
     // which have addresses less or equal than INITIAL_INPUT_ADDRESS (or NULL_ADDRESS for null values)
-    require(ref is UConcreteHeapRef  && (ref.address <= INITIAL_INPUT_ADDRESS || ref.address == NULL_ADDRESS)) {
+    require(ref is UConcreteHeapRef && (ref.address <= INITIAL_INPUT_ADDRESS || ref.address == NULL_ADDRESS)) {
         "Unexpected ref: $ref"
     }
     return ref
 }
 
 fun modelEnsureRightInputRef(ref: UHeapRef) {
-    require(((ref is UConcreteHeapRef  && (ref.address <= INITIAL_INPUT_ADDRESS || ref.address == NULL_ADDRESS))) || (ref is UNonAliasingHeapRef)) {
+    require(
+        ((ref is UConcreteHeapRef && (ref.address <= INITIAL_INPUT_ADDRESS || ref.address == NULL_ADDRESS))) || (ref is UNonAliasingHeapRef)
+    ) {
         "Unexpected ref: $ref"
     }
 }

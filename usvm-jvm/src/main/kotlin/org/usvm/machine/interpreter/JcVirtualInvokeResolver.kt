@@ -143,7 +143,7 @@ private fun JcVirtualMethodCallInst.prepareVirtualInvokeOnAbstractEnum(
     scope: JcStepScope,
     methodCall: JcVirtualMethodCallInst,
     instance: UHeapRef,
-    condition: UBoolExpr
+    condition: UBoolExpr,
 ): List<Pair<KExpr<KBoolSort>, (JcState) -> Unit>> {
     val superType = superClass.toType()
     // With enums, we need to fork on all enum types, in spite of type selector
@@ -197,8 +197,6 @@ private fun resolveVirtualInvokeWithoutModel(
                 refsWithConditions += ref to condition
             }
         },
-        // all these cases needs serious rewrites maybe (copy-paste from above)
-
         blockOnSymbolic = { _, (ref, condition) ->
             // Resolved lambda call site can't be a symbolic ref
             refsWithConditions.also { it += ref to condition }

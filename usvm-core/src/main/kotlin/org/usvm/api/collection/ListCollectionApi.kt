@@ -21,7 +21,7 @@ import org.usvm.sizeSort
 import org.usvm.utils.logAssertFailure
 
 object ListCollectionApi {
-    fun <ListType, USizeSort : USort, Ctx: UContext<USizeSort>> UState<ListType, *, *, Ctx, *, *>.mkSymbolicList(
+    fun <ListType, USizeSort : USort, Ctx : UContext<USizeSort>> UState<ListType, *, *, Ctx, *, *>.mkSymbolicList(
         listType: ListType,
     ): UHeapRef = with(ctx) {
         val ref = memory.allocConcrete(listType)
@@ -33,7 +33,7 @@ object ListCollectionApi {
      * List size may be incorrect for input lists.
      * Use [ensureListSizeCorrect] to guarantee that list size is correct.
      * */
-    fun <ListType, USizeSort : USort, Ctx: UContext<USizeSort>> UState<ListType, *, *, Ctx, *, *>.symbolicListSize(
+    fun <ListType, USizeSort : USort, Ctx : UContext<USizeSort>> UState<ListType, *, *, Ctx, *, *>.symbolicListSize(
         listRef: UHeapRef,
         listType: ListType,
     ): UExpr<USizeSort> = memory.readArrayLength(listRef, listType, ctx.sizeSort)
@@ -82,7 +82,7 @@ object ListCollectionApi {
         sort: Sort,
     ): UExpr<Sort> = memory.readArrayIndex(listRef, index, listType, sort)
 
-    fun <ListType, Sort : USort, USizeSort : USort, Ctx: UContext<USizeSort>> UState<ListType, *, *, Ctx, *, *>.symbolicListAdd(
+    fun <ListType, Sort : USort, USizeSort : USort, Ctx : UContext<USizeSort>> UState<ListType, *, *, Ctx, *, *>.symbolicListAdd(
         listRef: UHeapRef,
         listType: ListType,
         sort: Sort,
@@ -107,7 +107,7 @@ object ListCollectionApi {
         memory.writeArrayIndex(listRef, index, listType, sort, value, guard = memory.ctx.trueExpr)
     }
 
-    fun <ListType, Sort : USort, USizeSort : USort, Ctx: UContext<USizeSort>> UState<ListType, *, *, Ctx, *, *>.symbolicListInsert(
+    fun <ListType, Sort : USort, USizeSort : USort, Ctx : UContext<USizeSort>> UState<ListType, *, *, Ctx, *, *>.symbolicListInsert(
         listRef: UHeapRef,
         listType: ListType,
         sort: Sort,
@@ -137,7 +137,7 @@ object ListCollectionApi {
         memory.writeArrayLength(listRef, updatedSize, listType, sizeSort)
     }
 
-    fun <ListType, Sort : USort, USizeSort : USort, Ctx: UContext<USizeSort>> UState<ListType, *, *, Ctx, *, *>.symbolicListRemove(
+    fun <ListType, Sort : USort, USizeSort : USort, Ctx : UContext<USizeSort>> UState<ListType, *, *, Ctx, *, *>.symbolicListRemove(
         listRef: UHeapRef,
         listType: ListType,
         sort: Sort,
@@ -163,12 +163,12 @@ object ListCollectionApi {
         memory.writeArrayLength(listRef, updatedSize, listType, sizeSort)
     }
 
-    private fun <USizeSort : USort, Ctx: UContext<USizeSort>> Ctx.max(
+    private fun <USizeSort : USort, Ctx : UContext<USizeSort>> Ctx.max(
         first: UExpr<USizeSort>,
-        second: UExpr<USizeSort>
+        second: UExpr<USizeSort>,
     ): UExpr<USizeSort> = mkIte(mkSizeGtExpr(first, second), first, second)
 
-    fun <ListType, Sort : USort, USizeSort : USort, Ctx: UContext<USizeSort>> UState<ListType, *, *, Ctx, *, *>.symbolicListCopyRange(
+    fun <ListType, Sort : USort, USizeSort : USort, Ctx : UContext<USizeSort>> UState<ListType, *, *, Ctx, *, *>.symbolicListCopyRange(
         srcRef: UHeapRef,
         dstRef: UHeapRef,
         listType: ListType,
