@@ -7,8 +7,6 @@ import org.jacodb.api.jvm.cfg.JcInst
 import org.jacodb.api.jvm.ext.humanReadableSignature
 import org.jacodb.api.jvm.ext.methods
 import org.usvm.CoverageZone
-import org.usvm.NAHeapRefMap
-import org.usvm.NAReadingIdMap
 import org.usvm.StateCollectionStrategy
 import org.usvm.UMachine
 import org.usvm.UMachineOptions
@@ -59,8 +57,6 @@ class JcMachine(
     private val cfgStatistics = CfgStatisticsImpl(applicationGraph)
 
     fun analyze(methods: List<JcMethod>, targets: List<JcTarget> = emptyList()): List<JcState> {
-        NAHeapRefMap.clear()
-        NAReadingIdMap.clear()
         logger.debug("{}.analyze({})", this, methods)
         val initialStates = mutableMapOf<JcMethod, JcState>()
         methods.forEach {
@@ -70,7 +66,8 @@ class JcMachine(
         val methodsToTrackCoverage =
             when (options.coverageZone) {
                 CoverageZone.METHOD,
-                CoverageZone.TRANSITIVE -> methods.toSet()
+                CoverageZone.TRANSITIVE,
+                -> methods.toSet()
                 // TODO: more adequate method filtering. !it.isConstructor is used to exclude default constructor which is often not covered
                 CoverageZone.CLASS -> methods.flatMap { method ->
                     method.enclosingClass.methods.filter {

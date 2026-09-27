@@ -9,7 +9,6 @@ import io.ksmt.utils.mkConst
 import org.usvm.UAddressSort
 import org.usvm.UConcreteHeapAddress
 import org.usvm.UExpr
-import org.usvm.NAHeapRefMap
 import org.usvm.UNonAliasingHeapAddress
 import org.usvm.USort
 import org.usvm.collection.map.USymbolicMapKey
@@ -18,6 +17,7 @@ import org.usvm.memory.UReadOnlyMemoryRegion
 import org.usvm.memory.USymbolicCollection
 import org.usvm.memory.USymbolicCollectionId
 import org.usvm.model.UModelEvaluator
+import org.usvm.regions.Region
 import org.usvm.solver.U1DUpdatesTranslator
 import org.usvm.solver.U2DUpdatesTranslator
 import org.usvm.solver.UCollectionDecoder
@@ -25,12 +25,11 @@ import org.usvm.solver.UExprTranslator
 import org.usvm.solver.URegionDecoder
 import org.usvm.solver.URegionTranslator
 import org.usvm.uctx
-import org.usvm.regions.Region
 import java.util.IdentityHashMap
 
 class UMapRegionDecoder<MapType, KeySort : USort, ValueSort : USort, Reg : Region<Reg>>(
     private val regionId: UMapRegionId<MapType, KeySort, ValueSort, Reg>,
-    private val exprTranslator: UExprTranslator<*, *>
+    private val exprTranslator: UExprTranslator<*, *>,
 ) : URegionDecoder<UMapEntryLValue<MapType, KeySort, ValueSort, Reg>, ValueSort> {
     private val allocatedRegions =
         mutableMapOf<UConcreteHeapAddress, UAllocatedMapTranslator<MapType, KeySort, ValueSort, Reg>>()
@@ -41,21 +40,21 @@ class UMapRegionDecoder<MapType, KeySort : USort, ValueSort : USort, Reg : Regio
     private var inputRegionTranslator: UInputMapTranslator<MapType, KeySort, ValueSort, Reg>? = null
 
     fun allocatedMapTranslator(
-        collectionId: UAllocatedMapId<MapType, KeySort, ValueSort, Reg>
+        collectionId: UAllocatedMapId<MapType, KeySort, ValueSort, Reg>,
     ): URegionTranslator<UAllocatedMapId<MapType, KeySort, ValueSort, Reg>, UExpr<KeySort>, ValueSort> =
         allocatedRegions.getOrPut(collectionId.address) {
             UAllocatedMapTranslator(collectionId, exprTranslator)
         }
 
     fun nonAliasingMapTranslator(
-        collectionId: UNonAliasingMapId<MapType, KeySort, ValueSort, Reg>
+        collectionId: UNonAliasingMapId<MapType, KeySort, ValueSort, Reg>,
     ): URegionTranslator<UNonAliasingMapId<MapType, KeySort, ValueSort, Reg>, UExpr<KeySort>, ValueSort> =
         nonAliasingRegions.getOrPut(collectionId.id) {
             UNonAliasingMapTranslator(collectionId, exprTranslator)
         }
 
     fun inputMapTranslator(
-        collectionId: UInputMapId<MapType, KeySort, ValueSort, Reg>
+        collectionId: UInputMapId<MapType, KeySort, ValueSort, Reg>,
     ): URegionTranslator<UInputMapId<MapType, KeySort, ValueSort, Reg>, USymbolicMapKey<KeySort>, ValueSort> {
         if (inputRegionTranslator == null) {
             inputRegionTranslator = UInputMapTranslator(collectionId, exprTranslator)
@@ -65,16 +64,18 @@ class UMapRegionDecoder<MapType, KeySort : USort, ValueSort : USort, Reg : Regio
 
     override fun decodeLazyRegion(
         model: UModelEvaluator<*>,
-        assertions: List<KExpr<KBoolSort>>
+        assertions: List<KExpr<KBoolSort>>,
     ) = inputRegionTranslator?.let { UMapLazyModelRegion(regionId, model, it) }
         ?: if (nonAliasingRegions.isNotEmpty()) {
-            UNonAliasingMapModelRegion(regionId, model, nonAliasingRegions) }
-        else null
+            UNonAliasingMapModelRegion(regionId, model, nonAliasingRegions)
+        } else {
+            null
+        }
 }
 
 private class UAllocatedMapTranslator<MapType, KeySort : USort, ValueSort : USort, Reg : Region<Reg>>(
     collectionId: UAllocatedMapId<MapType, KeySort, ValueSort, Reg>,
-    exprTranslator: UExprTranslator<*, *>
+    exprTranslator: UExprTranslator<*, *>,
 ) : URegionTranslator<UAllocatedMapId<MapType, KeySort, ValueSort, Reg>, UExpr<KeySort>, ValueSort> {
     private val initialValue = with(collectionId.sort.uctx) {
         val sort = mkArraySort(collectionId.keySort, collectionId.sort)
@@ -87,7 +88,7 @@ private class UAllocatedMapTranslator<MapType, KeySort : USort, ValueSort : USor
 
     override fun translateReading(
         region: USymbolicCollection<UAllocatedMapId<MapType, KeySort, ValueSort, Reg>, UExpr<KeySort>, ValueSort>,
-        key: UExpr<KeySort>
+        key: UExpr<KeySort>,
     ): KExpr<ValueSort> {
         val translatedCollection = region.updates.accept(updatesTranslator, visitorCache)
         return updatesTranslator.visitSelect(translatedCollection, key)
@@ -102,14 +103,13 @@ internal interface UNonAliasingMapCollection<KeySort : USort, ValueSort : USort>
 
 private class UNonAliasingMapTranslator<MapType, KeySort : USort, ValueSort : USort, Reg : Region<Reg>>(
     collectionId: UNonAliasingMapId<MapType, KeySort, ValueSort, Reg>,
-    private val exprTranslator: UExprTranslator<*, *>
+    private val exprTranslator: UExprTranslator<*, *>,
 ) : URegionTranslator<UNonAliasingMapId<MapType, KeySort, ValueSort, Reg>, UExpr<KeySort>, ValueSort>,
-    UNonAliasingMapCollection<KeySort, ValueSort>
-{
+    UNonAliasingMapCollection<KeySort, ValueSort> {
     override val id: UNonAliasingHeapAddress = collectionId.id
 
     override fun evalMapRef(model: UModelEvaluator<*>): UExpr<UAddressSort>? {
-        val ref = NAHeapRefMap[id] ?: return null
+        val ref = exprTranslator.ctx.nonAliasingHeapRefs[id] ?: return null
         return model.evalAndComplete(exprTranslator.translate(ref))
     }
 
@@ -122,7 +122,7 @@ private class UNonAliasingMapTranslator<MapType, KeySort : USort, ValueSort : US
 
     override fun translateReading(
         region: USymbolicCollection<UNonAliasingMapId<MapType, KeySort, ValueSort, Reg>, UExpr<KeySort>, ValueSort>,
-        key: UExpr<KeySort>
+        key: UExpr<KeySort>,
     ): KExpr<ValueSort> {
         val translatedCollection = region.updates.accept(updatesTranslator, visitorCache)
         return updatesTranslator.visitSelect(translatedCollection, key)
@@ -130,12 +130,11 @@ private class UNonAliasingMapTranslator<MapType, KeySort : USort, ValueSort : US
 
     override fun decodeCollection(model: UModelEvaluator<*>): UReadOnlyMemoryRegion<UExpr<KeySort>, ValueSort> =
         model.evalAndCompleteArray1DMemoryRegion(initialValue.decl)
-
 }
 
 private class UInputMapTranslator<MapType, KeySort : USort, ValueSort : USort, Reg : Region<Reg>>(
     collectionId: UInputMapId<MapType, KeySort, ValueSort, Reg>,
-    exprTranslator: UExprTranslator<*, *>
+    exprTranslator: UExprTranslator<*, *>,
 ) : URegionTranslator<UInputMapId<MapType, KeySort, ValueSort, Reg>, USymbolicMapKey<KeySort>, ValueSort>,
     UCollectionDecoder<USymbolicMapKey<KeySort>, ValueSort> {
     private val initialValue = with(collectionId.sort.uctx) {
@@ -147,25 +146,25 @@ private class UInputMapTranslator<MapType, KeySort : USort, ValueSort : USort, R
 
     override fun translateReading(
         region: USymbolicCollection<UInputMapId<MapType, KeySort, ValueSort, Reg>, USymbolicMapKey<KeySort>, ValueSort>,
-        key: USymbolicMapKey<KeySort>
+        key: USymbolicMapKey<KeySort>,
     ): KExpr<ValueSort> {
         val translatedCollection = region.updates.accept(updatesTranslator, visitorCache)
         return updatesTranslator.visitSelect(translatedCollection, key)
     }
 
     override fun decodeCollection(
-        model: UModelEvaluator<*>
+        model: UModelEvaluator<*>,
     ): UReadOnlyMemoryRegion<USymbolicMapKey<KeySort>, ValueSort> =
         model.evalAndCompleteArray2DMemoryRegion(initialValue.decl)
 }
 
 private class UAllocatedMapUpdatesTranslator<KeySort : USort, ValueSort : USort>(
     exprTranslator: UExprTranslator<*, *>,
-    initialValue: KExpr<KArraySort<KeySort, ValueSort>>
+    initialValue: KExpr<KArraySort<KeySort, ValueSort>>,
 ) : U1DUpdatesTranslator<KeySort, ValueSort>(exprTranslator, initialValue) {
     override fun KContext.translateRangedUpdate(
         previous: KExpr<KArraySort<KeySort, ValueSort>>,
-        update: URangedUpdateNode<*, *, UExpr<KeySort>, ValueSort>
+        update: URangedUpdateNode<*, *, UExpr<KeySort>, ValueSort>,
     ): KExpr<KArraySort<KeySort, ValueSort>> {
         check(update.adapter is USymbolicMapMergeAdapter<*, *, UExpr<KeySort>, *>) {
             "Unexpected adapter: ${update.adapter}"
@@ -184,7 +183,7 @@ private class UAllocatedMapUpdatesTranslator<KeySort : USort, ValueSort : USort>
         previous: KExpr<KArraySort<KeySort, ValueSort>>,
         update: URangedUpdateNode<*, *, UExpr<KeySort>, ValueSort>,
         sourceCollection: USymbolicCollection<CollectionId, SrcKey, ValueSort>,
-        adapter: USymbolicMapMergeAdapter<*, SrcKey, UExpr<KeySort>, *>
+        adapter: USymbolicMapMergeAdapter<*, SrcKey, UExpr<KeySort>, *>,
     ): KExpr<KArraySort<KeySort, ValueSort>> {
         val key = mkFreshConst("k", previous.sort.domain)
 
@@ -194,7 +193,9 @@ private class UAllocatedMapUpdatesTranslator<KeySort : USort, ValueSort : USort>
         val isInside = update.includesSymbolically(key, composer = null).translated // already includes guard
 
         val result = sourceCollection.collectionId.instantiate(
-            sourceCollection, convertedKey, composer = null
+            sourceCollection,
+            convertedKey,
+            composer = null
         ).translated
 
         val ite = mkIte(isInside, result, previous.select(key))
@@ -204,11 +205,11 @@ private class UAllocatedMapUpdatesTranslator<KeySort : USort, ValueSort : USort>
 
 private class UInputMapUpdatesTranslator<KeySort : USort, ValueSort : USort>(
     exprTranslator: UExprTranslator<*, *>,
-    initialValue: KExpr<KArray2Sort<UAddressSort, KeySort, ValueSort>>
+    initialValue: KExpr<KArray2Sort<UAddressSort, KeySort, ValueSort>>,
 ) : U2DUpdatesTranslator<UAddressSort, KeySort, ValueSort>(exprTranslator, initialValue) {
     override fun KContext.translateRangedUpdate(
         previous: KExpr<KArray2Sort<UAddressSort, KeySort, ValueSort>>,
-        update: URangedUpdateNode<*, *, USymbolicMapKey<KeySort>, ValueSort>
+        update: URangedUpdateNode<*, *, USymbolicMapKey<KeySort>, ValueSort>,
     ): KExpr<KArray2Sort<UAddressSort, KeySort, ValueSort>> {
         check(update.adapter is USymbolicMapMergeAdapter<*, *, USymbolicMapKey<KeySort>, *>) {
             "Unexpected adapter: ${update.adapter}"
@@ -227,7 +228,7 @@ private class UInputMapUpdatesTranslator<KeySort : USort, ValueSort : USort>(
         previous: KExpr<KArray2Sort<UAddressSort, KeySort, ValueSort>>,
         update: URangedUpdateNode<*, *, USymbolicMapKey<KeySort>, ValueSort>,
         sourceCollection: USymbolicCollection<CollectionId, SrcKey, ValueSort>,
-        adapter: USymbolicMapMergeAdapter<*, SrcKey, USymbolicMapKey<KeySort>, *>
+        adapter: USymbolicMapMergeAdapter<*, SrcKey, USymbolicMapKey<KeySort>, *>,
     ): KExpr<KArray2Sort<UAddressSort, KeySort, ValueSort>> {
         val key1 = mkFreshConst("k1", previous.sort.domain0)
         val key2 = mkFreshConst("k2", previous.sort.domain1)
@@ -238,7 +239,9 @@ private class UInputMapUpdatesTranslator<KeySort : USort, ValueSort : USort>(
         val isInside = update.includesSymbolically(key1 to key2, composer = null).translated // already includes guard
 
         val result = sourceCollection.collectionId.instantiate(
-            sourceCollection, convertedKey, composer = null
+            sourceCollection,
+            convertedKey,
+            composer = null
         ).translated
 
         val ite = mkIte(isInside, result, previous.select(key1, key2))

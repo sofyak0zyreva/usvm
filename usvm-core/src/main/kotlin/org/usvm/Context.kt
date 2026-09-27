@@ -121,6 +121,18 @@ open class UContext<USizeSort : USort>(
     }
     val addressCounter = UAddressCounter()
 
+    val nonAliasingHeapRefs: MutableMap<UNonAliasingHeapAddress, UNonAliasingHeapRef> = mutableMapOf()
+    val nonAliasingReadingIds: MutableMap<Any, UNonAliasingHeapAddress> = mutableMapOf()
+
+    fun castToNAHeapRef(naSymbol: USymbolicHeapRef): UNonAliasingHeapRef {
+        if (naSymbol is URegisterReading<*> && nonAliasingHeapRefs[naSymbol.idx] == null) {
+            nonAliasingHeapRefs[naSymbol.idx] = UNonAliasingHeapRef(this, naSymbol.idx, naSymbol)
+        } else if (nonAliasingHeapRefs[naSymbol.id] == null) {
+            nonAliasingHeapRefs[naSymbol.id] = UNonAliasingHeapRef(this, naSymbol.id, naSymbol)
+        }
+        return nonAliasingHeapRefs[naSymbol.id]!!
+    }
+
     fun mkAddressCounter(): UAddressCounter {
         return addressCounter
     }
@@ -255,8 +267,8 @@ open class UContext<USizeSort : USort>(
 
     private fun mkNonAliasingSameOwner(id1: UNonAliasingHeapAddress, id2: UNonAliasingHeapAddress): UBoolExpr? {
         if (id1 == id2) return trueExpr
-        val ref1 = NAHeapRefMap[id1]?.symbol ?: return falseExpr
-        val ref2 = NAHeapRefMap[id2]?.symbol ?: return falseExpr
+        val ref1 = nonAliasingHeapRefs[id1]?.symbol ?: return falseExpr
+        val ref2 = nonAliasingHeapRefs[id2]?.symbol ?: return falseExpr
         return mkNonAliasingPathEq(ref1, ref2)
     }
 
@@ -368,7 +380,7 @@ open class UContext<USizeSort : USort>(
 
     fun <MapType, KeySort : USort, Sort : USort, Reg : Region<Reg>> mkAllocatedMapReading(
         region: UAllocatedMap<MapType, KeySort, Sort, Reg>,
-        key: UExpr<KeySort>
+        key: UExpr<KeySort>,
     ): UAllocatedMapReading<MapType, KeySort, Sort, Reg> =
         allocatedSymbolicMapReadingCache.createIfContextActive {
             UAllocatedMapReading(this, region, key)
@@ -378,7 +390,7 @@ open class UContext<USizeSort : USort>(
 
     fun <MapType, KeySort : USort, Sort : USort, Reg : Region<Reg>> mkNonAliasingMapReading(
         region: UNonAliasingMap<MapType, KeySort, Sort, Reg>,
-        key: UExpr<KeySort>
+        key: UExpr<KeySort>,
     ): UNonAliasingMapReading<MapType, KeySort, Sort, Reg> =
         nonAliasingSymbolicMapReadingCache.createIfContextActive {
             UNonAliasingMapReading(this, region, key)
@@ -389,7 +401,7 @@ open class UContext<USizeSort : USort>(
     fun <MapType, KeySort : USort, Reg : Region<Reg>, Sort : USort> mkInputMapReading(
         region: UInputMap<MapType, KeySort, Sort, Reg>,
         address: UHeapRef,
-        key: UExpr<KeySort>
+        key: UExpr<KeySort>,
     ): UInputMapReading<MapType, KeySort, Sort, Reg> =
         inputSymbolicMapReadingCache.createIfContextActive {
             UInputMapReading(this, region, address, key)
@@ -400,7 +412,7 @@ open class UContext<USizeSort : USort>(
 
     fun <MapType, Sort : USort> mkAllocatedRefMapWithInputKeysReading(
         region: UAllocatedRefMapWithInputKeys<MapType, Sort>,
-        keyRef: UHeapRef
+        keyRef: UHeapRef,
     ): UAllocatedRefMapWithInputKeysReading<MapType, Sort> =
         allocatedSymbolicRefMapWithInputKeysReadingCache.createIfContextActive {
             UAllocatedRefMapWithInputKeysReading(this, region, keyRef)
@@ -411,7 +423,7 @@ open class UContext<USizeSort : USort>(
 
     fun <MapType, Sort : USort> mkAllocatedRefMapWithNonAliasingKeysReading(
         region: UAllocatedRefMapWithNonAliasingKeys<MapType, Sort>,
-        keyRef: UHeapRef
+        keyRef: UHeapRef,
     ): UAllocatedRefMapWithNonAliasingKeysReading<MapType, Sort> =
         allocatedSymbolicRefMapWithNonAliasingKeysReadingCache.createIfContextActive {
             UAllocatedRefMapWithNonAliasingKeysReading(this, region, keyRef)
@@ -422,7 +434,7 @@ open class UContext<USizeSort : USort>(
 
     fun <MapType, Sort : USort> mkInputRefMapWithAllocatedKeysReading(
         region: UInputRefMapWithAllocatedKeys<MapType, Sort>,
-        mapRef: UHeapRef
+        mapRef: UHeapRef,
     ): UInputRefMapWithAllocatedKeysReading<MapType, Sort> =
         inputSymbolicRefMapWithAllocatedKeysReadingCache.createIfContextActive {
             UInputRefMapWithAllocatedKeysReading(this, region, mapRef)
@@ -433,7 +445,7 @@ open class UContext<USizeSort : USort>(
 
     fun <MapType, Sort : USort> mkNonAliasingRefMapWithAllocatedKeysReading(
         region: UNonAliasingRefMapWithAllocatedKeys<MapType, Sort>,
-        mapRef: UHeapRef
+        mapRef: UHeapRef,
     ): UNonAliasingRefMapWithAllocatedKeysReading<MapType, Sort> =
         nonAliasingSymbolicRefMapWithAllocatedKeysReadingCache.createIfContextActive {
             UNonAliasingRefMapWithAllocatedKeysReading(this, region, mapRef)
@@ -445,7 +457,7 @@ open class UContext<USizeSort : USort>(
     fun <MapType, Sort : USort> mkInputRefMapWithInputKeysReading(
         region: UInputRefMap<MapType, Sort>,
         mapRef: UHeapRef,
-        keyRef: UHeapRef
+        keyRef: UHeapRef,
     ): UInputRefMapWithInputKeysReading<MapType, Sort> =
         inputSymbolicRefMapWithInputKeysReadingCache.createIfContextActive {
             UInputRefMapWithInputKeysReading(this, region, mapRef, keyRef)
@@ -457,7 +469,7 @@ open class UContext<USizeSort : USort>(
     fun <MapType, Sort : USort> mkNonAliasingRefMapWithNonAliasingKeysReading(
         region: UNonAliasingRefMapWithNonAliasingKeys<MapType, Sort>,
         mapRef: UHeapRef,
-        keyRef: UHeapRef
+        keyRef: UHeapRef,
     ): UNonAliasingRefMapWithNonAliasingKeysReading<MapType, Sort> =
         nonAliasingSymbolicRefMapWithANonAliasingKeysReadingCache.createIfContextActive {
             UNonAliasingRefMapWithNonAliasingKeysReading(this, region, mapRef, keyRef)
@@ -467,7 +479,7 @@ open class UContext<USizeSort : USort>(
 
     fun <MapType> mkInputMapLengthReading(
         region: UInputMapLengthCollection<MapType, USizeSort>,
-        address: UHeapRef
+        address: UHeapRef,
     ): UInputMapLengthReading<MapType, USizeSort> =
         inputSymbolicMapLengthReadingCache.createIfContextActive {
             UInputMapLengthReading(this, region, address)
@@ -478,7 +490,7 @@ open class UContext<USizeSort : USort>(
 
     fun <SetType, ElementSort : USort, Reg : Region<Reg>> mkAllocatedSetReading(
         region: UAllocatedSet<SetType, ElementSort, Reg>,
-        element: UExpr<ElementSort>
+        element: UExpr<ElementSort>,
     ): UAllocatedSetReading<SetType, ElementSort, Reg> =
         allocatedSymbolicSetReadingCache.createIfContextActive {
             UAllocatedSetReading(this, region, element)
@@ -488,7 +500,7 @@ open class UContext<USizeSort : USort>(
 
     fun <SetType, ElementSort : USort, Reg : Region<Reg>> mkNonAliasingSetReading(
         region: UNonAliasingSet<SetType, ElementSort, Reg>,
-        element: UExpr<ElementSort>
+        element: UExpr<ElementSort>,
     ): UNonAliasingSetReading<SetType, ElementSort, Reg> =
         nonAliasingSymbolicSetReadingCache.createIfContextActive {
             UNonAliasingSetReading(this, region, element)
@@ -499,7 +511,7 @@ open class UContext<USizeSort : USort>(
     fun <SetType, ElementSort : USort, Reg : Region<Reg>> mkInputSetReading(
         region: UInputSet<SetType, ElementSort, Reg>,
         address: UHeapRef,
-        element: UExpr<ElementSort>
+        element: UExpr<ElementSort>,
     ): UInputSetReading<SetType, ElementSort, Reg> =
         inputSymbolicSetReadingCache.createIfContextActive {
             UInputSetReading(this, region, address, element)
@@ -510,7 +522,7 @@ open class UContext<USizeSort : USort>(
 
     fun <SetType> mkAllocatedRefSetWithInputElementsReading(
         region: UAllocatedRefSetWithInputElements<SetType>,
-        elementRef: UHeapRef
+        elementRef: UHeapRef,
     ): UAllocatedRefSetWithInputElementsReading<SetType> =
         allocatedSymbolicRefSetWithInputElementsReadingCache.createIfContextActive {
             UAllocatedRefSetWithInputElementsReading(this, region, elementRef)
@@ -521,7 +533,7 @@ open class UContext<USizeSort : USort>(
 
     fun <SetType> mkInputRefSetWithAllocatedElementsReading(
         region: UInputRefSetWithAllocatedElements<SetType>,
-        setRef: UHeapRef
+        setRef: UHeapRef,
     ): UInputRefSetWithAllocatedElementsReading<SetType> =
         inputSymbolicRefSetWithAllocatedElementsReadingCache.createIfContextActive {
             UInputRefSetWithAllocatedElementsReading(this, region, setRef)
@@ -533,33 +545,11 @@ open class UContext<USizeSort : USort>(
     fun <SetType> mkInputRefSetWithInputElementsReading(
         region: UInputRefSetWithInputElements<SetType>,
         setRef: UHeapRef,
-        elementRef: UHeapRef
+        elementRef: UHeapRef,
     ): UInputRefSetWithInputElementsReading<SetType> =
         inputSymbolicRefSetWithInputElementsReadingCache.createIfContextActive {
             UInputRefSetWithInputElementsReading(this, region, setRef, elementRef)
         }.cast()
-
-//    private val nonAliasingSymbolicRefSetWithInputElementsReadingCache =
-//        mkAstInterner<UNonAliasingRefSetWithInputElementsReading<*>>()
-//
-//    fun <SetType> mkNonAliasingRefSetWithInputElementsReading(
-//        region: UNonAliasingRefSetWithInputElements<SetType>,
-//        elementRef: UHeapRef
-//    ): UNonAliasingRefSetWithInputElementsReading<SetType> =
-//        nonAliasingSymbolicRefSetWithInputElementsReadingCache.createIfContextActive {
-//            UNonAliasingRefSetWithInputElementsReading(this, region, elementRef)
-//        }.cast()
-//
-//    private val inputSymbolicRefSetWithNonAliasingElementsReadingCache =
-//        mkAstInterner<UInputRefSetWithNonAliasingElementsReading<*>>()
-//
-//    fun <SetType> mkInputRefSetWithNonAliasingElementsReading(
-//        region: UInputRefSetWithNonAliasingElements<SetType>,
-//        setRef: UHeapRef,
-//    ): UInputRefSetWithNonAliasingElementsReading<SetType> =
-//        inputSymbolicRefSetWithNonAliasingElementsReadingCache.createIfContextActive {
-//            UInputRefSetWithNonAliasingElementsReading(this, region, setRef)
-//        }.cast()
 
     private val nonAliasingSymbolicRefSetWithNonAliasingElementsReadingCache =
         mkAstInterner<UNonAliasingRefSetWithNonAliasingElementsReading<*>>()
@@ -567,7 +557,7 @@ open class UContext<USizeSort : USort>(
     fun <SetType> mkNonAliasingRefSetWithNonAliasingElementsReading(
         region: UNonAliasingRefSetWithNonAliasingElements<SetType>,
         setRef: UHeapRef,
-        elementRef: UHeapRef
+        elementRef: UHeapRef,
     ): UNonAliasingRefSetWithNonAliasingElementsReading<SetType> =
         nonAliasingSymbolicRefSetWithNonAliasingElementsReadingCache.createIfContextActive {
             UNonAliasingRefSetWithNonAliasingElementsReading(this, region, setRef, elementRef)
@@ -610,21 +600,23 @@ open class UContext<USizeSort : USort>(
     private var trackedIndex = 0
 
     fun <Sort : USort> mkTrackedSymbol(
-        sort: Sort
+        sort: Sort,
     ): UTrackedSymbol<Sort> = trackedSymbols.createIfContextActive {
         UTrackedSymbol(this, name = "tracked#${trackedIndex++}", sort)
     }.cast()
-    
+
     private val isSubtypeExprCache = mkAstInterner<UIsSubtypeExpr<Any>>()
     fun <Type> mkIsSubtypeExpr(
-        ref: UHeapRef, type: Type,
+        ref: UHeapRef,
+        type: Type,
     ): UIsSubtypeExpr<Type> = isSubtypeExprCache.createIfContextActive {
         UIsSubtypeExpr(this, ref, type.cast())
     }.cast()
 
     private val isSupertypeExprCache = mkAstInterner<UIsSupertypeExpr<Any>>()
     fun <Type> mkIsSupertypeExpr(
-        ref: UHeapRef, type: Type,
+        ref: UHeapRef,
+        type: Type,
     ): UIsSupertypeExpr<Type> = isSupertypeExprCache.createIfContextActive {
         UIsSupertypeExpr(this, ref, type.cast())
     }.cast()
@@ -654,7 +646,7 @@ open class UContext<USizeSort : USort>(
     inline fun <T : KSort> mkIte(
         condition: KExpr<KBoolSort>,
         trueBranch: () -> KExpr<T>,
-        falseBranch: () -> KExpr<T>
+        falseBranch: () -> KExpr<T>,
     ): KExpr<T> =
         when (condition) {
             is UTrue -> trueBranch()
@@ -674,7 +666,10 @@ fun <USizeSort : USort> UContext<USizeSort>.mkSizeSubExpr(lhs: UExpr<USizeSort>,
     sizeExprs.mkSizeSubExpr(lhs, rhs)
 fun <USizeSort : USort> UContext<USizeSort>.mkSizeLeExpr(lhs: UExpr<USizeSort>, rhs: UExpr<USizeSort>): UBoolExpr =
     sizeExprs.mkSizeLeExpr(lhs, rhs)
-fun <USizeSort : USort> UContext<USizeSort>.mkSizeAddExpr(lhs: UExpr<USizeSort>, rhs: UExpr<USizeSort>): UExpr<USizeSort> =
+fun <USizeSort : USort> UContext<USizeSort>.mkSizeAddExpr(
+    lhs: UExpr<USizeSort>,
+    rhs: UExpr<USizeSort>,
+): UExpr<USizeSort> =
     sizeExprs.mkSizeAddExpr(lhs, rhs)
 fun <USizeSort : USort> UContext<USizeSort>.mkSizeGtExpr(lhs: UExpr<USizeSort>, rhs: UExpr<USizeSort>): UBoolExpr =
     sizeExprs.mkSizeGtExpr(lhs, rhs)
@@ -690,4 +685,6 @@ val KAst.uctx
     get() = ctx as UContext<*>
 
 fun <USizeSort : USort> UContext<*>.withSizeSort(): UContext<USizeSort> = cast()
-inline fun <USizeSort : USort, R> UContext<*>.withSizeSort(block: UContext<USizeSort>.() -> R): R = block(withSizeSort())
+inline fun <USizeSort : USort, R> UContext<*>.withSizeSort(block: UContext<USizeSort>.() -> R): R = block(
+    withSizeSort()
+)

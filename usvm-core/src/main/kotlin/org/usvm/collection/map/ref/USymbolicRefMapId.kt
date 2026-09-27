@@ -8,7 +8,6 @@ import org.usvm.UConcreteHeapAddress
 import org.usvm.UExpr
 import org.usvm.UHeapRef
 import org.usvm.UNonAliasingHeapAddress
-import org.usvm.NAHeapRefMap
 import org.usvm.USort
 import org.usvm.collection.field.getId
 import org.usvm.collection.map.USymbolicMapKey
@@ -30,17 +29,18 @@ import org.usvm.memory.UTreeUpdates
 import org.usvm.memory.UWritableMemory
 import org.usvm.memory.key.UHeapRefKeyInfo
 import org.usvm.memory.key.UHeapRefRegion
+import org.usvm.regions.emptyRegionTree
 import org.usvm.sampleUValue
 import org.usvm.uctx
-import org.usvm.regions.emptyRegionTree
 
 interface USymbolicRefMapId<
-        MapType,
-        Key,
-        ValueSort : USort,
-        out KeysSetId : USymbolicRefSetId<MapType, Key, *, KeysSetId>,
-        out MapId : USymbolicRefMapId<MapType, Key, ValueSort, KeysSetId, MapId>>
-    : USymbolicCollectionId<Key, ValueSort, MapId> {
+    MapType,
+    Key,
+    ValueSort : USort,
+    out KeysSetId : USymbolicRefSetId<MapType, Key, *, KeysSetId>,
+    out MapId : USymbolicRefMapId<MapType, Key, ValueSort, KeysSetId, MapId>,
+    > :
+    USymbolicCollectionId<Key, ValueSort, MapId> {
     val keysSetId: KeysSetId
     val mapType: MapType
 }
@@ -49,15 +49,19 @@ class UAllocatedRefMapWithInputKeysId<MapType, ValueSort : USort>(
     override val sort: ValueSort,
     override val mapType: MapType,
     val mapAddress: UConcreteHeapAddress,
-) : USymbolicRefMapId<MapType, UHeapRef, ValueSort,
-        UAllocatedRefSetWithInputElementsId<MapType>,
-        UAllocatedRefMapWithInputKeysId<MapType, ValueSort>> {
+) : USymbolicRefMapId<
+    MapType,
+    UHeapRef,
+    ValueSort,
+    UAllocatedRefSetWithInputElementsId<MapType>,
+    UAllocatedRefMapWithInputKeysId<MapType, ValueSort>
+    > {
     val defaultValue: UExpr<ValueSort> by lazy { sort.sampleUValue() }
 
     override fun instantiate(
         collection: USymbolicCollection<UAllocatedRefMapWithInputKeysId<MapType, ValueSort>, UHeapRef, ValueSort>,
         key: UHeapRef,
-        composer: UComposer<*, *>?
+        composer: UComposer<*, *>?,
     ): UExpr<ValueSort> {
         if (collection.updates.isEmpty()) {
             return composer.compose(defaultValue)
@@ -114,10 +118,14 @@ class UAllocatedRefMapWithNonAliasingKeysId<MapType, ValueSort : USort>(
     override val sort: ValueSort,
     override val mapType: MapType,
     val mapAddress: UConcreteHeapAddress,
-    val keyAddress: UNonAliasingHeapAddress
-) : USymbolicRefMapId<MapType, UHeapRef, ValueSort,
-        UAllocatedRefSetWithNonAliasingElementsId<MapType>,
-        UAllocatedRefMapWithNonAliasingKeysId<MapType, ValueSort>> {
+    val keyAddress: UNonAliasingHeapAddress,
+) : USymbolicRefMapId<
+    MapType,
+    UHeapRef,
+    ValueSort,
+    UAllocatedRefSetWithNonAliasingElementsId<MapType>,
+    UAllocatedRefMapWithNonAliasingKeysId<MapType, ValueSort>
+    > {
     val defaultValue: UExpr<ValueSort> by lazy { sort.sampleUValue() }
     override val keysSetId: UAllocatedRefSetWithNonAliasingElementsId<MapType>
         get() = UAllocatedRefSetWithNonAliasingElementsId(mapAddress, keyAddress, mapType, sort.uctx.boolSort)
@@ -142,7 +150,7 @@ class UAllocatedRefMapWithNonAliasingKeysId<MapType, ValueSort : USort>(
     override fun instantiate(
         collection: USymbolicCollection<UAllocatedRefMapWithNonAliasingKeysId<MapType, ValueSort>, UHeapRef, ValueSort>,
         key: UHeapRef,
-        composer: UComposer<*, *>?
+        composer: UComposer<*, *>?,
     ): UExpr<ValueSort> {
         if (composer == null) {
             return key.uctx.mkAllocatedRefMapWithNonAliasingKeysReading(collection, key)
@@ -162,7 +170,7 @@ class UAllocatedRefMapWithNonAliasingKeysId<MapType, ValueSort : USort>(
         if (sort != other.sort) return false
         if (mapType != other.mapType) return false
         if (mapAddress != other.mapAddress) return false
-        if (keyAddress!= other.keyAddress) return false
+        if (keyAddress != other.keyAddress) return false
 
         return true
     }
@@ -174,15 +182,19 @@ class UInputRefMapWithAllocatedKeysId<MapType, ValueSort : USort>(
     override val sort: ValueSort,
     override val mapType: MapType,
     val keyAddress: UConcreteHeapAddress,
-) : USymbolicRefMapId<MapType, UHeapRef, ValueSort,
-        UInputRefSetWithAllocatedElementsId<MapType>,
-        UInputRefMapWithAllocatedKeysId<MapType, ValueSort>> {
+) : USymbolicRefMapId<
+    MapType,
+    UHeapRef,
+    ValueSort,
+    UInputRefSetWithAllocatedElementsId<MapType>,
+    UInputRefMapWithAllocatedKeysId<MapType, ValueSort>
+    > {
     val defaultValue: UExpr<ValueSort> by lazy { sort.sampleUValue() }
 
     override fun instantiate(
         collection: USymbolicCollection<UInputRefMapWithAllocatedKeysId<MapType, ValueSort>, UHeapRef, ValueSort>,
         key: UHeapRef,
-        composer: UComposer<*, *>?
+        composer: UComposer<*, *>?,
     ): UExpr<ValueSort> {
         if (collection.updates.isEmpty()) {
             return composer.compose(defaultValue)
@@ -238,12 +250,15 @@ class UInputRefMapWithAllocatedKeysId<MapType, ValueSort : USort>(
 class UNonAliasingRefMapWithAllocatedKeysId<MapType, ValueSort : USort>(
     override val sort: ValueSort,
     override val mapType: MapType,
-//    val mapAddress: UNonAliasingHeapAddress,
     val mapRef: UHeapRef,
     val keyAddress: UConcreteHeapAddress,
-) : USymbolicRefMapId<MapType, UHeapRef, ValueSort,
-        UNonAliasingRefSetWithAllocatedElementsId<MapType>,
-        UNonAliasingRefMapWithAllocatedKeysId<MapType, ValueSort>> {
+) : USymbolicRefMapId<
+    MapType,
+    UHeapRef,
+    ValueSort,
+    UNonAliasingRefSetWithAllocatedElementsId<MapType>,
+    UNonAliasingRefMapWithAllocatedKeysId<MapType, ValueSort>
+    > {
     val defaultValue: UExpr<ValueSort> by lazy { sort.sampleUValue() }
     val mapAddress = getId(mapRef)
     override val keysSetId: UNonAliasingRefSetWithAllocatedElementsId<MapType>
@@ -269,7 +284,7 @@ class UNonAliasingRefMapWithAllocatedKeysId<MapType, ValueSort : USort>(
     override fun instantiate(
         collection: USymbolicCollection<UNonAliasingRefMapWithAllocatedKeysId<MapType, ValueSort>, UHeapRef, ValueSort>,
         key: UHeapRef,
-        composer: UComposer<*, *>?
+        composer: UComposer<*, *>?,
     ): UExpr<ValueSort> {
         if (composer == null) {
             return key.uctx.mkNonAliasingRefMapWithAllocatedKeysReading(collection, key)
@@ -289,26 +304,30 @@ class UNonAliasingRefMapWithAllocatedKeysId<MapType, ValueSort : USort>(
         if (sort != other.sort) return false
         if (mapType != other.mapType) return false
         if (mapAddress != other.mapAddress) return false
-        if (keyAddress!= other.keyAddress) return false
+        if (keyAddress != other.keyAddress) return false
 
         return true
     }
 
     override fun hashCode(): Int = hash(mapAddress, keyAddress, mapType, sort)
-
 }
 
 class UInputRefMapWithInputKeysId<MapType, ValueSort : USort>(
     override val sort: ValueSort,
     override val mapType: MapType,
-) : USymbolicRefMapId<MapType, USymbolicMapKey<UAddressSort>, ValueSort,
-        UInputRefSetWithInputElementsId<MapType>,
-        UInputRefMapWithInputKeysId<MapType, ValueSort>> {
+) : USymbolicRefMapId<
+    MapType,
+    USymbolicMapKey<UAddressSort>,
+    ValueSort,
+    UInputRefSetWithInputElementsId<MapType>,
+    UInputRefMapWithInputKeysId<MapType, ValueSort>
+    > {
 
     override fun instantiate(
-        collection: USymbolicCollection<UInputRefMapWithInputKeysId<MapType, ValueSort>, USymbolicMapKey<UAddressSort>, ValueSort>,
+        collection:
+        USymbolicCollection<UInputRefMapWithInputKeysId<MapType, ValueSort>, USymbolicMapKey<UAddressSort>, ValueSort>,
         key: USymbolicMapKey<UAddressSort>,
-        composer: UComposer<*, *>?
+        composer: UComposer<*, *>?,
     ): UExpr<ValueSort> {
         if (composer == null) {
             return sort.uctx.mkInputRefMapWithInputKeysReading(collection, key.first, key.second)
@@ -323,7 +342,7 @@ class UInputRefMapWithInputKeysId<MapType, ValueSort : USort>(
         memory: UWritableMemory<Type>,
         key: USymbolicMapKey<UAddressSort>,
         value: UExpr<ValueSort>,
-        guard: UBoolExpr
+        guard: UBoolExpr,
     ) {
         memory.write(mkLValue(key), value, guard)
     }
@@ -368,9 +387,13 @@ class UNonAliasingRefMapWithNonAliasingKeysId<MapType, ValueSort : USort>(
     override val mapType: MapType,
     val mapAddress: UNonAliasingHeapAddress,
     val keyAddress: UNonAliasingHeapAddress,
-) : USymbolicRefMapId<MapType, USymbolicMapKey<UAddressSort>, ValueSort,
-        UNonAliasingRefSetWithNonAliasingElementsId<MapType>,
-        UNonAliasingRefMapWithNonAliasingKeysId<MapType, ValueSort>> {
+) : USymbolicRefMapId<
+    MapType,
+    USymbolicMapKey<UAddressSort>,
+    ValueSort,
+    UNonAliasingRefSetWithNonAliasingElementsId<MapType>,
+    UNonAliasingRefMapWithNonAliasingKeysId<MapType, ValueSort>
+    > {
     val defaultValue: UExpr<ValueSort> by lazy { sort.sampleUValue() }
 
     override val keysSetId: UNonAliasingRefSetWithNonAliasingElementsId<MapType>
@@ -395,12 +418,13 @@ class UNonAliasingRefMapWithNonAliasingKeysId<MapType, ValueSort : USort>(
         URefMapEntryLValue(sort, nonAliasingRef(mapAddress), nonAliasingRef(keyAddress), mapType)
 
     private fun nonAliasingRef(id: UNonAliasingHeapAddress): UHeapRef =
-        NAHeapRefMap[id] ?: sort.uctx.mkNonAliasingHeapRef(id)
+        sort.uctx.nonAliasingHeapRefs[id] ?: sort.uctx.mkNonAliasingHeapRef(id)
 
     override fun instantiate(
-        collection: USymbolicCollection<UNonAliasingRefMapWithNonAliasingKeysId<MapType, ValueSort>, USymbolicMapKey<UAddressSort>, ValueSort>,
+        collection:
+        USymbolicCollection<UNonAliasingRefMapWithNonAliasingKeysId<MapType, ValueSort>, USymbolicMapKey<UAddressSort>, ValueSort>,
         key: USymbolicMapKey<UAddressSort>,
-        composer: UComposer<*, *>?
+        composer: UComposer<*, *>?,
     ): UExpr<ValueSort> {
         if (composer == null) {
             return sort.uctx.mkNonAliasingRefMapWithNonAliasingKeysReading(collection, key.first, key.second)
@@ -420,11 +444,10 @@ class UNonAliasingRefMapWithNonAliasingKeysId<MapType, ValueSort : USort>(
         if (sort != other.sort) return false
         if (mapType != other.mapType) return false
         if (mapAddress != other.mapAddress) return false
-        if (keyAddress!= other.keyAddress) return false
+        if (keyAddress != other.keyAddress) return false
 
         return true
     }
 
     override fun hashCode(): Int = hash(mapAddress, keyAddress, mapType, sort)
-
 }

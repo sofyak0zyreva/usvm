@@ -1,18 +1,15 @@
 package org.usvm.collection.set.ref
 
-import org.usvm.NAHeapRefMap
 import org.usvm.UAddressSort
 import org.usvm.UBoolExpr
 import org.usvm.UBoolSort
 import org.usvm.UConcreteHeapAddress
 import org.usvm.UHeapRef
 import org.usvm.UNonAliasingHeapAddress
-import org.usvm.UNonAliasingHeapRef
 import org.usvm.collection.field.getId
-import org.usvm.collection.set.USymbolicSetEntries
 import org.usvm.collection.set.USymbolicSetElement
 import org.usvm.collection.set.USymbolicSetElementsCollector
-import org.usvm.collection.set.primitive.UNonAliasingSet
+import org.usvm.collection.set.USymbolicSetEntries
 import org.usvm.collections.immutable.getOrPut
 import org.usvm.collections.immutable.implementations.immutableMap.UPersistentHashMap
 import org.usvm.collections.immutable.internal.MutabilityOwnership
@@ -31,7 +28,7 @@ import org.usvm.uctx
 data class URefSetEntryLValue<SetType>(
     val setRef: UHeapRef,
     val setElement: UHeapRef,
-    val setType: SetType
+    val setType: SetType,
 ) : ULValue<URefSetEntryLValue<SetType>, UBoolSort> {
     override val sort: UBoolSort
         get() = setRef.uctx.boolSort
@@ -45,7 +42,7 @@ data class URefSetEntryLValue<SetType>(
 
 data class URefSetRegionId<SetType>(
     val setType: SetType,
-    override val sort: UBoolSort
+    override val sort: UBoolSort,
 ) : UMemoryRegionId<URefSetEntryLValue<SetType>, UBoolSort> {
     override fun emptyRegion(): UMemoryRegion<URefSetEntryLValue<SetType>, UBoolSort> =
         URefSetMemoryRegion(setType, sort)
@@ -53,47 +50,26 @@ data class URefSetRegionId<SetType>(
 
 internal data class UAllocatedRefSetWithAllocatedElementId(
     val setAddress: UConcreteHeapAddress,
-    val elementAddress: UConcreteHeapAddress
+    val elementAddress: UConcreteHeapAddress,
 )
 
-//internal data class UAllocatedRefSetWithNonAliasingElementId(
-//    val setAddress: UConcreteHeapAddress,
-//    val elementId: UNonAliasingHeapAddress
-//)
-//
-//internal data class UNonAliasingRefSetWithAllocatedElementId(
-//    val setId: UNonAliasingHeapAddress,
-//    val elementAddress: UConcreteHeapAddress
-//)
-//
-//internal data class UNonAliasingRefSetWithNonAliasingElementId(
-//    val setId: UNonAliasingHeapAddress,
-//    val elementId: UNonAliasingHeapAddress
-//)
-
 typealias UAllocatedRefSetWithInputElements<SetType> =
-        USymbolicCollection<UAllocatedRefSetWithInputElementsId<SetType>, UHeapRef, UBoolSort>
+    USymbolicCollection<UAllocatedRefSetWithInputElementsId<SetType>, UHeapRef, UBoolSort>
 
 typealias UInputRefSetWithAllocatedElements<SetType> =
-        USymbolicCollection<UInputRefSetWithAllocatedElementsId<SetType>, UHeapRef, UBoolSort>
+    USymbolicCollection<UInputRefSetWithAllocatedElementsId<SetType>, UHeapRef, UBoolSort>
 
 typealias UInputRefSetWithInputElements<SetType> =
-        USymbolicCollection<UInputRefSetWithInputElementsId<SetType>, USymbolicSetElement<UAddressSort>, UBoolSort>
-
-//typealias UNonAliasingRefSetWithInputElements<SetType> =
-//        USymbolicCollection<UNonAliasingRefSetWithInputElementsId<SetType>, UHeapRef, UBoolSort>
+    USymbolicCollection<UInputRefSetWithInputElementsId<SetType>, USymbolicSetElement<UAddressSort>, UBoolSort>
 
 typealias UNonAliasingRefSetWithAllocatedElements<SetType> =
-        USymbolicCollection<UNonAliasingRefSetWithAllocatedElementsId<SetType>, UHeapRef, UBoolSort>
-//
-//typealias UInputRefSetWithNonAliasingElements<SetType> =
-//        USymbolicCollection<UInputRefSetWithNonAliasingElementsId<SetType>, UHeapRef, UBoolSort>
-////
+    USymbolicCollection<UNonAliasingRefSetWithAllocatedElementsId<SetType>, UHeapRef, UBoolSort>
+
 typealias UAllocatedRefSetWithNonAliasingElements<SetType> =
-        USymbolicCollection<UAllocatedRefSetWithNonAliasingElementsId<SetType>, UHeapRef, UBoolSort>
+    USymbolicCollection<UAllocatedRefSetWithNonAliasingElementsId<SetType>, UHeapRef, UBoolSort>
 
 typealias UNonAliasingRefSetWithNonAliasingElements<SetType> =
-        USymbolicCollection<UNonAliasingRefSetWithNonAliasingElementsId<SetType>, USymbolicSetElement<UAddressSort>, UBoolSort>
+    USymbolicCollection<UNonAliasingRefSetWithNonAliasingElementsId<SetType>, USymbolicSetElement<UAddressSort>, UBoolSort>
 
 typealias URefSetEntries<SetType> = USymbolicSetEntries<URefSetEntryLValue<SetType>>
 
@@ -110,7 +86,10 @@ interface URefSetRegion<SetType> :
 
     fun allocatedSetWithNonAliasingElements(setRef: UConcreteHeapAddress, setElement: UNonAliasingHeapAddress): UAllocatedRefSetWithNonAliasingElements<SetType>
     fun inputSetWithInputElements(): UInputRefSetWithInputElements<SetType>
-    fun nonAliasingSetWithNonAliasingElements(setRef: UNonAliasingHeapAddress, setElement: UNonAliasingHeapAddress):  UNonAliasingRefSetWithNonAliasingElements<SetType>
+    fun nonAliasingSetWithNonAliasingElements(
+        setRef: UNonAliasingHeapAddress,
+        setElement: UNonAliasingHeapAddress,
+    ): UNonAliasingRefSetWithNonAliasingElements<SetType>
 
     fun union(
         srcRef: UHeapRef,
@@ -123,25 +102,25 @@ interface URefSetRegion<SetType> :
 internal class URefSetMemoryRegion<SetType>(
     private val setType: SetType,
     private val sort: UBoolSort,
-    private var allocatedSetWithAllocatedElements: UPersistentHashMap<UAllocatedRefSetWithAllocatedElementId, UBoolExpr> = persistentHashMapOf(),
-    private var allocatedSetWithInputElements: UPersistentHashMap<UAllocatedRefSetWithInputElementsId<SetType>, UAllocatedRefSetWithInputElements<SetType>> = persistentHashMapOf(),
-    private var inputSetWithAllocatedElements: UPersistentHashMap<UInputRefSetWithAllocatedElementsId<SetType>, UInputRefSetWithAllocatedElements<SetType>> = persistentHashMapOf(),
+    private var allocatedSetWithAllocatedElements: UPersistentHashMap<UAllocatedRefSetWithAllocatedElementId, UBoolExpr> =
+        persistentHashMapOf(),
+    private var allocatedSetWithInputElements:
+    UPersistentHashMap<UAllocatedRefSetWithInputElementsId<SetType>, UAllocatedRefSetWithInputElements<SetType>> = persistentHashMapOf(),
+    private var inputSetWithAllocatedElements:
+    UPersistentHashMap<UInputRefSetWithAllocatedElementsId<SetType>, UInputRefSetWithAllocatedElements<SetType>> = persistentHashMapOf(),
     private var inputSetWithInputElements: UInputRefSetWithInputElements<SetType>? = null,
-    private var allocatedSetWithNonAliasingElements: UPersistentHashMap<UAllocatedRefSetWithNonAliasingElementsId<SetType>, UAllocatedRefSetWithNonAliasingElements<SetType>> = persistentHashMapOf(),
-    private var nonAliasingSetWithAllocatedElements: UPersistentHashMap<UNonAliasingRefSetWithAllocatedElementsId<SetType>, UNonAliasingRefSetWithAllocatedElements<SetType>> = persistentHashMapOf(),
-    private var nonAliasingSetWithNonAliasingElements: UPersistentHashMap<UNonAliasingRefSetWithNonAliasingElementsId<SetType>, UNonAliasingRefSetWithNonAliasingElements<SetType>> = persistentHashMapOf(),
-//    private var nonAliasingSetWithInputElements: UPersistentHashMap<UNonAliasingRefSetWithInputElementsId<SetType>, UNonAliasingRefSetWithInputElements<SetType>> = persistentHashMapOf(),
-//    private var inputSetWithNonAliasingElements: UPersistentHashMap<UInputRefSetWithNonAliasingElementsId<SetType>, UInputRefSetWithNonAliasingElements<SetType>> = persistentHashMapOf(),
-//    private var allocatedSetWithNonAliasingElements: UPersistentHashMap<UAllocatedRefSetWithNonAliasingElementsId<SetType>, UAllocatedRefSetWithNonAliasingElements<SetType>> = persistentHashMapOf(),
-//    private var nonAliasingSetWithAllocatedElements: UPersistentHashMap<UNonAliasingRefSetWithAllocatedElementsId<SetType>, UNonAliasingRefSetWithAllocatedElements<SetType>> = persistentHashMapOf(),
-//    private var nonAliasingSetWithNonAliasingElements: UPersistentHashMap<UNonAliasingRefSetWithNonAliasingElementsId<SetType>, UNonAliasingRefSetWithNonAliasingElements<SetType>> = persistentHashMapOf(),
-
-    ) : URefSetRegion<SetType> {
+    private var allocatedSetWithNonAliasingElements:
+    UPersistentHashMap<UAllocatedRefSetWithNonAliasingElementsId<SetType>, UAllocatedRefSetWithNonAliasingElements<SetType>> = persistentHashMapOf(),
+    private var nonAliasingSetWithAllocatedElements:
+    UPersistentHashMap<UNonAliasingRefSetWithAllocatedElementsId<SetType>, UNonAliasingRefSetWithAllocatedElements<SetType>> = persistentHashMapOf(),
+    private var nonAliasingSetWithNonAliasingElements:
+    UPersistentHashMap<UNonAliasingRefSetWithNonAliasingElementsId<SetType>, UNonAliasingRefSetWithNonAliasingElements<SetType>> = persistentHashMapOf(),
+) : URefSetRegion<SetType> {
 
     private val defaultOwnership = sort.uctx.defaultOwnership
 
     private fun updateAllocatedSetWithAllocatedElements(
-        updated: UPersistentHashMap<UAllocatedRefSetWithAllocatedElementId, UBoolExpr>
+        updated: UPersistentHashMap<UAllocatedRefSetWithAllocatedElementId, UBoolExpr>,
     ) = URefSetMemoryRegion(
         setType, sort,
         updated,
@@ -150,9 +129,7 @@ internal class URefSetMemoryRegion<SetType>(
         inputSetWithInputElements,
         allocatedSetWithNonAliasingElements,
         nonAliasingSetWithAllocatedElements,
-        nonAliasingSetWithNonAliasingElements,
-//        nonAliasingSetWithInputElements,
-//        inputSetWithNonAliasingElements
+        nonAliasingSetWithNonAliasingElements
     )
 
     private fun allocatedSetWithNonAliasingElementsId(setAddress: UConcreteHeapAddress, elementId: UNonAliasingHeapAddress) =
@@ -161,7 +138,10 @@ internal class URefSetMemoryRegion<SetType>(
     private fun getAllocatedSetWithNonAliasingElements(
         id: UAllocatedRefSetWithNonAliasingElementsId<SetType>,
     ): UAllocatedRefSetWithNonAliasingElements<SetType> {
-        val (updatedSet, collection) = allocatedSetWithNonAliasingElements.getOrPut(id, defaultOwnership) { id.emptyRegion() }
+        val (updatedSet, collection) = allocatedSetWithNonAliasingElements.getOrPut(
+            id,
+            defaultOwnership
+        ) { id.emptyRegion() }
         allocatedSetWithNonAliasingElements = updatedSet
         return collection
     }
@@ -181,9 +161,7 @@ internal class URefSetMemoryRegion<SetType>(
         inputSetWithInputElements,
         allocatedSetWithNonAliasingElements.put(id, updatedSet, ownership),
         nonAliasingSetWithAllocatedElements,
-        nonAliasingSetWithNonAliasingElements,
-//        nonAliasingSetWithInputElements,
-//        inputSetWithNonAliasingElements
+        nonAliasingSetWithNonAliasingElements
     )
 
     private fun allocatedSetWithInputElementsId(setAddress: UConcreteHeapAddress) =
@@ -214,48 +192,22 @@ internal class URefSetMemoryRegion<SetType>(
         inputSetWithInputElements,
         allocatedSetWithNonAliasingElements,
         nonAliasingSetWithAllocatedElements,
-        nonAliasingSetWithNonAliasingElements,
-//        nonAliasingSetWithInputElements,
-//        inputSetWithNonAliasingElements
+        nonAliasingSetWithNonAliasingElements
     )
 
-//    private fun nonAliasingSetWithInputElementsId(setId: UNonAliasingHeapAddress) =
-//        UNonAliasingRefSetWithInputElementsId(setId, setType, sort)
-//
-//    private fun getNonAliasingSetWithInputElements(
-//        id: UNonAliasingRefSetWithInputElementsId<SetType>,
-//    ): UNonAliasingRefSetWithInputElements<SetType> {
-//        val (updatedSet, collection) = nonAliasingSetWithInputElements.getOrPut(id, defaultOwnership) { id.emptyRegion() }
-//        nonAliasingSetWithInputElements = updatedSet
-//        return collection
-//    }
-//
-//    fun nonAliasingSetWithInputElements(setRef: UConcreteHeapAddress) =
-//        getNonAliasingSetWithInputElements(nonAliasingSetWithInputElementsId(setRef))
-//
-//    private fun updateNonAliasingSetWithInputElements(
-//        id: UNonAliasingRefSetWithInputElementsId<SetType>,
-//        updatedSet: UNonAliasingRefSetWithInputElements<SetType>,
-//        ownership: MutabilityOwnership,
-//    ) = URefSetMemoryRegion(
-//        setType, sort,
-//        allocatedSetWithAllocatedElements,
-//        allocatedSetWithInputElements,
-//        inputSetWithAllocatedElements,
-//        inputSetWithInputElements,
-//        allocatedSetWithNonAliasingElements,
-//        nonAliasingSetWithAllocatedElements,
-//        nonAliasingSetWithNonAliasingElements,
-//        nonAliasingSetWithInputElements.put(id, updatedSet, ownership),
-//        inputSetWithNonAliasingElements
-//    )
-    private fun nonAliasingSetWithAllocatedElementsId(setId: UNonAliasingHeapAddress, elementAddress: UConcreteHeapAddress) =
+    private fun nonAliasingSetWithAllocatedElementsId(
+        setId: UNonAliasingHeapAddress,
+        elementAddress: UConcreteHeapAddress,
+    ) =
         UNonAliasingRefSetWithAllocatedElementsId(setId, elementAddress, setType, sort)
 
     private fun getNonAliasingSetWithAllocatedElements(
-        id: UNonAliasingRefSetWithAllocatedElementsId<SetType>
+        id: UNonAliasingRefSetWithAllocatedElementsId<SetType>,
     ): UNonAliasingRefSetWithAllocatedElements<SetType> {
-        val (updatedMap, collection) = nonAliasingSetWithAllocatedElements.getOrPut(id, defaultOwnership) { id.emptyRegion() }
+        val (updatedMap, collection) = nonAliasingSetWithAllocatedElements.getOrPut(
+            id,
+            defaultOwnership
+        ) { id.emptyRegion() }
         nonAliasingSetWithAllocatedElements = updatedMap
         return collection
     }
@@ -272,16 +224,14 @@ internal class URefSetMemoryRegion<SetType>(
         inputSetWithInputElements,
         allocatedSetWithNonAliasingElements,
         nonAliasingSetWithAllocatedElements.put(id, updatedSet, ownership),
-        nonAliasingSetWithNonAliasingElements,
-//        nonAliasingSetWithInputElements,
-//        inputSetWithNonAliasingElements
+        nonAliasingSetWithNonAliasingElements
     )
 
     private fun inputSetWithAllocatedElementsId(elementAddress: UConcreteHeapAddress) =
         UInputRefSetWithAllocatedElementsId(elementAddress, setType, sort)
 
     private fun getInputSetWithAllocatedElements(
-        id: UInputRefSetWithAllocatedElementsId<SetType>
+        id: UInputRefSetWithAllocatedElementsId<SetType>,
     ): UInputRefSetWithAllocatedElements<SetType> {
         val (updatedMap, collection) = inputSetWithAllocatedElements.getOrPut(id, defaultOwnership) { id.emptyRegion() }
         inputSetWithAllocatedElements = updatedMap
@@ -300,48 +250,24 @@ internal class URefSetMemoryRegion<SetType>(
         inputSetWithInputElements,
         allocatedSetWithNonAliasingElements,
         nonAliasingSetWithAllocatedElements,
-        nonAliasingSetWithNonAliasingElements,
-//        nonAliasingSetWithInputElements,
-//        inputSetWithNonAliasingElements
+        nonAliasingSetWithNonAliasingElements
     )
-
-//    private fun inputSetWithNonAliasingElementsId(elementId: UNonAliasingHeapAddress) =
-//        UInputRefSetWithNonAliasingElementsId(elementId, setType, sort)
-//
-//    private fun getInputSetWithNonAliasingElements(
-//        id: UInputRefSetWithNonAliasingElementsId<SetType>
-//    ): UInputRefSetWithNonAliasingElements<SetType> {
-//        val (updatedMap, collection) = inputSetWithNonAliasingElements.getOrPut(id, defaultOwnership) { id.emptyRegion() }
-//        inputSetWithNonAliasingElements = updatedMap
-//        return collection
-//    }
-//
-//    private fun updateInputSetWithNonAliasingElements(
-//        id: UInputRefSetWithNonAliasingElementsId<SetType>,
-//        updatedSet: UInputRefSetWithNonAliasingElements<SetType>,
-//        ownership: MutabilityOwnership,
-//    ) = URefSetMemoryRegion(
-//        setType, sort,
-//        allocatedSetWithAllocatedElements,
-//        allocatedSetWithInputElements,
-//        inputSetWithAllocatedElements,
-//        inputSetWithInputElements,
-//        allocatedSetWithNonAliasingElements,
-//        nonAliasingSetWithAllocatedElements,
-//        nonAliasingSetWithNonAliasingElements,
-//        nonAliasingSetWithInputElements,
-//        inputSetWithNonAliasingElements.put(id, updatedSet, ownership)
-//    )
 
     override fun nonAliasingSetWithNonAliasingElements(setRef: UNonAliasingHeapAddress, setElement: UNonAliasingHeapAddress) =
         getNonAliasingSetWithNonAliasingElements(nonAliasingSetWithNonAliasingElementsId(setRef, setElement))
-    private fun nonAliasingSetWithNonAliasingElementsId(setId: UNonAliasingHeapAddress, elementId: UNonAliasingHeapAddress) =
+    private fun nonAliasingSetWithNonAliasingElementsId(
+        setId: UNonAliasingHeapAddress,
+        elementId: UNonAliasingHeapAddress,
+    ) =
         UNonAliasingRefSetWithNonAliasingElementsId(setId, elementId, setType, sort)
 
     private fun getNonAliasingSetWithNonAliasingElements(
-        id: UNonAliasingRefSetWithNonAliasingElementsId<SetType>
+        id: UNonAliasingRefSetWithNonAliasingElementsId<SetType>,
     ): UNonAliasingRefSetWithNonAliasingElements<SetType> {
-        val (updatedMap, collection) = nonAliasingSetWithNonAliasingElements.getOrPut(id, defaultOwnership) { id.emptyRegion() }
+        val (updatedMap, collection) = nonAliasingSetWithNonAliasingElements.getOrPut(
+            id,
+            defaultOwnership
+        ) { id.emptyRegion() }
         nonAliasingSetWithNonAliasingElements = updatedMap
         return collection
     }
@@ -358,14 +284,13 @@ internal class URefSetMemoryRegion<SetType>(
         inputSetWithInputElements,
         allocatedSetWithNonAliasingElements,
         nonAliasingSetWithAllocatedElements,
-        nonAliasingSetWithNonAliasingElements.put(id, updatedSet, ownership),
-//        nonAliasingSetWithInputElements,
-//        inputSetWithNonAliasingElements
+        nonAliasingSetWithNonAliasingElements.put(id, updatedSet, ownership)
     )
 
     override fun inputSetWithInputElements(): UInputRefSetWithInputElements<SetType> {
-        if (inputSetWithInputElements == null)
+        if (inputSetWithInputElements == null) {
             inputSetWithInputElements = UInputRefSetWithInputElementsId(setType, sort).emptyRegion()
+        }
         return inputSetWithInputElements!!
     }
 
@@ -378,14 +303,11 @@ internal class URefSetMemoryRegion<SetType>(
             updatedSet,
             allocatedSetWithNonAliasingElements,
             nonAliasingSetWithAllocatedElements,
-            nonAliasingSetWithNonAliasingElements,
-//            nonAliasingSetWithInputElements,
-//            inputSetWithNonAliasingElements
+            nonAliasingSetWithNonAliasingElements
         )
 
     override fun read(key: URefSetEntryLValue<SetType>): UBoolExpr =
         key.setRef.mapWithStaticAsSymbolic(
-            // all these cases needs serious rewrites maybe (copy-paste from above)
             { concreteRef ->
                 key.setElement.mapWithStaticAsSymbolic(
                     { concreteElem ->
@@ -410,14 +332,11 @@ internal class URefSetMemoryRegion<SetType>(
                         getNonAliasingSetWithAllocatedElements(id).read(nonAliasingRef)
                     },
                     { nonAliasingElem ->
-                        // ?
                         val id = nonAliasingSetWithNonAliasingElementsId(getId(nonAliasingRef), getId(nonAliasingElem))
                         getNonAliasingSetWithNonAliasingElements(id).read(nonAliasingRef to nonAliasingElem)
                     },
                     { symbolicElem ->
                         throw IllegalStateException("NA and input together")
-//                        val id = nonAliasingSetWithInputElementsId(getId(nonAliasingRef))
-//                        getNonAliasingSetWithInputElements(id).read(symbolicElem)
                     },
                     ignoreNullRefs = false
                 )
@@ -430,8 +349,6 @@ internal class URefSetMemoryRegion<SetType>(
                     },
                     { nonAliasingElem ->
                         throw IllegalStateException("NA and input together")
-//                        val id = inputSetWithNonAliasingElementsId(getId(nonAliasingElem))
-//                        getInputSetWithNonAliasingElements(id).read(symbolicRef)
                     },
                     { symbolicElem ->
                         inputSetWithInputElements().read(symbolicRef to symbolicElem)
@@ -496,10 +413,6 @@ internal class URefSetMemoryRegion<SetType>(
                 },
                 blockOnNonAliasing = { region, (nonAliasingElemRef, guard) ->
                     throw IllegalStateException("NA and input together")
-//                    val id = inputSetWithNonAliasingElementsId(getId(nonAliasingElemRef))
-//                    val newMap = region.getInputSetWithNonAliasingElements(id)
-//                        .write(symbolicSetRef, value, guard, ownership)
-//                    region.updateInputSetWithNonAliasingElements(id, newMap, ownership)
                 }
             )
         },
@@ -517,13 +430,10 @@ internal class URefSetMemoryRegion<SetType>(
                 },
                 blockOnSymbolic = { region, (symbolicElemRef, guard) ->
                     throw IllegalStateException("NA and input together")
-//                    val id = nonAliasingSetWithInputElementsId(getId(nonAliasingSetRef))
-//                    val newMap = region.getNonAliasingSetWithInputElements(id)
-//                        .write(symbolicElemRef, value, guard, ownership)
-//                    region.updateNonAliasingSetWithInputElements(id, newMap, ownership)
                 },
                 blockOnNonAliasing = { region, (nonAliasingElemRef, guard) ->
-                    val id = nonAliasingSetWithNonAliasingElementsId(getId(nonAliasingSetRef), getId(nonAliasingElemRef))
+                    val id =
+                        nonAliasingSetWithNonAliasingElementsId(getId(nonAliasingSetRef), getId(nonAliasingElemRef))
                     val newMap = region.getNonAliasingSetWithNonAliasingElements(id)
                         .write(nonAliasingSetRef to nonAliasingElemRef, value, guard, ownership)
                     region.updateNonAliasingSetWithNonAliasingElements(id, newMap, ownership)
@@ -578,7 +488,6 @@ internal class URefSetMemoryRegion<SetType>(
                     result.updateAllocatedSetWithNonAliasingElements(dstKeyId, updated2, ownership)
                 }
             )
-
         },
         blockOnSymbolic0Concrete1 = { region, srcSymbolic, dstConcrete, guard ->
             val updatedAllocatedSet = region.unionInputSetAllocatedElements(
@@ -601,7 +510,7 @@ internal class URefSetMemoryRegion<SetType>(
             val updated = dstCollection.copyRange(srcCollection, adapter, guard)
             updatedRegion.updateAllocatedSetWithInputElements(dstId, updated, ownership)
         },
-        blockOnNonAliasing0Concrete1 = {region, srcNonAliasing, dstConcrete, guard ->
+        blockOnNonAliasing0Concrete1 = { region, srcNonAliasing, dstConcrete, guard ->
             val updatedAllocatedSet = region.unionNonAliasingSetAllocatedElements(
                 initial = region.allocatedSetWithAllocatedElements,
                 srcSetRef = srcNonAliasing,
@@ -629,7 +538,9 @@ internal class URefSetMemoryRegion<SetType>(
         blockOnConcrete0Symbolic1 = { region, srcConcrete, dstSymbolic, guard ->
             val initialAllocatedSetState = region.allocatedSetWithAllocatedElements
             val updatedRegion = region.unionAllocatedSetAllocatedElements(
-                initial = region, srcAddress = srcConcrete.address, guard = guard,
+                initial = region,
+                srcAddress = srcConcrete.address,
+                guard = guard,
                 read = { initialAllocatedSetState[it] ?: sort.uctx.falseExpr },
                 mkDstKeyId = { inputSetWithAllocatedElementsId(it) },
                 write = { result, dstKeyId, value, g ->
@@ -675,7 +586,7 @@ internal class URefSetMemoryRegion<SetType>(
                 }
             )
         },
-        blockOnNonAliasing0NonAliasing1 = {region, srcNonAliasing, dstNonAliasing, guard ->
+        blockOnNonAliasing0NonAliasing1 = { region, srcNonAliasing, dstNonAliasing, guard ->
             val updatedRegion = region.unionNonAliasingSetAllocatedElements(
                 initial = region,
                 srcSetRef = srcNonAliasing,
@@ -695,7 +606,12 @@ internal class URefSetMemoryRegion<SetType>(
                 mkDstKeyId = { nonAliasingSetWithNonAliasingElementsId(getId(dstNonAliasing), it) },
                 write = { result, dstKeyId, srcCollection ->
                     val dstCollection = updatedRegion.getNonAliasingSetWithNonAliasingElements(dstKeyId)
-                    val adapter = UNonAliasingToNonAliasingSymbolicRefSetUnionAdapter(srcNonAliasing, dstNonAliasing, srcCollection)
+                    val adapter =
+                        UNonAliasingToNonAliasingSymbolicRefSetUnionAdapter(
+                            srcNonAliasing,
+                            dstNonAliasing,
+                            srcCollection
+                        )
                     val updated = dstCollection.copyRange(srcCollection, adapter, guard)
                     result.updateNonAliasingSetWithNonAliasingElements(dstKeyId, updated, ownership)
                 }
@@ -703,7 +619,8 @@ internal class URefSetMemoryRegion<SetType>(
         },
         blockOnSymbolic0Symbolic1 = { region, srcSymbolic, dstSymbolic, guard ->
             val updatedRegion = region.unionInputSetAllocatedElements(
-                initial = region, guard = guard,
+                initial = region,
+                guard = guard,
                 read = { region.getInputSetWithAllocatedElements(it).read(srcSymbolic) },
                 mkDstKeyId = { inputSetWithAllocatedElementsId(it) },
                 write = { result, dstKeyId, value, g ->
@@ -726,7 +643,7 @@ internal class URefSetMemoryRegion<SetType>(
         guard: UBoolExpr,
         read: (UInputRefSetWithAllocatedElementsId<SetType>) -> UBoolExpr,
         mkDstKeyId: (UConcreteHeapAddress) -> DstKeyId,
-        write: (R, DstKeyId, UBoolExpr, UBoolExpr) -> R
+        write: (R, DstKeyId, UBoolExpr, UBoolExpr) -> R,
     ) = unionAllocatedElements(
         initial,
         inputSetWithAllocatedElements.keys.toList(),
@@ -742,7 +659,7 @@ internal class URefSetMemoryRegion<SetType>(
         guard: UBoolExpr,
         read: (UAllocatedRefSetWithAllocatedElementId) -> UBoolExpr,
         mkDstKeyId: (UConcreteHeapAddress) -> DstKeyId,
-        write: (R, DstKeyId, UBoolExpr, UBoolExpr) -> R
+        write: (R, DstKeyId, UBoolExpr, UBoolExpr) -> R,
     ) = unionAllocatedElements(
         initial,
         allocatedSetWithAllocatedElements.keys.filterTo(mutableListOf()) { it.setAddress == srcAddress },
@@ -758,7 +675,7 @@ internal class URefSetMemoryRegion<SetType>(
         guard: UBoolExpr,
         read: (UNonAliasingRefSetWithAllocatedElementsId<SetType>) -> UBoolExpr,
         mkDstKeyId: (UNonAliasingHeapAddress) -> DstKeyId,
-        write: (R, DstKeyId, UBoolExpr, UBoolExpr) -> R
+        write: (R, DstKeyId, UBoolExpr, UBoolExpr) -> R,
     ) = unionAllocatedElements(
         initial,
         nonAliasingSetWithAllocatedElements.keys.filterTo(mutableListOf()) { it.setId == getId(srcSetRef) },
@@ -773,7 +690,7 @@ internal class URefSetMemoryRegion<SetType>(
         srcSetRef: UHeapRef,
         read: (UAllocatedRefSetWithNonAliasingElementsId<SetType>) -> UAllocatedRefSetWithNonAliasingElements<SetType>,
         mkDstKeyId: (UNonAliasingHeapAddress) -> DstKeyId,
-        write: (R, DstKeyId,  UAllocatedRefSetWithNonAliasingElements<SetType>) -> R
+        write: (R, DstKeyId, UAllocatedRefSetWithNonAliasingElements<SetType>) -> R,
     ) = unionNonAliasingElements(
         initial,
         allocatedSetWithNonAliasingElements.keys.filterTo(mutableListOf()) { it.setAddress == getId(srcSetRef) },
@@ -785,9 +702,10 @@ internal class URefSetMemoryRegion<SetType>(
     private inline fun <R, DstKeyId> unionNonAliasingSetNonAliasingElements(
         initial: R,
         srcSetRef: UHeapRef,
-        read: (UNonAliasingRefSetWithNonAliasingElementsId<SetType>) -> UNonAliasingRefSetWithNonAliasingElements<SetType>,
+        read:
+        (UNonAliasingRefSetWithNonAliasingElementsId<SetType>) -> UNonAliasingRefSetWithNonAliasingElements<SetType>,
         mkDstKeyId: (UNonAliasingHeapAddress) -> DstKeyId,
-        write: (R, DstKeyId, UNonAliasingRefSetWithNonAliasingElements<SetType>) -> R
+        write: (R, DstKeyId, UNonAliasingRefSetWithNonAliasingElements<SetType>) -> R,
     ) = unionNonAliasingElements(
         initial,
         nonAliasingSetWithNonAliasingElements.keys.filterTo(mutableListOf()) { it.setId == getId(srcSetRef) },
@@ -802,7 +720,7 @@ internal class URefSetMemoryRegion<SetType>(
         guard: UBoolExpr,
         read: (SrcKeyId) -> UBoolExpr,
         mkDstKeyId: (SrcKeyId) -> DstKeyId,
-        write: (R, DstKeyId, UBoolExpr, UBoolExpr) -> R
+        write: (R, DstKeyId, UBoolExpr, UBoolExpr) -> R,
     ): R = keys.fold(initial) { result, srcKeyId ->
         val srcContains = read(srcKeyId)
 
@@ -815,7 +733,7 @@ internal class URefSetMemoryRegion<SetType>(
         keys: List<SrcKeyId>,
         read: (SrcKeyId) -> SrcCollection,
         mkDstKeyId: (SrcKeyId) -> DstKeyId,
-        write: (R, DstKeyId, SrcCollection) -> R
+        write: (R, DstKeyId, SrcCollection) -> R,
     ): R = keys.fold(initial) { result, srcKeyId ->
         val srcCollection = read(srcKeyId)
         write(result, mkDstKeyId(srcKeyId), srcCollection)
@@ -848,7 +766,8 @@ internal class URefSetMemoryRegion<SetType>(
 
                 allocatedSetWithNonAliasingElements.keys.forEach { entry ->
                     if (entry.setAddress == concreteRef.address) {
-                        val elem = NAHeapRefMap[entry.elementId] ?: ref.uctx.mkConcreteHeapRef(entry.elementId)
+                        val elem = ref.uctx.nonAliasingHeapRefs[entry.elementId]
+                            ?: ref.uctx.mkConcreteHeapRef(entry.elementId)
                         entries.add(URefSetEntryLValue(concreteRef, elem, setType))
                     }
                 }
@@ -880,7 +799,8 @@ internal class URefSetMemoryRegion<SetType>(
                 }
                 nonAliasingSetWithNonAliasingElements.keys.forEach { entry ->
                     if (entry.setId == setId) {
-                        val elem = NAHeapRefMap[entry.elementId] ?: ref.uctx.mkConcreteHeapRef(entry.elementId)
+                        val elem = ref.uctx.nonAliasingHeapRefs[entry.elementId]
+                            ?: ref.uctx.mkConcreteHeapRef(entry.elementId)
                         entries.add(URefSetEntryLValue(nonAliasingRef, elem, setType))
                     }
                 }
