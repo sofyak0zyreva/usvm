@@ -1,18 +1,6 @@
 package org.usvm.collection.array
 
-import io.ksmt.KAst
-import io.ksmt.decl.KDecl
-import io.ksmt.decl.KUninterpretedConstDecl
-import io.ksmt.expr.KArrayConst
 import io.ksmt.expr.KBitVec32Value
-import io.ksmt.expr.KExpr
-import io.ksmt.expr.KUninterpretedSortValue
-import io.ksmt.solver.model.KFuncInterp
-import io.ksmt.solver.model.KFuncInterpVarsFree
-import io.ksmt.sort.KSort
-import io.ksmt.sort.KUninterpretedSort
-import kotlinx.collections.immutable.persistentMapOf
-import org.usvm.NAHeapRefMap
 import org.usvm.UAddressSort
 import org.usvm.UConcreteHeapRef
 import org.usvm.UExpr
@@ -76,20 +64,4 @@ class UNonAliasingArrayModelRegion<ArrayType, Sort : USort, USizeSort : USort> i
         }
         return array?.evalElement(model, key.index) ?: defaultValue
     }
-}
-
-fun rAddressIdx(model: UModelEvaluator<*>, valAddress: UExpr<UAddressSort>?): Int? {
-    val rAddress: KDecl<*>? = run {
-        for (decl in model.model.declarations) {
-            val interp = model.model.interpretation(decl)
-            if (interp.toString() == valAddress.toString()) {
-                return@run decl
-            }
-        }
-        null
-    }
-    rAddress?.let{
-        return rAddress.name.substringAfter("r").substringBefore("_Address").toIntOrNull()
-    }
-    return null
 }

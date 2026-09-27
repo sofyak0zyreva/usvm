@@ -9,9 +9,9 @@ import io.ksmt.utils.mkConst
 import org.usvm.UAddressSort
 import org.usvm.UConcreteHeapAddress
 import org.usvm.UExpr
+import org.usvm.NAHeapRefMap
 import org.usvm.UNonAliasingHeapAddress
 import org.usvm.USort
-import org.usvm.collection.array.UNonAliasingArrayModelRegion
 import org.usvm.collection.map.USymbolicMapKey
 import org.usvm.memory.URangedUpdateNode
 import org.usvm.memory.UReadOnlyMemoryRegion
@@ -94,12 +94,24 @@ private class UAllocatedMapTranslator<MapType, KeySort : USort, ValueSort : USor
     }
 }
 
+internal interface UNonAliasingMapCollection<KeySort : USort, ValueSort : USort> : UCollectionDecoder<UExpr<KeySort>, ValueSort> {
+    val id: UNonAliasingHeapAddress
+
+    fun evalMapRef(model: UModelEvaluator<*>): UExpr<UAddressSort>?
+}
+
 private class UNonAliasingMapTranslator<MapType, KeySort : USort, ValueSort : USort, Reg : Region<Reg>>(
     collectionId: UNonAliasingMapId<MapType, KeySort, ValueSort, Reg>,
-    exprTranslator: UExprTranslator<*, *>
+    private val exprTranslator: UExprTranslator<*, *>
 ) : URegionTranslator<UNonAliasingMapId<MapType, KeySort, ValueSort, Reg>, UExpr<KeySort>, ValueSort>,
-    UCollectionDecoder<UExpr<KeySort>, ValueSort>
+    UNonAliasingMapCollection<KeySort, ValueSort>
 {
+    override val id: UNonAliasingHeapAddress = collectionId.id
+
+    override fun evalMapRef(model: UModelEvaluator<*>): UExpr<UAddressSort>? {
+        val ref = NAHeapRefMap[id] ?: return null
+        return model.evalAndComplete(exprTranslator.translate(ref))
+    }
 
     private val initialValue = with(collectionId.sort.uctx) {
         mkArraySort(collectionId.keySort, collectionId.sort).mkConst(collectionId.toString())

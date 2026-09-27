@@ -1,6 +1,5 @@
 package org.usvm.collection.set.primitive
 
-import io.ksmt.decl.KDecl
 import io.ksmt.expr.KExpr
 import io.ksmt.sort.KBoolSort
 import org.usvm.UAddressSort
@@ -12,11 +11,6 @@ import org.usvm.UHeapRef
 import org.usvm.UNonAliasingHeapAddress
 import org.usvm.UNonAliasingHeapRef
 import org.usvm.USort
-import org.usvm.collection.array.rAddressIdx
-import org.usvm.collection.field.getId
-import org.usvm.collection.map.primitive.UMapEntryLValue
-import org.usvm.collection.map.primitive.UMapRegionId
-import org.usvm.collection.set.UNonAliasingSetCollectionDecoder
 import org.usvm.collection.set.USetCollectionDecoder
 import org.usvm.isFalse
 import org.usvm.memory.UReadOnlyMemoryRegion
@@ -26,7 +20,6 @@ import org.usvm.model.UModelEvaluator
 import org.usvm.model.modelEnsureConcreteInputRef
 import org.usvm.model.modelEnsureRightInputRef
 import org.usvm.regions.Region
-import org.usvm.solver.UCollectionDecoder
 
 abstract class USetModelRegion<SetType, ElementSort : USort, Reg : Region<Reg>>(
     private val regionId: USetRegionId<SetType, ElementSort, Reg>
@@ -71,56 +64,49 @@ class USetEagerModelRegion<SetType, ElementSort : USort, Reg : Region<Reg>>(
     override val inputSet: UMemory2DArray<UAddressSort, ElementSort, UBoolSort>
 ) : USetModelRegion<SetType, ElementSort, Reg>(regionId)
 
-class UNonAliasingSetModelRegion<SetType, ElementSort : USort, Reg : Region<Reg>>(
+class UNonAliasingSetModelRegion<SetType, ElementSort : USort, Reg : Region<Reg>> internal constructor(
     private val regionId: USetRegionId<SetType, ElementSort, Reg>,
     private val model: UModelEvaluator<*>,
-    assertions: List<KExpr<KBoolSort>>,
-    private val nonAliasingMapDecoders:  Map<UNonAliasingSetId<SetType, ElementSort, Reg>, UNonAliasingSetCollectionDecoder<ElementSort>>
+    private val assertions: List<KExpr<KBoolSort>>,
+    sets: Collection<UNonAliasingSetCollection<ElementSort>>,
 ) : UReadOnlyMemoryRegion<USetEntryLValue<SetType, ElementSort, Reg>, UBoolSort>,
     USetReadOnlyRegion<SetType, ElementSort, Reg> {
-        val refSets: UMemory1DArray<ElementSort, UBoolSort> by lazy {
-            val x = nonAliasingMapDecoders.values.firstOrNull() !!
-            x.decodeCollection(model, assertions)
-        }
-        val nonAliasingSets: Map<UNonAliasingHeapAddress, UMemory1DArray<ElementSort, UBoolSort>> by lazy {
-            nonAliasingMapDecoders
-                .mapKeys { (key, _) -> key.id }
-                .mapValues { (_, decoder) -> decoder.decodeCollection(model, assertions)  }
-                .toMutableMap()
-        }
+
+    private val setsById = sets.associateBy { it.id }
+
+    private val decodedSets = mutableMapOf<UNonAliasingHeapAddress, UMemory1DArray<ElementSort, UBoolSort>>()
+
+    private val idsByAddress: List<Pair<UExpr<UAddressSort>, UNonAliasingHeapAddress>> by lazy {
+        sets.mapNotNull { set -> set.evalSetRef(model)?.let { it to set.id } }
+    }
+
+    private fun idOf(ref: UHeapRef): UNonAliasingHeapAddress? = when (ref) {
+        is UNonAliasingHeapRef -> ref.id
+        is UConcreteHeapRef -> idsByAddress.firstOrNull { it.first == ref }?.second
+        else -> null
+    }
+
+    private fun elementsOf(id: UNonAliasingHeapAddress): UMemory1DArray<ElementSort, UBoolSort>? {
+        val set = setsById[id] ?: return null
+        return decodedSets.getOrPut(id) { set.decodeElements(model, assertions) }
+    }
 
     override fun setEntries(ref: UHeapRef): UPrimitiveSetEntries<SetType, ElementSort, Reg> = with(regionId) {
-        val setRef = modelEnsureConcreteInputRef(ref)
+        modelEnsureRightInputRef(ref)
         val result = UPrimitiveSetEntries<SetType, ElementSort, Reg>()
-        val set = nonAliasingSets[getId(setRef)] ?: return result
-//        throw IllegalStateException("no model set for this NA ref")
+        val elements = idOf(ref)?.let { elementsOf(it) } ?: return result
 
-        check(set.constValue.isFalse) { "Set model is not complete" }
+        check(elements.constValue.isFalse) { "Set model is not complete" }
 
-        set.values.keys.forEach {
-            result.add(USetEntryLValue(elementSort, setRef, it, setType, elementInfo))
+        elements.values.keys.forEach {
+            result.add(USetEntryLValue(elementSort, ref, it, setType, elementInfo))
         }
-
         return result
     }
 
     override fun read(key: USetEntryLValue<SetType, ElementSort, Reg>): UExpr<UBoolSort> {
         modelEnsureRightInputRef(key.setRef)
-        val defValue = nonAliasingSets.values.firstOrNull()!!.read(key.setElement)
-
-        if (key.setRef is UConcreteHeapRef) {
-            val valAddress = model.addressesMapping.entries
-                .firstOrNull { (_, value) -> value == key.setRef }
-                ?.key
-
-            val rIdx = rAddressIdx(model, valAddress)
-            return nonAliasingSets[rIdx]?.read(key.setElement) ?: defValue
-        }
-        else if (key.setRef is UNonAliasingHeapRef) {
-            return  (nonAliasingSets[key.setRef.id]?.read(key.setElement)
-                ?: defValue
-                    )
-        }
-        return defValue
+        val elements = idOf(key.setRef)?.let { elementsOf(it) } ?: return model.ctx.falseExpr
+        return elements.read(key.setElement)
     }
 }

@@ -5,8 +5,11 @@ import io.ksmt.expr.KExpr
 import io.ksmt.sort.KBoolSort
 import org.usvm.UBoolSort
 import org.usvm.UExpr
+import org.usvm.model.UMemory1DArray
+import org.usvm.UNonAliasingHeapAddress
+import org.usvm.UAddressSort
+import org.usvm.NAHeapRefMap
 import org.usvm.USort
-import org.usvm.collection.map.primitive.UNonAliasingMapModelRegion
 import org.usvm.collection.set.UAllocatedSetUpdatesTranslator
 import org.usvm.collection.set.UInputSetUpdatesTranslator
 import org.usvm.collection.set.UNonAliasingSetCollectionDecoder
@@ -64,7 +67,7 @@ class USetRegionDecoder<SetType, ElementSort : USort, Reg : Region<Reg>>(
     ): UReadOnlyMemoryRegion<USetEntryLValue<SetType, ElementSort, Reg>, UBoolSort>? =
         inputRegionTranslator?.let { USetLazyModelRegion(regionId, model, assertions, it) }
         ?: if (nonAliasingRegionTranslators.isNotEmpty()) {
-            UNonAliasingSetModelRegion(regionId, model, assertions, nonAliasingRegionTranslators) }
+            UNonAliasingSetModelRegion(regionId, model, assertions, nonAliasingRegionTranslators.values) }
         else null
 }
 
@@ -80,11 +83,32 @@ private class UAllocatedSetTranslator<SetType, ElementSort : USort, Reg : Region
     }
 }
 
+internal interface UNonAliasingSetCollection<ElementSort : USort> {
+    val id: UNonAliasingHeapAddress
+
+    fun decodeElements(model: UModelEvaluator<*>, assertions: List<KExpr<KBoolSort>>): UMemory1DArray<ElementSort, UBoolSort>
+
+    fun evalSetRef(model: UModelEvaluator<*>): UExpr<UAddressSort>?
+}
+
 private class UNonAliasingSetTranslator<SetType, ElementSort : USort, Reg : Region<Reg>>(
     collectionId: UNonAliasingSetId<SetType, ElementSort, Reg>,
     private val exprTranslator: UExprTranslator<*, *>
 ) : URegionTranslator<UNonAliasingSetId<SetType, ElementSort, Reg>, UExpr<ElementSort>, UBoolSort>,
-    UNonAliasingSetCollectionDecoder<ElementSort>() {
+    UNonAliasingSetCollectionDecoder<ElementSort>(),
+    UNonAliasingSetCollection<ElementSort> {
+
+    override val id: UNonAliasingHeapAddress = collectionId.id
+
+    override fun decodeElements(
+        model: UModelEvaluator<*>,
+        assertions: List<KExpr<KBoolSort>>,
+    ): UMemory1DArray<ElementSort, UBoolSort> = decodeCollection(model, assertions)
+
+    override fun evalSetRef(model: UModelEvaluator<*>): UExpr<UAddressSort>? {
+        val ref = NAHeapRefMap[id] ?: return null
+        return model.evalAndComplete(exprTranslator.translate(ref))
+    }
     override fun translateReading(
         region: USymbolicCollection<UNonAliasingSetId<SetType, ElementSort, Reg>, UExpr<ElementSort>, UBoolSort>,
         key: UExpr<ElementSort>
