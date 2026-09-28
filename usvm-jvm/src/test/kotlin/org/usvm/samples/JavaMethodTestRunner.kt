@@ -34,6 +34,7 @@ import kotlin.reflect.KFunction4
 import kotlin.reflect.full.instanceParameter
 import kotlin.reflect.jvm.javaConstructor
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 
 @ExtendWith(UTestRunnerController::class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -297,7 +298,15 @@ open class JavaMethodTestRunner : TestRunner<JcTest, KFunction<*>, KClass<*>?, J
             paramsMutationsMatchers,
             invariants = invariants,
             extractValuesToCheck = { test: JcTest -> test.takeAllParametersBeforeAndAfterWithResult(method) },
-            expectedTypesForExtractedValues = arrayOf(T::class, A0::class, A1::class, T::class, A0::class, A1::class, R::class),
+            expectedTypesForExtractedValues = arrayOf(
+                T::class,
+                A0::class,
+                A1::class,
+                T::class,
+                A0::class,
+                A1::class,
+                R::class
+            ),
             checkMode = checkMode,
             coverageChecker
         )
@@ -805,7 +814,7 @@ open class JavaMethodTestRunner : TestRunner<JcTest, KFunction<*>, KClass<*>?, J
         pathSelectionStrategies = listOf(PathSelectionStrategy.FORK_DEPTH),
         coverageZone = CoverageZone.TRANSITIVE,
         exceptionsPropagation = true,
-//        timeout = 60_000.milliseconds,
+        timeout = 60_000.milliseconds,
         stepsFromLastCovered = 3500L,
         solverTimeout = Duration.INFINITE, // we do not need the timeout for a solver in tests
         typeOperationsTimeout = Duration.INFINITE, // we do not need the timeout for type operations in tests
@@ -814,7 +823,7 @@ open class JavaMethodTestRunner : TestRunner<JcTest, KFunction<*>, KClass<*>?, J
     open fun createMachine(
         cp: JcClasspath,
         options: UMachineOptions,
-        interpreterObserver: JcInterpreterObserver?
+        interpreterObserver: JcInterpreterObserver?,
     ): JcMachine {
         return JcMachine(cp, options, interpreterObserver = interpreterObserver)
     }

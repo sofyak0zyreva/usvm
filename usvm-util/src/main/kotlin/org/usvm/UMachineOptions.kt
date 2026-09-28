@@ -6,7 +6,7 @@ import kotlin.time.Duration.Companion.seconds
 
 enum class SolverType {
     YICES,
-    Z3
+    Z3,
 }
 
 enum class PathSelectionStrategy {
@@ -92,7 +92,7 @@ enum class PathSelectionStrategy {
      * reachability.
      * States are selected randomly with distribution based on distance to targets.
      */
-    TARGETED_CALL_STACK_LOCAL_RANDOM
+    TARGETED_CALL_STACK_LOCAL_RANDOM,
 }
 
 enum class PathSelectorCombinationStrategy {
@@ -104,7 +104,7 @@ enum class PathSelectorCombinationStrategy {
     /**
      * Multiple path selectors have independent state sets and are interleaved.
      */
-    PARALLEL
+    PARALLEL,
 }
 
 enum class PathSelectorFairnessStrategy {
@@ -117,7 +117,7 @@ enum class PathSelectorFairnessStrategy {
      * Strategy similar to Linux O(1) scheduler: keys are switched in round-robin fashion (so, all keys are guaranteed to be selected).
      * Each key is given an equal time quantum.
      */
-    CONSTANT_TIME
+    CONSTANT_TIME,
 }
 
 // TODO: add module/package coverage zone
@@ -135,7 +135,7 @@ enum class CoverageZone {
     /**
      * Coverage of methods transitively reachable from a start method.
      */
-    TRANSITIVE
+    TRANSITIVE,
 }
 
 enum class StateCollectionStrategy {
