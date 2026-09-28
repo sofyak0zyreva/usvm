@@ -51,7 +51,17 @@ data class USymbolicCollection<out CollectionId : USymbolicCollectionId<Key, Sor
     /**
      * Reads a [key] from this collection with on-the-fly composition, if the [composer] provided.
      */
+    private var readCache: HashMap<Key, UExpr<Sort>>? = null
+
     fun read(key: Key, composer: UComposer<*, *>?): UExpr<Sort> {
+        if (composer != null || sort.uctx.runInAliasingMode) {
+            return readUncached(key, composer)
+        }
+        val cache = readCache ?: HashMap<Key, UExpr<Sort>>().also { readCache = it }
+        return cache.getOrPut(key) { readUncached(key, null) }
+    }
+
+    private fun readUncached(key: Key, composer: UComposer<*, *>?): UExpr<Sort> {
         if (sort == sort.uctx.addressSort) {
             // Here we split concrete heap addresses from symbolic ones to optimize further memory operations.
             return splittingRead(key, composer) { it is UConcreteHeapRef }
