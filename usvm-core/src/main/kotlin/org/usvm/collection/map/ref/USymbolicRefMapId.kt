@@ -152,6 +152,9 @@ class UAllocatedRefMapWithNonAliasingKeysId<MapType, ValueSort : USort>(
         key: UHeapRef,
         composer: UComposer<*, *>?,
     ): UExpr<ValueSort> {
+        if (collection.updates.isEmpty()) {
+            return composer.compose(defaultValue)
+        }
         if (composer == null) {
             return key.uctx.mkAllocatedRefMapWithNonAliasingKeysReading(collection, key)
         }
@@ -286,6 +289,9 @@ class UNonAliasingRefMapWithAllocatedKeysId<MapType, ValueSort : USort>(
         key: UHeapRef,
         composer: UComposer<*, *>?,
     ): UExpr<ValueSort> {
+        if (collection.updates.isEmpty()) {
+            return composer.compose(defaultValue)
+        }
         if (composer == null) {
             return key.uctx.mkNonAliasingRefMapWithAllocatedKeysReading(collection, key)
         }
