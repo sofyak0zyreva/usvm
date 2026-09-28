@@ -331,6 +331,115 @@ class UInputToAllocatedSymbolicMapMergeAdapter<MapType, KeySort : USort>(
     }
 }
 
+class UNonAliasingToInputSymbolicMapMergeAdapter<MapType, KeySort : USort>(
+    private val srcMapRef: UHeapRef,
+    private val dstMapRef: UHeapRef,
+    setOfKeys: USymbolicCollection<UNonAliasingSetId<MapType, KeySort, *>, UExpr<KeySort>, UBoolSort>,
+) : USymbolicMapMergeAdapter<
+    MapType,
+    UExpr<KeySort>,
+    USymbolicMapKey<KeySort>,
+    UNonAliasingSetId<MapType, KeySort, *>
+    >(setOfKeys) {
+
+    override fun convert(key: USymbolicMapKey<KeySort>, composer: UComposer<*, *>?): UExpr<KeySort> = key.second
+
+    override fun <DstReg : Region<DstReg>> region(): DstReg =
+        convertRegion(setOfKeys.collectionId.keyInfo())
+
+    @Suppress("UNCHECKED_CAST")
+    private fun <ElReg : Region<ElReg>, ResReg : Region<ResReg>> convertRegion(
+        elementInfo: USymbolicCollectionKeyInfo<UExpr<KeySort>, ElReg>,
+    ): ResReg {
+        val elementRegion = setOfKeys.collectionId.region(
+            setOfKeys,
+            elementInfo
+        )
+        val refRegion = UHeapRefKeyInfo.keyToRegion(dstMapRef)
+        return USymbolicSetKeyInfo.addSetRefRegion(elementRegion, refRegion) as ResReg
+    }
+
+    override fun <Type> applyTo(
+        memory: UWritableMemory<Type>,
+        srcCollectionId: USymbolicCollectionId<UExpr<KeySort>, *, *>,
+        dstCollectionId: USymbolicCollectionId<USymbolicMapKey<KeySort>, *, *>,
+        guard: UBoolExpr,
+        srcKey: UExpr<KeySort>,
+        composer: UComposer<*, *>,
+    ) {
+        check(srcCollectionId is UNonAliasingMapId<*, KeySort, *, *>) { "Unexpected collection: $srcCollectionId" }
+        check(dstCollectionId is USymbolicMapId<*, *, *, *, *, *, *>) { "Unexpected collection: $dstCollectionId" }
+
+        setOfKeys.applyTo(memory, srcKey, composer)
+
+        memory.mapMerge(
+            composer.compose(srcMapRef),
+            composer.compose(dstMapRef),
+            srcCollectionId.mapType,
+            srcCollectionId.keySort,
+            srcCollectionId.sort,
+            srcCollectionId.keyInfo,
+            setOfKeys.collectionId.setRegionId().uncheckedCast(),
+            guard
+        )
+    }
+}
+
+class UInputToNonAliasingSymbolicMapMergeAdapter<MapType, KeySort : USort>(
+    private val srcMapRef: UHeapRef,
+    private val dstMapRef: UHeapRef,
+    setOfKeys: USymbolicCollection<UInputSetId<MapType, KeySort, *>, USymbolicMapKey<KeySort>, UBoolSort>,
+) : USymbolicMapMergeAdapter<
+    MapType,
+    USymbolicMapKey<KeySort>,
+    UExpr<KeySort>,
+    UInputSetId<MapType, KeySort, *>
+    >(setOfKeys) {
+
+    override fun convert(key: UExpr<KeySort>, composer: UComposer<*, *>?): USymbolicMapKey<KeySort> =
+        composer.compose(srcMapRef) to key
+
+    override fun <DstReg : Region<DstReg>> region(): DstReg =
+        convertRegion(setOfKeys.collectionId.elementInfo)
+
+    @Suppress("UNCHECKED_CAST")
+    private fun <ElReg : Region<ElReg>, ResReg : Region<ResReg>> convertRegion(
+        elementInfo: USymbolicCollectionKeyInfo<UExpr<KeySort>, ElReg>,
+    ): ResReg {
+        val srcKeyInfo = USymbolicSetKeyInfo(elementInfo)
+        val srcKeysRegion = setOfKeys.collectionId.region(
+            setOfKeys,
+            srcKeyInfo
+        )
+        return USymbolicSetKeyInfo.removeSetRefRegion(srcKeysRegion, elementInfo) as ResReg
+    }
+
+    override fun <Type> applyTo(
+        memory: UWritableMemory<Type>,
+        srcCollectionId: USymbolicCollectionId<USymbolicMapKey<KeySort>, *, *>,
+        dstCollectionId: USymbolicCollectionId<UExpr<KeySort>, *, *>,
+        guard: UBoolExpr,
+        srcKey: USymbolicMapKey<KeySort>,
+        composer: UComposer<*, *>,
+    ) {
+        check(srcCollectionId is USymbolicMapId<*, *, *, *, *, *, *>) { "Unexpected collection: $srcCollectionId" }
+        check(dstCollectionId is UNonAliasingMapId<*, KeySort, *, *>) { "Unexpected collection: $dstCollectionId" }
+
+        setOfKeys.applyTo(memory, srcKey, composer)
+
+        memory.mapMerge(
+            composer.compose(srcMapRef),
+            composer.compose(dstMapRef),
+            dstCollectionId.mapType,
+            dstCollectionId.keySort,
+            dstCollectionId.sort,
+            dstCollectionId.keyInfo,
+            setOfKeys.collectionId.setRegionId().uncheckedCast(),
+            guard
+        )
+    }
+}
+
 class UInputToInputSymbolicMapMergeAdapter<MapType, KeySort : USort>(
     val srcMapRef: UHeapRef,
     val dstMapRef: UHeapRef,
