@@ -259,6 +259,42 @@ open class UContext<USizeSort : USort>(
                 mkAnd(sameMap, super.mkEq(l.key.asExpr(keySort), r.key.asExpr(keySort), order = true))
             }
 
+            l is UInputArrayReading<*, *, *> && r is UInputArrayReading<*, *, *> -> {
+                if (l.collection.collectionId != r.collection.collectionId) return falseExpr
+                if (!l.collection.updates.isEmpty() || !r.collection.updates.isEmpty()) return null
+                val sameArray = mkNonAliasingPathEq(l.address, r.address) ?: return null
+                val sameIndex = super.mkEq(l.index.asExpr(sizeSort), r.index.asExpr(sizeSort), order = true)
+                mkAnd(sameArray, sameIndex)
+            }
+
+            l is UInputFieldReading<*, *> && r is UInputFieldReading<*, *> -> {
+                if (l.collection.collectionId.field != r.collection.collectionId.field) return falseExpr
+                if (!l.collection.updates.isEmpty() || !r.collection.updates.isEmpty()) return null
+                mkNonAliasingPathEq(l.address, r.address)
+            }
+
+            l is UInputRefMapWithInputKeysReading<*, *> && r is UInputRefMapWithInputKeysReading<*, *> -> {
+                if (l.collection.collectionId != r.collection.collectionId) return falseExpr
+                if (!l.collection.updates.isEmpty() || !r.collection.updates.isEmpty()) return null
+                val sameMap = mkNonAliasingPathEq(l.mapRef, r.mapRef) ?: return null
+                mkAnd(sameMap, mkHeapRefEq(l.keyRef, r.keyRef))
+            }
+
+            l is UInputRefMapWithAllocatedKeysReading<*, *> && r is UInputRefMapWithAllocatedKeysReading<*, *> -> {
+                if (l.collection.collectionId.keyAddress != r.collection.collectionId.keyAddress) return falseExpr
+                if (!l.collection.updates.isEmpty() || !r.collection.updates.isEmpty()) return null
+                mkNonAliasingPathEq(l.mapRef, r.mapRef)
+            }
+
+            l is UInputMapReading<*, *, *, *> && r is UInputMapReading<*, *, *, *> -> {
+                val lId = l.collection.collectionId
+                if (lId != r.collection.collectionId) return falseExpr
+                if (!l.collection.updates.isEmpty() || !r.collection.updates.isEmpty()) return null
+                val sameMap = mkNonAliasingPathEq(l.address, r.address) ?: return null
+                val keySort = lId.keySort
+                mkAnd(sameMap, super.mkEq(l.key.asExpr(keySort), r.key.asExpr(keySort), order = true))
+            }
+
             l is UNonAliasingHeapRef && r is UNonAliasingHeapRef -> mkBool(l.id == r.id)
 
             else -> falseExpr
@@ -282,6 +318,11 @@ open class UContext<USizeSort : USort>(
             ref is UNonAliasingRefMapWithAllocatedKeysReading<*, *> ||
             ref is UAllocatedRefMapWithNonAliasingKeysReading<*, *> ||
             ref is UNonAliasingMapReading<*, *, *, *> ||
+            ref is UInputArrayReading<*, *, *> ||
+            ref is UInputFieldReading<*, *> ||
+            ref is UInputRefMapWithInputKeysReading<*, *> ||
+            ref is UInputRefMapWithAllocatedKeysReading<*, *> ||
+            ref is UInputMapReading<*, *, *, *> ||
             ref is UNonAliasingHeapRef ||
             ref is URegisterReading<*>
 
