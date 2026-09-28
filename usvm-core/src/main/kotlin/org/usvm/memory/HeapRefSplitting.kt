@@ -2,6 +2,7 @@ package org.usvm.memory
 
 import org.usvm.UAddressSort
 import org.usvm.UBoolExpr
+import org.usvm.UCollectionReading
 import org.usvm.UConcreteHeapRef
 import org.usvm.UExpr
 import org.usvm.UHeapRef
@@ -22,6 +23,8 @@ data class GuardedExpr<out T>(
 infix fun <T> T.with(guard: UBoolExpr) = GuardedExpr(this, guard)
 
 infix fun <T> GuardedExpr<T>.withAlso(guard: UBoolExpr) = GuardedExpr(expr, guard.ctx.mkAnd(this.guard, guard))
+
+fun UHeapRef.isNonAliasingRoot(): Boolean = !uctx.runInAliasingMode && this !is UCollectionReading<*, *, *>
 
 /**
  * @param concreteHeapRefs a list of split concrete heap refs with their guards.
@@ -132,16 +135,17 @@ inline fun <R> foldHeapRef(
         } else {
             initial
         }
-        ref is USymbolicHeapRef && !ref.uctx.runInAliasingMode -> blockOnNonAliasing(
+        ref is USymbolicHeapRef && ref.isNonAliasingRoot() -> blockOnNonAliasing(
             initial,
             ref.uctx.castToNAHeapRef(ref) with initialGuard
         )
         ref is USymbolicHeapRef -> blockOnSymbolic(initial, ref with initialGuard)
         ref is UIteExpr<UAddressSort> -> {
+            val nonAliasingMode = !ref.uctx.runInAliasingMode
             val (concreteHeapRefs, symbolicHeapRefs) = splitUHeapRef(
                 ref,
                 initialGuard,
-                collapseHeapRefs = collapseHeapRefs,
+                collapseHeapRefs = collapseHeapRefs && !nonAliasingMode,
                 staticIsConcrete = staticIsConcrete
             )
 
@@ -193,7 +197,9 @@ inline fun <R> foldHeapRef2(
     blockOnConcrete0Symbolic1: (R, UConcreteHeapRef, UHeapRef, UBoolExpr) -> R,
     blockOnNonAliasing0Concrete1: (R, UHeapRef, UConcreteHeapRef, UBoolExpr) -> R,
     blockOnNonAliasing0NonAliasing1: (R, UHeapRef, UHeapRef, UBoolExpr) -> R,
+    blockOnNonAliasing0Symbolic1: (R, UHeapRef, UHeapRef, UBoolExpr) -> R,
     blockOnSymbolic0Concrete1: (R, UHeapRef, UConcreteHeapRef, UBoolExpr) -> R,
+    blockOnSymbolic0NonAliasing1: (R, UHeapRef, UHeapRef, UBoolExpr) -> R,
     blockOnSymbolic0Symbolic1: (R, UHeapRef, UHeapRef, UBoolExpr) -> R,
 ): R = foldHeapRefWithStaticAsSymbolic(
     ref = ref0,
@@ -230,7 +236,7 @@ inline fun <R> foldHeapRef2(
                 blockOnNonAliasing0NonAliasing1(r1, na0, na1, guard1)
             },
             blockOnSymbolic = { r1, (inputRef1, guard1) ->
-                throw IllegalStateException("NA and input together")
+                blockOnNonAliasing0Symbolic1(r1, na0, inputRef1, guard1)
             }
         )
     },
@@ -244,7 +250,7 @@ inline fun <R> foldHeapRef2(
                 blockOnSymbolic0Concrete1(r1, inputRef0, concrete1, guard1)
             },
             blockOnNonAliasing = { r1, (na1, guard1) ->
-                throw IllegalStateException("NA and input together")
+                blockOnSymbolic0NonAliasing1(r1, inputRef0, na1, guard1)
             },
             blockOnSymbolic = { r1, (inputRef1, guard1) ->
                 blockOnSymbolic0Symbolic1(r1, inputRef0, inputRef1, guard1)
@@ -280,7 +286,7 @@ internal inline fun <Sort : USort> UHeapRef.map(
         require(!ignoreNullRefs) { "Got nullRef on the top!" }
         symbolicMapper(this)
     }
-    this is USymbolicHeapRef && !this.uctx.runInAliasingMode -> nonAliasingMapper(this.uctx.castToNAHeapRef(this))
+    this is USymbolicHeapRef && this.isNonAliasingRoot() -> nonAliasingMapper(this.uctx.castToNAHeapRef(this))
 
     this is USymbolicHeapRef -> symbolicMapper(this)
     this is UIteExpr<UAddressSort> -> {
@@ -299,7 +305,7 @@ internal inline fun <Sort : USort> UHeapRef.map(
             when {
                 isStaticHeapRef(ref) -> completelyMapped += staticMapper(ref)
                 ref is UConcreteHeapRef -> completelyMapped += concreteMapper(ref)
-                ref is USymbolicHeapRef && !ref.uctx.runInAliasingMode ->
+                ref is USymbolicHeapRef && ref.isNonAliasingRoot() ->
                     completelyMapped += nonAliasingMapper(ref.uctx.castToNAHeapRef(ref))
                 ref is USymbolicHeapRef -> completelyMapped += symbolicMapper(ref)
                 ref is UIteExpr<UAddressSort> -> {

@@ -336,7 +336,7 @@ internal class URefSetMemoryRegion<SetType>(
                         getNonAliasingSetWithNonAliasingElements(id).read(nonAliasingRef to nonAliasingElem)
                     },
                     { symbolicElem ->
-                        throw IllegalStateException("NA and input together")
+                        inputSetWithInputElements().read(nonAliasingRef to symbolicElem)
                     },
                     ignoreNullRefs = false
                 )
@@ -348,7 +348,7 @@ internal class URefSetMemoryRegion<SetType>(
                         getInputSetWithAllocatedElements(id).read(symbolicRef)
                     },
                     { nonAliasingElem ->
-                        throw IllegalStateException("NA and input together")
+                        inputSetWithInputElements().read(symbolicRef to nonAliasingElem)
                     },
                     { symbolicElem ->
                         inputSetWithInputElements().read(symbolicRef to symbolicElem)
@@ -412,7 +412,9 @@ internal class URefSetMemoryRegion<SetType>(
                     region.updateInputSetWithInputElements(newMap)
                 },
                 blockOnNonAliasing = { region, (nonAliasingElemRef, guard) ->
-                    throw IllegalStateException("NA and input together")
+                    val newMap = region.inputSetWithInputElements()
+                        .write(symbolicSetRef to nonAliasingElemRef, value, guard, ownership)
+                    region.updateInputSetWithInputElements(newMap)
                 }
             )
         },
@@ -429,7 +431,9 @@ internal class URefSetMemoryRegion<SetType>(
                     region.updateNonAliasingSetWithAllocatedElements(id, newMap, ownership)
                 },
                 blockOnSymbolic = { region, (symbolicElemRef, guard) ->
-                    throw IllegalStateException("NA and input together")
+                    val newMap = region.inputSetWithInputElements()
+                        .write(nonAliasingSetRef to symbolicElemRef, value, guard, ownership)
+                    region.updateInputSetWithInputElements(newMap)
                 },
                 blockOnNonAliasing = { region, (nonAliasingElemRef, guard) ->
                     val id =
@@ -635,7 +639,68 @@ internal class URefSetMemoryRegion<SetType>(
             val adapter = UInputToInputSymbolicRefSetUnionAdapter(srcSymbolic, dstSymbolic, srcCollection)
             val updated = dstCollection.copyRange(srcCollection, adapter, guard)
             updatedRegion.updateInputSetWithInputElements(updated)
-        }
+        },
+        blockOnNonAliasing0Symbolic1 = { region, srcNonAliasing, dstSymbolic, guard ->
+            val updatedRegion = region.unionNonAliasingSetAllocatedElements(
+                initial = region,
+                srcSetRef = srcNonAliasing,
+                guard = guard,
+                read = { region.getNonAliasingSetWithAllocatedElements(it).read(srcNonAliasing) },
+                mkDstKeyId = { inputSetWithAllocatedElementsId(it) },
+                write = { result, dstKeyId, value, g ->
+                    val newMap = result.getInputSetWithAllocatedElements(dstKeyId)
+                        .write(dstSymbolic, value, g, ownership)
+                    result.updateInputSetWithAllocatedElements(dstKeyId, newMap, ownership)
+                }
+            )
+            val updatedRegion2 = updatedRegion.unionNonAliasingSetNonAliasingElements(
+                initial = updatedRegion,
+                srcSetRef = srcNonAliasing,
+                read = { id -> updatedRegion.getNonAliasingSetWithNonAliasingElements(id) },
+                mkDstKeyId = { it },
+                write = { result, _, srcCollection ->
+                    val dstCollection = result.inputSetWithInputElements()
+                    val adapter = UNonAliasingToNonAliasingSymbolicRefSetUnionAdapter(
+                        srcNonAliasing,
+                        dstSymbolic,
+                        srcCollection
+                    )
+                    result.updateInputSetWithInputElements(dstCollection.copyRange(srcCollection, adapter, guard))
+                }
+            )
+            val inputCollection = updatedRegion2.inputSetWithInputElements()
+            val adapter = UInputToInputSymbolicRefSetUnionAdapter(srcNonAliasing, dstSymbolic, inputCollection)
+            updatedRegion2.updateInputSetWithInputElements(inputCollection.copyRange(inputCollection, adapter, guard))
+        },
+        blockOnSymbolic0NonAliasing1 = { region, srcSymbolic, dstNonAliasing, guard ->
+            val updatedRegion = region.unionInputSetAllocatedElements(
+                initial = region,
+                guard = guard,
+                read = { region.getInputSetWithAllocatedElements(it).read(srcSymbolic) },
+                mkDstKeyId = { nonAliasingSetWithAllocatedElementsId(getId(dstNonAliasing), it) },
+                write = { result, dstKeyId, value, g ->
+                    val newMap = result.getNonAliasingSetWithAllocatedElements(dstKeyId)
+                        .write(dstNonAliasing, value, g, ownership)
+                    result.updateNonAliasingSetWithAllocatedElements(dstKeyId, newMap, ownership)
+                }
+            )
+            val inputCollection = updatedRegion.inputSetWithInputElements()
+            val inputAdapter = UInputToInputSymbolicRefSetUnionAdapter(srcSymbolic, dstNonAliasing, inputCollection)
+            var result = updatedRegion.updateInputSetWithInputElements(
+                inputCollection.copyRange(inputCollection, inputAdapter, guard)
+            )
+            guard.uctx.nonAliasingHeapRefs.keys.forEach { elementId ->
+                val dstId = result.nonAliasingSetWithNonAliasingElementsId(getId(dstNonAliasing), elementId)
+                val dstCollection = result.getNonAliasingSetWithNonAliasingElements(dstId)
+                val adapter = UInputToInputSymbolicRefSetUnionAdapter(srcSymbolic, dstNonAliasing, inputCollection)
+                result = result.updateNonAliasingSetWithNonAliasingElements(
+                    dstId,
+                    dstCollection.copyRange(inputCollection, adapter, guard),
+                    ownership
+                )
+            }
+            result
+        },
     )
 
     private inline fun <R, DstKeyId> unionInputSetAllocatedElements(
@@ -803,6 +868,10 @@ internal class URefSetMemoryRegion<SetType>(
                             ?: ref.uctx.mkConcreteHeapRef(entry.elementId)
                         entries.add(URefSetEntryLValue(nonAliasingRef, elem, setType))
                     }
+                }
+                val inputElements = USymbolicSetElementsCollector.collect(inputSetWithInputElements().updates)
+                inputElements.elements.forEach { (setRef, elem) ->
+                    if (setRef == nonAliasingRef) entries.add(URefSetEntryLValue(nonAliasingRef, elem, setType))
                 }
 
                 entries.markAsInput()

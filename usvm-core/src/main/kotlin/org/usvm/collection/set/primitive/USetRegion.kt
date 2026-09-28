@@ -286,7 +286,27 @@ internal class USetMemoryRegion<SetType, ElementSort : USort, Reg : Region<Reg>>
             val adapter = UInputToInputSymbolicSetUnionAdapter(srcSymbolic, dstSymbolic, srcCollection)
             val updated = dstCollection.copyRange(srcCollection, adapter, guard)
             region.updateInputSet(updated)
-        }
+        },
+        blockOnNonAliasing0Symbolic1 = { region, srcNonAliasing, dstSymbolic, guard ->
+            val srcId = UNonAliasingSetId(elementSort, setType, elementInfo, getId(srcNonAliasing))
+            val srcCollection = region.getNonAliasingSet(srcId)
+
+            val dstCollection = region.inputSetElements()
+
+            val adapter = UNonAliasingToInputSymbolicSetUnionAdapter(srcNonAliasing, dstSymbolic, srcCollection)
+            val updated = dstCollection.copyRange(srcCollection, adapter, guard)
+            region.updateInputSet(updated)
+        },
+        blockOnSymbolic0NonAliasing1 = { region, srcSymbolic, dstNonAliasing, guard ->
+            val srcCollection = region.inputSetElements()
+
+            val dstId = UNonAliasingSetId(elementSort, setType, elementInfo, getId(dstNonAliasing))
+            val dstCollection = region.getNonAliasingSet(dstId)
+
+            val adapter = UInputToNonAliasingSymbolicSetUnionAdapter(srcSymbolic, dstNonAliasing, srcCollection)
+            val updated = dstCollection.copyRange(srcCollection, adapter, guard)
+            region.updateNonAliasingSet(dstId, updated, ownership)
+        },
     )
 
     override fun setEntries(ref: UHeapRef): UPrimitiveSetEntries<SetType, ElementSort, Reg> =

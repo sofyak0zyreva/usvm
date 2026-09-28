@@ -142,8 +142,8 @@ internal class UArrayMemoryRegion<ArrayType, Sort : USort, USizeSort : USort>(
     private fun updateInput(updated: UInputArray<ArrayType, Sort, USizeSort>) =
         UArrayMemoryRegion(allocatedArrays, updated, nonAliasingArrays, staticArrays)
 
-    override fun read(key: UArrayIndexLValue<ArrayType, Sort, USizeSort>): UExpr<Sort> {
-        val x = key.ref.mapWithStaticAsSymbolic(
+    override fun read(key: UArrayIndexLValue<ArrayType, Sort, USizeSort>): UExpr<Sort> =
+        key.ref.mapWithStaticAsSymbolic(
             concreteMapper = { concreteRef ->
                 getAllocatedArray(
                     key.arrayType,
@@ -160,8 +160,6 @@ internal class UArrayMemoryRegion<ArrayType, Sort : USort, USizeSort : USort>(
             },
             symbolicMapper = { symbolicRef -> getInputArray(key.arrayType, key.sort).read(symbolicRef to key.index) }
         )
-        return x
-    }
 
     override fun write(
         key: UArrayIndexLValue<ArrayType, Sort, USizeSort>,
@@ -300,7 +298,33 @@ internal class UArrayMemoryRegion<ArrayType, Sort : USort, USizeSort : USort>(
             )
             val newDstCollection = dstCollection.copyRange(srcCollection, adapter, guard)
             region.updateInput(newDstCollection)
-        }
+        },
+        blockOnNonAliasing0Symbolic1 = { region, srcNonAliasing, dstSymbolic, guard ->
+            val id = getId(srcNonAliasing)
+            val srcCollection = region.getNonAliasingArray(type, elementSort, id)
+            val dstCollection = region.getInputArray(type, elementSort)
+            val adapter = USymbolicArrayNonAliasingToInputCopyAdapter(
+                fromSrcIdx,
+                dstSymbolic to fromDstIdx,
+                dstSymbolic to toDstIdx,
+                USymbolicArrayIndexKeyInfo()
+            )
+            val newDstCollection = dstCollection.copyRange(srcCollection, adapter, guard)
+            region.updateInput(newDstCollection)
+        },
+        blockOnSymbolic0NonAliasing1 = { region, srcSymbolic, dstNonAliasing, guard ->
+            val id = getId(dstNonAliasing)
+            val srcCollection = region.getInputArray(type, elementSort)
+            val dstCollection = region.getNonAliasingArray(type, elementSort, id)
+            val adapter = USymbolicArrayInputToNonAliasingCopyAdapter(
+                srcSymbolic to fromSrcIdx,
+                fromDstIdx,
+                toDstIdx,
+                USizeExprKeyInfo()
+            )
+            val newDstCollection = dstCollection.copyRange(srcCollection, adapter, guard)
+            region.updateNonAliasingArray(id, newDstCollection, ownership)
+        },
     )
 
     override fun initializeAllocatedArray(
