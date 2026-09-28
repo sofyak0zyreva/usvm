@@ -11,6 +11,7 @@ import org.usvm.UConcreteHeapAddress
 import org.usvm.UExpr
 import org.usvm.UHeapRef
 import org.usvm.UNonAliasingHeapAddress
+import org.usvm.UNonAliasingHeapRef
 import org.usvm.USort
 import org.usvm.collection.map.USymbolicMapKey
 import org.usvm.memory.URangedUpdateNode
@@ -18,6 +19,8 @@ import org.usvm.memory.UReadOnlyMemoryRegion
 import org.usvm.memory.USymbolicCollection
 import org.usvm.memory.USymbolicCollectionId
 import org.usvm.model.UModelEvaluator
+import org.usvm.model.UNonAliasingOrInputModelRegion
+import org.usvm.model.UNonAliasingRoots
 import org.usvm.solver.U1DUpdatesTranslator
 import org.usvm.solver.U2DUpdatesTranslator
 import org.usvm.solver.UCollectionDecoder
@@ -95,12 +98,21 @@ class URefMapRegionDecoder<MapType, ValueSort : USort>(
     override fun decodeLazyRegion(
         model: UModelEvaluator<*>,
         assertions: List<KExpr<KBoolSort>>,
-    ) = inputRegionTranslator?.let { URefMapLazyModelRegion(regionId, model, it) }
-        ?: if (nonAliasingWithNonAliasingKeysRegions.isNotEmpty()) {
+    ): UReadOnlyMemoryRegion<URefMapEntryLValue<MapType, ValueSort>, ValueSort>? {
+        val input = inputRegionTranslator?.let { URefMapLazyModelRegion(regionId, model, it) }
+        val nonAliasing = if (nonAliasingWithNonAliasingKeysRegions.isNotEmpty()) {
             UNonAliasingRefMapModelRegion(regionId, model, nonAliasingWithNonAliasingKeysRegions.values.toList())
         } else {
             null
         }
+        if (input == null || nonAliasing == null) return input ?: nonAliasing
+        val rootIds = nonAliasingWithNonAliasingKeysRegions.keys.flatMap { listOf(it.first, it.second) } +
+            nonAliasingWithAllocatedKeysRegions.keys.map { it.first }
+        val roots = UNonAliasingRoots(model, exprTranslator, rootIds)
+        return UNonAliasingOrInputModelRegion(nonAliasing, input) {
+            it.mapRef is UNonAliasingHeapRef || (roots.isRoot(it.mapRef) && roots.isRootOrAllocated(it.mapKey))
+        }
+    }
 }
 
 private class UAllocatedRefMapWithInputKeysTranslator<MapType, ValueSort : USort>(

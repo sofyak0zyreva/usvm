@@ -13,6 +13,8 @@ import org.usvm.memory.URangedUpdateNode
 import org.usvm.memory.UReadOnlyMemoryRegion
 import org.usvm.memory.USymbolicCollection
 import org.usvm.model.UModelEvaluator
+import org.usvm.model.UNonAliasingOrInputModelRegion
+import org.usvm.model.UNonAliasingRoots
 import org.usvm.solver.U1DUpdatesTranslator
 import org.usvm.solver.UCollectionDecoder
 import org.usvm.solver.UExprTranslator
@@ -49,10 +51,14 @@ class UFieldRegionDecoder<Field, Sort : USort>(
     override fun decodeLazyRegion(
         model: UModelEvaluator<*>,
         assertions: List<KExpr<KBoolSort>>,
-    ) = inputRegionTranslator?.let {
-        UFieldsLazyModelRegion(regionId, model, it)
-    } ?: nonAliasingRegions.values.firstOrNull()?.let {
-        UNonAliasingFieldsModelRegion(regionId, model, it)
+    ): UReadOnlyMemoryRegion<UFieldLValue<Field, Sort>, Sort>? {
+        val input = inputRegionTranslator?.let { UFieldsLazyModelRegion(regionId, model, it) }
+        val nonAliasing = nonAliasingRegions.values.firstOrNull()?.let {
+            UNonAliasingFieldsModelRegion(regionId, model, it)
+        }
+        if (input == null || nonAliasing == null) return input ?: nonAliasing
+        val roots = UNonAliasingRoots(model, exprTranslator, nonAliasingRegions.keys)
+        return UNonAliasingOrInputModelRegion(nonAliasing, input) { roots.isRoot(it.ref) }
     }
 }
 

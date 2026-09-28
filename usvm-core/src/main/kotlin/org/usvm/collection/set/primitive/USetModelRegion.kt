@@ -17,6 +17,7 @@ import org.usvm.memory.UReadOnlyMemoryRegion
 import org.usvm.model.UMemory1DArray
 import org.usvm.model.UMemory2DArray
 import org.usvm.model.UModelEvaluator
+import org.usvm.model.UNonAliasingRoots
 import org.usvm.model.modelEnsureConcreteInputRef
 import org.usvm.model.modelEnsureRightInputRef
 import org.usvm.regions.Region
@@ -109,4 +110,18 @@ class UNonAliasingSetModelRegion<SetType, ElementSort : USort, Reg : Region<Reg>
         val elements = idOf(key.setRef)?.let { elementsOf(it) } ?: return model.ctx.falseExpr
         return elements.read(key.setElement)
     }
+}
+
+class UNonAliasingOrInputSetModelRegion<SetType, ElementSort : USort, Reg : Region<Reg>>(
+    private val nonAliasing: UNonAliasingSetModelRegion<SetType, ElementSort, Reg>,
+    private val input: USetModelRegion<SetType, ElementSort, Reg>,
+    private val roots: UNonAliasingRoots,
+) : UReadOnlyMemoryRegion<USetEntryLValue<SetType, ElementSort, Reg>, UBoolSort>,
+    USetReadOnlyRegion<SetType, ElementSort, Reg> {
+
+    override fun read(key: USetEntryLValue<SetType, ElementSort, Reg>): UExpr<UBoolSort> =
+        if (roots.isRoot(key.setRef)) nonAliasing.read(key) else input.read(key)
+
+    override fun setEntries(ref: UHeapRef): UPrimitiveSetEntries<SetType, ElementSort, Reg> =
+        if (roots.isRoot(ref)) nonAliasing.setEntries(ref) else input.setEntries(ref)
 }

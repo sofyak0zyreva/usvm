@@ -17,6 +17,8 @@ import org.usvm.memory.UReadOnlyMemoryRegion
 import org.usvm.memory.USymbolicCollection
 import org.usvm.memory.USymbolicCollectionId
 import org.usvm.model.UModelEvaluator
+import org.usvm.model.UNonAliasingOrInputModelRegion
+import org.usvm.model.UNonAliasingRoots
 import org.usvm.sizeSort
 import org.usvm.solver.U1DUpdatesTranslator
 import org.usvm.solver.U2DUpdatesTranslator
@@ -66,10 +68,17 @@ class UArrayRegionDecoder<ArrayType, Sort : USort, USizeSort : USort>(
     override fun decodeLazyRegion(
         model: UModelEvaluator<*>,
         assertions: List<KExpr<KBoolSort>>,
-    ) = inputRegionTranslator?.let {
-        UArrayLazyModelRegion(regionId, model, it)
+    ): UReadOnlyMemoryRegion<UArrayIndexLValue<ArrayType, Sort, USizeSort>, Sort>? {
+        val input = inputRegionTranslator?.let { UArrayLazyModelRegion(regionId, model, it) }
+        val nonAliasing = if (nonAliasingRegions.isNotEmpty()) {
+            UNonAliasingArrayModelRegion(regionId, model, nonAliasingRegions)
+        } else {
+            null
+        }
+        if (input == null || nonAliasing == null) return input ?: nonAliasing
+        val roots = UNonAliasingRoots(model, exprTranslator, nonAliasingRegions.keys)
+        return UNonAliasingOrInputModelRegion(nonAliasing, input) { roots.isRoot(it.ref) }
     }
-        ?: if (nonAliasingRegions.isNotEmpty()) { UNonAliasingArrayModelRegion(regionId, model, nonAliasingRegions) } else null
 }
 
 private class UAllocatedArrayRegionTranslator<ArrayType, Sort : USort, USizeSort : USort>(

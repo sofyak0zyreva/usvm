@@ -1,6 +1,5 @@
 package org.usvm.collection.array
 
-import io.ksmt.expr.KBitVec32Value
 import io.ksmt.utils.uncheckedCast
 import org.usvm.UAddressSort
 import org.usvm.UConcreteHeapRef
@@ -20,9 +19,6 @@ abstract class UArrayModelRegion<ArrayType, Sort : USort, USizeSort : USort>(
     abstract val inputArray: UReadOnlyMemoryRegion<USymbolicArrayIndex<USizeSort>, Sort>
 
     override fun read(key: UArrayIndexLValue<ArrayType, Sort, USizeSort>): UExpr<Sort> {
-        if (key.index is KBitVec32Value && key.index.intValue == 2) {
-            println()
-        }
         val ref = modelEnsureConcreteInputRef(key.ref)
         return inputArray.read(ref to key.index)
     }

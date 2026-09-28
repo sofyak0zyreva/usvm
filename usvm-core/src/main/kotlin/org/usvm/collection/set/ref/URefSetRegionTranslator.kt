@@ -87,12 +87,13 @@ class URefSetRegionDecoder<SetType>(
         model: UModelEvaluator<*>,
         assertions: List<KExpr<KBoolSort>>,
     ): UReadOnlyMemoryRegion<URefSetEntryLValue<SetType>, UBoolSort>? =
-        inputWithInputRegionTranslator?.let { URefSetLazyModelRegion(regionId, model, assertions, it) }
-            ?: if (nonAliasingWithNonAliasingRegionTranslator.isNotEmpty()) {
-                UNonAliasingRefSetModelRegion(regionId, model, assertions, nonAliasingWithNonAliasingRegionTranslator.values)
-            } else {
-                null
-            }
+        if (nonAliasingWithNonAliasingRegionTranslator.isEmpty()) {
+            inputWithInputRegionTranslator?.let { URefSetLazyModelRegion(regionId, model, assertions, it) }
+        } else {
+            val cells: List<USetCollectionDecoder<UAddressSort>> =
+                nonAliasingWithNonAliasingRegionTranslator.values + listOfNotNull(inputWithInputRegionTranslator)
+            UNonAliasingRefSetModelRegion(regionId, model, assertions, cells)
+        }
 }
 
 private class UAllocatedRefSetWithInputElementsTranslator<SetType>(
