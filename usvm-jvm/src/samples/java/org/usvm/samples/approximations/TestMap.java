@@ -6,11 +6,11 @@ import java.util.Map;
 public class TestMap<K, V> {
     private final Map<K, V> data = new HashMap<>();
 
-    int size() {
+    public int size() {
         return data.size();
     }
 
-    boolean containsKey(final K key) {
+    public boolean containsKey(final K key) {
         return data.containsKey(key);
     }
 
@@ -18,7 +18,7 @@ public class TestMap<K, V> {
         return data.put(key, value);
     }
 
-    V get(final K key) {
+    public V get(final K key) {
         return data.get(key);
     }
 
