@@ -6,9 +6,9 @@ import io.ksmt.expr.printer.ExpressionPrinter
 import io.ksmt.expr.transformer.KTransformerBase
 import org.usvm.UCollectionReading
 import org.usvm.UContext
+import org.usvm.UExpr
 import org.usvm.UHeapRef
 import org.usvm.UNullRef
-import org.usvm.UExpr
 import org.usvm.USort
 import org.usvm.UTransformer
 import org.usvm.asTypedTransformer
@@ -17,6 +17,7 @@ class UInputArrayLengthReading<ArrayType, USizeSort : USort> internal constructo
     ctx: UContext<USizeSort>,
     collection: UInputArrayLengths<ArrayType, USizeSort>,
     val address: UHeapRef,
+    id: Int = -1,
 ) : UCollectionReading<UInputArrayLengthId<ArrayType, USizeSort>, UHeapRef, USizeSort>(ctx, collection) {
     init {
         require(address !is UNullRef)

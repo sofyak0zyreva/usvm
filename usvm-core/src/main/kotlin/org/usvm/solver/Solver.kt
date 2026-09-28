@@ -35,7 +35,7 @@ open class USolverBase<Type>(
     protected val translator: UExprTranslator<Type, *>,
     protected val decoder: UModelDecoder<UModelBase<Type>>,
     // TODO this timeout must not exceed time budget for the MUT
-    private val timeout: Duration
+    private val timeout: Duration,
 ) : USolver<UPathConstraints<Type>, UModelBase<Type>>(), AutoCloseable {
 
     override fun check(query: UPathConstraints<Type>): USolverResult<UModelBase<Type>> =
@@ -43,7 +43,7 @@ open class USolverBase<Type>(
 
     fun checkWithSoftConstraints(
         pc: UPathConstraints<Type>,
-        softConstraints: Iterable<UBoolExpr>
+        softConstraints: Iterable<UBoolExpr>,
     ): USolverResult<UModelBase<Type>> = internalCheck(pc, softConstraints)
 
     private fun internalCheck(
@@ -55,14 +55,16 @@ open class USolverBase<Type>(
         }
 
         smtSolver.withAssertionsScope {
-            val assertions = pc.constraints(translator).toList()
-            smtSolver.assert(assertions)
+            val pcAssertions = pc.constraints(translator).toList()
 
             val translatedSoftConstraints = softConstraints
                 .asSequence()
                 .map(translator::translate)
                 .filterNot(UBoolExpr::isFalse)
                 .toMutableList()
+
+            val assertions = pcAssertions + translator.nonAliasingAxioms
+            smtSolver.assert(assertions)
 
             // DPLL(T)-like solve procedure
             var iter = 0
@@ -110,9 +112,10 @@ open class USolverBase<Type>(
                     )
 
                     // in case of failure, assert reference disequality expressions
-                    is UTypeUnsatResult<Type> -> typeResult.conflictLemmas
-                        .map(translator::translate)
-                        .let { smtSolver.assert(it) }
+                    is UTypeUnsatResult<Type> ->
+                        typeResult.conflictLemmas
+                            .map(translator::translate)
+                            .let { smtSolver.assert(it) }
 
                     is UUnknownResult -> return UUnknownResult()
                     is UUnsatResult -> return UUnsatResult()

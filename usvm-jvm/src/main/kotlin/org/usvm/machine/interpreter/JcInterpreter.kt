@@ -126,7 +126,6 @@ class JcInterpreter(
                     val argumentLValue = URegisterStackLValue(typeToSort(type), method.localIdx(idx))
                     val ref = state.memory.read(argumentLValue).asExpr(addressSort)
                     state.pathConstraints += mkIsSubtypeExpr(ref, type)
-
                     entrypointArguments += type to ref
                 }
             }
@@ -230,7 +229,7 @@ class JcInterpreter(
     private fun callMethod(
         scope: JcStepScope,
         stmt: JcMethodCallBaseInst,
-        exprResolver: JcExprResolver
+        exprResolver: JcExprResolver,
     ) {
         val simpleValueResolver = exprResolver.simpleValueResolver
         val method = stmt.method
@@ -306,7 +305,7 @@ class JcInterpreter(
 
                 if (method.isFinal) {
                     // Case for approximated interfaces
-                    with (stmt) {
+                    with(stmt) {
                         scope.doWithState {
                             newStmt(JcConcreteMethodCallInst(location, method, arguments, returnSite))
                         }
@@ -380,7 +379,7 @@ class JcInterpreter(
         scope: JcStepScope,
         enclosingType: JcClassType,
         outerType: JcClassType,
-        outerClassRef: UHeapRef
+        outerClassRef: UHeapRef,
     ) {
         with(ctx) {
             scope.assert(mkEq(outerClassRef, nullRef).not())
@@ -410,6 +409,11 @@ class JcInterpreter(
             }
         } ?: observer?.onAssignStatement(exprResolver.simpleValueResolver, stmt, scope)
 
+        val x = stmt.lhv
+        if (x is JcLocalVar && x.name == "%4") {
+            println()
+        }
+        val r = scope.calcOnState { methodResult }
         val lvalue = exprResolver.resolveLValue(stmt.lhv) ?: return
         val expr = exprResolver.resolveJcExpr(stmt.rhv, stmt.lhv.type) ?: return
 
@@ -427,7 +431,7 @@ class JcInterpreter(
         lvalue: ULValue<*, *>,
         rvalue: UExpr<out USort>,
         exprResolver: JcExprResolver,
-        scope: JcStepScope
+        scope: JcStepScope,
     ): Unit? {
         if (lvalue !is UArrayIndexLValue<*, *, *>) {
             return Unit
@@ -463,10 +467,13 @@ class JcInterpreter(
 
         observer?.onIfStatement(exprResolver.simpleValueResolver, stmt, scope)
 
-        val boolExpr = exprResolver
-            .resolveJcExpr(stmt.condition)
-            ?.asExpr(ctx.boolSort)
-            ?: return
+        val x = stmt.condition
+        val y = exprResolver.resolveJcExpr(x)
+        val boolExpr = y?.asExpr(ctx.boolSort) ?: return
+//        val boolExpr = exprResolver
+//            .resolveJcExpr(stmt.condition)
+//            ?.asExpr(ctx.boolSort)
+//            ?: return
 
         val instList = stmt.location.method.instList
         val (posStmt, negStmt) = instList[stmt.trueBranch.index] to instList[stmt.falseBranch.index]
@@ -509,7 +516,9 @@ class JcInterpreter(
 
     @Suppress("UNUSED_PARAMETER")
     private fun visitCatchStmt(scope: JcStepScope, stmt: JcCatchInst) {
-        error("The catch instruction must be unfolded during processing of the instructions led to it. Encountered inst: $stmt")
+        error(
+            "The catch instruction must be unfolded during processing of the instructions led to it. Encountered inst: $stmt"
+        )
     }
 
     private fun visitSwitchStmt(scope: JcStepScope, stmt: JcSwitchInst) {
@@ -649,11 +658,12 @@ class JcInterpreter(
     // TODO: now we need to explicitly evaluate indices of registers, because we don't have specific ULValues
     private fun mapLocalToIdxMapper(method: JcMethod, local: JcImmediate) =
         when (local) {
-            is JcLocalVar -> localVarToIdx
-                .getOrPut(method) { mutableMapOf() }
-                .run {
-                    getOrPut(local.name) { method.parametersWithThisCount + size }
-                }
+            is JcLocalVar ->
+                localVarToIdx
+                    .getOrPut(method) { mutableMapOf() }
+                    .run {
+                        getOrPut(local.name) { method.parametersWithThisCount + size }
+                    }
 
             is JcThis -> 0
             is JcArgument -> method.localIdx(local.index)
@@ -675,7 +685,7 @@ class JcInterpreter(
     private fun stringConstantAllocator(
         state: JcState,
         value: String,
-        initialize: Boolean = true
+        initialize: Boolean = true,
     ): Pair<UConcreteHeapRef, Boolean> {
         val memory = state.memory
         val interningPool = memory.getRegion(JcStringInterningRegionId) as JcStringInterningRegion
@@ -687,8 +697,9 @@ class JcInterpreter(
 
         alreadyInitialized = alreadyInitialized || initializedRefs.contains(address)
 
-        if (initialize)
+        if (initialize) {
             initializedRefs.add(address)
+        }
 
         return address to alreadyInitialized
     }
@@ -701,7 +712,7 @@ class JcInterpreter(
     private fun typeInstanceAllocator(
         state: JcState,
         type: JcType,
-        initialize: Boolean = true
+        initialize: Boolean = true,
     ): Pair<UConcreteHeapRef, Boolean> {
         val memory = state.memory
         val interningPool = memory.getRegion(JcClassInterningRegionId) as JcClassInterningRegion
@@ -713,8 +724,9 @@ class JcInterpreter(
 
         alreadyInitialized = alreadyInitialized || initializedRefs.contains(address)
 
-        if (initialize)
+        if (initialize) {
             initializedRefs.add(address)
+        }
 
         return address to alreadyInitialized
     }

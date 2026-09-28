@@ -45,15 +45,16 @@ internal class UMapLengthMemoryRegion<MapType, USizeSort : USort>(
     private val sort: USizeSort,
     private val mapType: MapType,
     private val allocatedLengths: UPersistentHashMap<UConcreteHeapAddress, UExpr<USizeSort>> = persistentHashMapOf(),
-    private var inputLengths: UInputMapLength<MapType, USizeSort>? = null
+    private var inputLengths: UInputMapLength<MapType, USizeSort>? = null,
 ) : UMapLengthRegion<MapType, USizeSort> {
 
     private fun updateAllocated(updated: UPersistentHashMap<UConcreteHeapAddress, UExpr<USizeSort>>) =
         UMapLengthMemoryRegion(sort, mapType, updated, inputLengths)
 
     private fun getInputLength(ref: UMapLengthLValue<MapType, USizeSort>): UInputMapLength<MapType, USizeSort> {
-        if (inputLengths == null)
+        if (inputLengths == null) {
             inputLengths = UInputMapLengthId(ref.mapType, ref.sort).emptyRegion()
+        }
         return inputLengths!!
     }
 
@@ -62,6 +63,7 @@ internal class UMapLengthMemoryRegion<MapType, USizeSort : USort>(
 
     override fun read(key: UMapLengthLValue<MapType, USizeSort>): UExpr<USizeSort> = key.ref.mapWithStaticAsSymbolic(
         concreteMapper = { concreteRef -> allocatedLengths[concreteRef.address] ?: sort.sampleUValue() },
+        nonAliasingMapper = { symbolicRef -> getInputLength(key).read(symbolicRef) },
         symbolicMapper = { symbolicRef -> getInputLength(key).read(symbolicRef) }
     )
 
@@ -79,6 +81,11 @@ internal class UMapLengthMemoryRegion<MapType, USizeSort : USort>(
                 sort.sampleUValue()
             }
             region.updateAllocated(newRegion)
+        },
+        blockOnNonAliasing = { region, (symbolicRef, innerGuard) ->
+            val oldRegion = region.getInputLength(key)
+            val newRegion = oldRegion.write(symbolicRef, value, innerGuard, ownership)
+            region.updateInput(newRegion)
         },
         blockOnSymbolic = { region, (symbolicRef, innerGuard) ->
             val oldRegion = region.getInputLength(key)

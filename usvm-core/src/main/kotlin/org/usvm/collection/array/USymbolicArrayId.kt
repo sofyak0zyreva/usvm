@@ -11,6 +11,7 @@ import org.usvm.UBoolExpr
 import org.usvm.UComposer
 import org.usvm.UConcreteHeapAddress
 import org.usvm.UExpr
+import org.usvm.UNonAliasingHeapAddress
 import org.usvm.USort
 import org.usvm.compose
 import org.usvm.memory.UPinpointUpdateNode
@@ -19,12 +20,12 @@ import org.usvm.memory.USymbolicCollectionId
 import org.usvm.memory.UTreeUpdates
 import org.usvm.memory.UUpdateNode
 import org.usvm.memory.UWritableMemory
+import org.usvm.memory.key.USizeExprKeyInfo
 import org.usvm.memory.key.USizeRegion
+import org.usvm.mkSizeExpr
 import org.usvm.regions.RegionTree
 import org.usvm.regions.emptyRegionTree
 import org.usvm.sampleUValue
-import org.usvm.memory.key.USizeExprKeyInfo
-import org.usvm.mkSizeExpr
 import org.usvm.uctx
 import org.usvm.withSizeSort
 
@@ -48,7 +49,7 @@ class UAllocatedArrayId<ArrayType, Sort : USort, USizeSort : USort> internal con
     override fun instantiate(
         collection: USymbolicCollection<UAllocatedArrayId<ArrayType, Sort, USizeSort>, UExpr<USizeSort>, Sort>,
         key: UExpr<USizeSort>,
-        composer: UComposer<*, *>?
+        composer: UComposer<*, *>?,
     ): UExpr<Sort> {
         if (collection.updates.isEmpty()) {
             return composer.compose(defaultValue)
@@ -82,7 +83,7 @@ class UAllocatedArrayId<ArrayType, Sort : USort, USizeSort : USort> internal con
 
     fun initializedArray(
         content: List<UExpr<Sort>>,
-        guard: UBoolExpr
+        guard: UBoolExpr,
     ): USymbolicCollection<UAllocatedArrayId<ArrayType, Sort, USizeSort>, UExpr<USizeSort>, Sort> {
         val ctx = guard.uctx.withSizeSort<USizeSort>()
         val entries = content.mapIndexed { idx, value ->
@@ -118,7 +119,7 @@ class UAllocatedArrayId<ArrayType, Sort : USort, USizeSort : USort> internal con
 private typealias UInitializedArrayRegionValue<USizeSort, Sort> = Pair<UUpdateNode<UExpr<USizeSort>, Sort>, RegionTree<USizeRegion, UUpdateNode<UExpr<USizeSort>, Sort>>>
 
 private class UInitializedArrayRegionEntries<USizeSort : USort, Sort : USort>(
-    val data: List<UUpdateNode<UExpr<USizeSort>, Sort>>
+    val data: List<UUpdateNode<UExpr<USizeSort>, Sort>>,
 ) : PersistentMap<USizeRegion, UInitializedArrayRegionValue<USizeSort, Sort>> {
     override val size: Int get() = data.size
     override fun isEmpty(): Boolean = data.isEmpty()
@@ -157,7 +158,7 @@ private class UInitializedArrayRegionEntries<USizeSort : USort, Sort : USort>(
 
     private data class Entry<USizeSort : USort, Sort : USort>(
         override val key: USizeRegion,
-        override val value: UInitializedArrayRegionValue<USizeSort, Sort>
+        override val value: UInitializedArrayRegionValue<USizeSort, Sort>,
     ) : Map.Entry<USizeRegion, UInitializedArrayRegionValue<USizeSort, Sort>>
 
     override val entries: ImmutableSet<Map.Entry<USizeRegion, UInitializedArrayRegionValue<USizeSort, Sort>>> by lazy {
@@ -187,7 +188,7 @@ private class UInitializedArrayRegionEntries<USizeSort : USort, Sort : USort>(
 
     override fun remove(
         key: USizeRegion,
-        value: UInitializedArrayRegionValue<USizeSort, Sort>
+        value: UInitializedArrayRegionValue<USizeSort, Sort>,
     ): PersistentMap<USizeRegion, UInitializedArrayRegionValue<USizeSort, Sort>> =
         persistentMap.remove(key, value)
 
@@ -195,13 +196,13 @@ private class UInitializedArrayRegionEntries<USizeSort : USort, Sort : USort>(
         persistentMap.remove(key)
 
     override fun putAll(
-        m: Map<out USizeRegion, UInitializedArrayRegionValue<USizeSort, Sort>>
+        m: Map<out USizeRegion, UInitializedArrayRegionValue<USizeSort, Sort>>,
     ): PersistentMap<USizeRegion, UInitializedArrayRegionValue<USizeSort, Sort>> =
         persistentMap.putAll(m)
 
     override fun put(
         key: USizeRegion,
-        value: UInitializedArrayRegionValue<USizeSort, Sort>
+        value: UInitializedArrayRegionValue<USizeSort, Sort>,
     ): PersistentMap<USizeRegion, UInitializedArrayRegionValue<USizeSort, Sort>> =
         persistentMap.put(key, value)
 }
@@ -215,9 +216,10 @@ class UInputArrayId<ArrayType, Sort : USort, USizeSort : USort> internal constru
 ) : USymbolicArrayId<ArrayType, USymbolicArrayIndex<USizeSort>, Sort, UInputArrayId<ArrayType, Sort, USizeSort>> {
 
     override fun instantiate(
-        collection: USymbolicCollection<UInputArrayId<ArrayType, Sort, USizeSort>, USymbolicArrayIndex<USizeSort>, Sort>,
+        collection:
+        USymbolicCollection<UInputArrayId<ArrayType, Sort, USizeSort>, USymbolicArrayIndex<USizeSort>, Sort>,
         key: USymbolicArrayIndex<USizeSort>,
-        composer: UComposer<*, *>?
+        composer: UComposer<*, *>?,
     ): UExpr<Sort> {
         if (composer == null) {
             return sort.uctx.withSizeSort<USizeSort>().mkInputArrayReading(collection, key.first, key.second)
@@ -232,7 +234,7 @@ class UInputArrayId<ArrayType, Sort : USort, USizeSort : USort> internal constru
         memory: UWritableMemory<Type>,
         key: USymbolicArrayIndex<USizeSort>,
         value: UExpr<Sort>,
-        guard: UBoolExpr
+        guard: UBoolExpr,
     ) {
         memory.write(mkLValue(key), value, guard)
     }
@@ -265,4 +267,46 @@ class UInputArrayId<ArrayType, Sort : USort, USizeSort : USort> internal constru
     }
 
     override fun hashCode(): Int = hash(arrayType, sort)
+}
+
+class UNonAliasingArrayId<ArrayType, Sort : USort, USizeSort : USort> internal constructor(
+    override val arrayType: ArrayType,
+    override val sort: Sort,
+    val id: UNonAliasingHeapAddress,
+) : USymbolicArrayId<ArrayType, UExpr<USizeSort>, Sort, UNonAliasingArrayId<ArrayType, Sort, USizeSort>> {
+    val defaultValue: UExpr<Sort> by lazy { sort.sampleUValue() }
+    override fun instantiate(
+        collection: USymbolicCollection<UNonAliasingArrayId<ArrayType, Sort, USizeSort>, UExpr<USizeSort>, Sort>,
+        key: UExpr<USizeSort>,
+        composer: UComposer<*, *>?,
+    ): UExpr<Sort> {
+        if (composer == null) {
+            val heapRef = key.uctx.nonAliasingHeapRefs[id] ?: key.uctx.mkNonAliasingHeapRef(id)
+            return key.uctx.withSizeSort<USizeSort>().mkNonAliasingArrayReading(collection, heapRef, key)
+        }
+        val memory = composer.memory.toWritableMemory(composer.ownership)
+        collection.applyTo(memory, key, composer)
+        return memory.read(mkLValue(key))
+    }
+
+    private fun mkLValue(key: UExpr<USizeSort>) =
+        UArrayIndexLValue(sort, key.uctx.mkNonAliasingHeapRef(id), key, arrayType)
+
+    override fun <Type> write(
+        memory: UWritableMemory<Type>,
+        key: UExpr<USizeSort>,
+        value: UExpr<Sort>,
+        guard: UBoolExpr,
+    ) {
+        memory.write(mkLValue(key), value, guard)
+    }
+
+    override fun keyInfo(): USizeExprKeyInfo<USizeSort> = USizeExprKeyInfo()
+    override fun emptyRegion(): USymbolicCollection<UNonAliasingArrayId<ArrayType, Sort, USizeSort>, UExpr<USizeSort>, Sort> {
+        val updates = UTreeUpdates<UExpr<USizeSort>, USizeRegion, Sort> (
+            updates = emptyRegionTree(),
+            keyInfo()
+        )
+        return USymbolicCollection(this, updates)
+    }
 }

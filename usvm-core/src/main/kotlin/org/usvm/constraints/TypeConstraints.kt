@@ -59,7 +59,8 @@ class UTypeConstraints<Type>(
     private val typeSystem: UTypeSystem<Type>,
     private val equalityConstraints: UEqualityConstraints,
     private var concreteRefToType: UPersistentHashMap<UConcreteHeapAddress, Type> = persistentHashMapOf(),
-    private var symbolicRefToTypeRegion: UPersistentHashMap<USymbolicHeapRef, UTypeRegion<Type>> = persistentHashMapOf(),
+    private var symbolicRefToTypeRegion: UPersistentHashMap<USymbolicHeapRef, UTypeRegion<Type>> =
+        persistentHashMapOf(),
 ) : UTypeEvaluator<Type>, UOwnedMergeable<UTypeConstraints<Type>, MutableMergeGuard> {
     private val ctx: UContext<*> get() = equalityConstraints.ctx
 
@@ -415,6 +416,19 @@ class UTypeConstraints<Type>(
                     concreteRef.ctx.falseExpr
                 }
             },
+            nonAliasingMapper = mapper@{ nonAliasingRef ->
+                val sym = nonAliasingRef.symbol ?: throw IllegalStateException("symbol in NA is null")
+                if (sym == sym.uctx.nullRef) {
+                    return@mapper sym.ctx.trueExpr
+                }
+                val typeRegion = getTypeRegion(sym)
+
+                if (typeRegion.addSupertype(supertype).isEmpty) {
+                    sym.uctx.mkEq(sym, sym.uctx.nullRef)
+                } else {
+                    sym.uctx.mkIsSubtypeExpr(sym, supertype)
+                }
+            },
             symbolicMapper = mapper@{ symbolicRef ->
                 if (symbolicRef == symbolicRef.uctx.nullRef) {
                     // accordingly to the [UIsSubtypeExpr] specification, [nullRef] always satisfies the [type]
@@ -441,6 +455,19 @@ class UTypeConstraints<Type>(
                     concreteRef.ctx.falseExpr
                 }
             },
+            nonAliasingMapper = mapper@{ nonAliasingRef ->
+                val sym = nonAliasingRef.symbol ?: throw IllegalStateException("symbol in NA is null")
+                if (sym == sym.uctx.nullRef) {
+                    return@mapper sym.ctx.falseExpr
+                }
+                val typeRegion = getTypeRegion(sym)
+
+                if (typeRegion.addSubtype(subtype).isEmpty) {
+                    sym.ctx.falseExpr
+                } else {
+                    sym.uctx.mkIsSupertypeExpr(sym, subtype)
+                }
+            },
             symbolicMapper = mapper@{ symbolicRef ->
                 if (symbolicRef == symbolicRef.uctx.nullRef) {
                     // accordingly to the [UIsSupertypeExpr] specification, on [nullRef] return false
@@ -463,7 +490,7 @@ class UTypeConstraints<Type>(
     fun clone(
         equalityConstraints: UEqualityConstraints,
         thisOwnership: MutabilityOwnership,
-        cloneOwnership: MutabilityOwnership
+        cloneOwnership: MutabilityOwnership,
     ) = UTypeConstraints(
         cloneOwnership,
         typeSystem,
@@ -485,7 +512,7 @@ class UTypeConstraints<Type>(
         by: MutableMergeGuard,
         thisOwnership: MutabilityOwnership,
         otherOwnership: MutabilityOwnership,
-        mergedOwnership: MutabilityOwnership
+        mergedOwnership: MutabilityOwnership,
     ): UTypeConstraints<Type>? {
         // TODO: should we check equality constraints?
         if (symbolicRefToTypeRegion != other.symbolicRefToTypeRegion) {
@@ -494,7 +521,13 @@ class UTypeConstraints<Type>(
         val mergedConcreteRefs = concreteRefToType.putAll(other.concreteRefToType, mergedOwnership)
         this.ownership = thisOwnership
         other.ownership = otherOwnership
-        return UTypeConstraints(mergedOwnership, typeSystem, equalityConstraints, mergedConcreteRefs, symbolicRefToTypeRegion)
+        return UTypeConstraints(
+            mergedOwnership,
+            typeSystem,
+            equalityConstraints,
+            mergedConcreteRefs,
+            symbolicRefToTypeRegion
+        )
     }
 
     @Suppress("UNUSED_PARAMETER")

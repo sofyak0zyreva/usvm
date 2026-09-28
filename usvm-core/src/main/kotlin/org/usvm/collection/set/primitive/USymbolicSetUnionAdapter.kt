@@ -24,7 +24,9 @@ import org.usvm.uctx
 import java.lang.ref.WeakReference
 
 sealed class USymbolicSetUnionAdapter<
-    SetType, SrcKey, DstKey,
+    SetType,
+    SrcKey,
+    DstKey,
     out SetId : USymbolicSetId<SetType, *, SrcKey, *, *, SetId>,
     >(
     val setOfKeys: USymbolicCollection<SetId, SrcKey, UBoolSort>,
@@ -70,10 +72,10 @@ sealed class USymbolicSetUnionAdapter<
     private data class IncludesSymbolicallyCache<Key>(
         val key: WeakReference<Key>,
         val composer: WeakReference<UComposer<*, *>>?,
-        val result: UBoolExpr
+        val result: UBoolExpr,
     ) {
         constructor(key: Key, composer: UComposer<*, *>?, result: UBoolExpr) :
-                this(WeakReference(key), composer?.let { WeakReference(it) }, result)
+            this(WeakReference(key), composer?.let { WeakReference(it) }, result)
 
         fun containsCachedValue(key: Key, composer: UComposer<*, *>?): Boolean {
             if (!this.key.equalTo(key)) return false
@@ -95,13 +97,19 @@ sealed class USymbolicSetUnionAdapter<
 
 class UAllocatedToAllocatedSymbolicSetUnionAdapter<SetType, ElemSort : USort>(
     setOfKeys: USymbolicCollection<UAllocatedSetId<SetType, ElemSort, *>, UExpr<ElemSort>, UBoolSort>,
-) : USymbolicSetUnionAdapter<SetType, UExpr<ElemSort>, UExpr<ElemSort>,
-    UAllocatedSetId<SetType, ElemSort, *>>(setOfKeys) {
+) : USymbolicSetUnionAdapter<
+    SetType,
+    UExpr<ElemSort>,
+    UExpr<ElemSort>,
+    UAllocatedSetId<SetType, ElemSort, *>
+    >(setOfKeys) {
     override fun convert(key: UExpr<ElemSort>, composer: UComposer<*, *>?): UExpr<ElemSort> = key
 
     @Suppress("UNCHECKED_CAST")
     override fun <DstReg : Region<DstReg>> region(): DstReg =
         setOfKeys.collectionId.region(setOfKeys, setOfKeys.collectionId.keyInfo()) as DstReg
+
+
 
     override fun collectSetElements(elements: USymbolicSetElementsCollector.Elements<UExpr<ElemSort>>) {
         val setElements = USymbolicSetElementsCollector.collect(setOfKeys.updates)
@@ -110,7 +118,6 @@ class UAllocatedToAllocatedSymbolicSetUnionAdapter<SetType, ElemSort : USort>(
         }
         elements.elements += setElements.elements
     }
-
     override fun <Type> applyTo(
         memory: UWritableMemory<Type>,
         srcCollectionId: USymbolicCollectionId<UExpr<ElemSort>, *, *>,
@@ -135,11 +142,61 @@ class UAllocatedToAllocatedSymbolicSetUnionAdapter<SetType, ElemSort : USort>(
     }
 }
 
+class UAllocatedToNonAliasingSymbolicSetUnionAdapter<SetType, ElemSort : USort>(
+    private val dstSetRef: UHeapRef,
+    setOfKeys: USymbolicCollection<UAllocatedSetId<SetType, ElemSort, *>, UExpr<ElemSort>, UBoolSort>,
+) : USymbolicSetUnionAdapter<
+    SetType,
+    UExpr<ElemSort>,
+    UExpr<ElemSort>,
+    UAllocatedSetId<SetType, ElemSort, *>
+    >(setOfKeys) {
+    override fun convert(key: UExpr<ElemSort>, composer: UComposer<*, *>?): UExpr<ElemSort> = key
+    override fun collectSetElements(elements: USymbolicSetElementsCollector.Elements<UExpr<ElemSort>>) {
+        val setElements = USymbolicSetElementsCollector.collect(setOfKeys.updates)
+        if (setElements.isInput) {
+            elements.isInput = true
+        }
+        elements.elements += setElements.elements
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    override fun <DstReg : Region<DstReg>> region(): DstReg =
+        setOfKeys.collectionId.region(setOfKeys, setOfKeys.collectionId.keyInfo()) as DstReg
+
+    override fun <Type> applyTo(
+        memory: UWritableMemory<Type>,
+        srcCollectionId: USymbolicCollectionId<UExpr<ElemSort>, *, *>,
+        dstCollectionId: USymbolicCollectionId<UExpr<ElemSort>, *, *>,
+        guard: UBoolExpr,
+        srcKey: UExpr<ElemSort>,
+        composer: UComposer<*, *>,
+    ) {
+        check(srcCollectionId is UAllocatedSetId<*, ElemSort, *>) { "Unexpected collection: $srcCollectionId" }
+        check(dstCollectionId is UNonAliasingSetId<*, ElemSort, *>) { "Unexpected collection: $dstCollectionId" }
+
+        with(guard.uctx) {
+            memory.setUnion(
+                mkConcreteHeapRef(srcCollectionId.setAddress),
+                composer.compose(dstSetRef),
+                srcCollectionId.setType,
+                srcCollectionId.elementSort,
+                srcCollectionId.keyInfo(),
+                guard
+            )
+        }
+    }
+}
+
 class UAllocatedToInputSymbolicSetUnionAdapter<SetType, ElemSort : USort>(
     val dstSetRef: UHeapRef,
     setOfKeys: USymbolicCollection<UAllocatedSetId<SetType, ElemSort, *>, UExpr<ElemSort>, UBoolSort>,
-) : USymbolicSetUnionAdapter<SetType, UExpr<ElemSort>, USymbolicSetElement<ElemSort>,
-    UAllocatedSetId<SetType, ElemSort, *>>(setOfKeys) {
+) : USymbolicSetUnionAdapter<
+    SetType,
+    UExpr<ElemSort>,
+    USymbolicSetElement<ElemSort>,
+    UAllocatedSetId<SetType, ElemSort, *>
+    >(setOfKeys) {
 
     override fun convert(key: USymbolicSetElement<ElemSort>, composer: UComposer<*, *>?): UExpr<ElemSort> = key.second
 
@@ -189,11 +246,109 @@ class UAllocatedToInputSymbolicSetUnionAdapter<SetType, ElemSort : USort>(
     }
 }
 
+class UNonAliasingToAllocatedSymbolicSetUnionAdapter<SetType, ElemSort : USort>(
+    private val srcSetRef: UHeapRef,
+    setOfKeys: USymbolicCollection<UNonAliasingSetId<SetType, ElemSort, *>, UExpr<ElemSort>, UBoolSort>,
+) : USymbolicSetUnionAdapter<
+    SetType,
+    UExpr<ElemSort>,
+    UExpr<ElemSort>,
+    UNonAliasingSetId<SetType, ElemSort, *>
+    >(setOfKeys) {
+    override fun convert(key: UExpr<ElemSort>, composer: UComposer<*, *>?): UExpr<ElemSort> = key
+
+    override fun collectSetElements(elements: USymbolicSetElementsCollector.Elements<UExpr<ElemSort>>) {
+        val setElements = USymbolicSetElementsCollector.collect(setOfKeys.updates)
+        if (setElements.isInput) {
+            elements.isInput = true
+        }
+        elements.elements += setElements.elements
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    override fun <DstReg : Region<DstReg>> region(): DstReg =
+        setOfKeys.collectionId.region(setOfKeys, setOfKeys.collectionId.keyInfo()) as DstReg
+
+    override fun <Type> applyTo(
+        memory: UWritableMemory<Type>,
+        srcCollectionId: USymbolicCollectionId<UExpr<ElemSort>, *, *>,
+        dstCollectionId: USymbolicCollectionId<UExpr<ElemSort>, *, *>,
+        guard: UBoolExpr,
+        srcKey: UExpr<ElemSort>,
+        composer: UComposer<*, *>,
+    ) {
+        check(srcCollectionId is UNonAliasingSetId<*, ElemSort, *>) { "Unexpected collection: $srcCollectionId" }
+        check(dstCollectionId is UAllocatedSetId<*, ElemSort, *>) { "Unexpected collection: $dstCollectionId" }
+
+        with(guard.uctx) {
+            memory.setUnion(
+                composer.compose(srcSetRef),
+                mkConcreteHeapRef(dstCollectionId.setAddress),
+                srcCollectionId.setType,
+                srcCollectionId.elementSort,
+                srcCollectionId.keyInfo(),
+                guard
+            )
+        }
+    }
+}
+
+class UNonAliasingToNonAliasingSymbolicSetUnionAdapter<SetType, ElemSort : USort>(
+    private val srcSetRef: UHeapRef,
+    private val dstSetRef: UHeapRef,
+    setOfKeys: USymbolicCollection<UNonAliasingSetId<SetType, ElemSort, *>, UExpr<ElemSort>, UBoolSort>,
+) : USymbolicSetUnionAdapter<
+    SetType,
+    UExpr<ElemSort>,
+    UExpr<ElemSort>,
+    UNonAliasingSetId<SetType, ElemSort, *>
+    >(setOfKeys) {
+    override fun convert(key: UExpr<ElemSort>, composer: UComposer<*, *>?): UExpr<ElemSort> = key
+    override fun collectSetElements(elements: USymbolicSetElementsCollector.Elements<UExpr<ElemSort>>) {
+        val setElements = USymbolicSetElementsCollector.collect(setOfKeys.updates)
+        if (setElements.isInput) {
+            elements.isInput = true
+        }
+        elements.elements += setElements.elements
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    override fun <DstReg : Region<DstReg>> region(): DstReg =
+        setOfKeys.collectionId.region(setOfKeys, setOfKeys.collectionId.keyInfo()) as DstReg
+
+    override fun <Type> applyTo(
+        memory: UWritableMemory<Type>,
+        srcCollectionId: USymbolicCollectionId<UExpr<ElemSort>, *, *>,
+        dstCollectionId: USymbolicCollectionId<UExpr<ElemSort>, *, *>,
+        guard: UBoolExpr,
+        srcKey: UExpr<ElemSort>,
+        composer: UComposer<*, *>,
+    ) {
+        check(srcCollectionId is UNonAliasingSetId<*, ElemSort, *>) { "Unexpected collection: $srcCollectionId" }
+        check(dstCollectionId is UNonAliasingSetId<*, ElemSort, *>) { "Unexpected collection: $dstCollectionId" }
+
+        with(guard.uctx) {
+            memory.setUnion(
+                composer.compose(srcSetRef),
+                composer.compose(dstSetRef),
+                srcCollectionId.setType,
+                srcCollectionId.elementSort,
+                srcCollectionId.keyInfo(),
+                guard
+            )
+        }
+    }
+}
+
 class UInputToAllocatedSymbolicSetUnionAdapter<SetType, ElemSort : USort>(
     val srcSetRef: UHeapRef,
     setOfKeys: USymbolicCollection<UInputSetId<SetType, ElemSort, *>, USymbolicSetElement<ElemSort>, UBoolSort>,
-) : USymbolicSetUnionAdapter<SetType, USymbolicSetElement<ElemSort>, UExpr<ElemSort>,
-    UInputSetId<SetType, ElemSort, *>>(setOfKeys) {
+) : USymbolicSetUnionAdapter<
+    SetType,
+    USymbolicSetElement<ElemSort>,
+    UExpr<ElemSort>,
+    UInputSetId<SetType, ElemSort, *>
+    >(setOfKeys) {
 
     override fun convert(key: UExpr<ElemSort>, composer: UComposer<*, *>?): USymbolicSetElement<ElemSort> =
         composer.compose(srcSetRef) to key
@@ -243,12 +398,130 @@ class UInputToAllocatedSymbolicSetUnionAdapter<SetType, ElemSort : USort>(
     }
 }
 
+class UNonAliasingToInputSymbolicSetUnionAdapter<SetType, ElemSort : USort>(
+    private val srcSetRef: UHeapRef,
+    private val dstSetRef: UHeapRef,
+    setOfKeys: USymbolicCollection<UNonAliasingSetId<SetType, ElemSort, *>, UExpr<ElemSort>, UBoolSort>,
+) : USymbolicSetUnionAdapter<
+    SetType,
+    UExpr<ElemSort>,
+    USymbolicSetElement<ElemSort>,
+    UNonAliasingSetId<SetType, ElemSort, *>
+    >(setOfKeys) {
+
+    override fun convert(key: USymbolicSetElement<ElemSort>, composer: UComposer<*, *>?): UExpr<ElemSort> = key.second
+
+    override fun <DstReg : Region<DstReg>> region(): DstReg = convertRegion(setOfKeys.collectionId.keyInfo())
+
+    @Suppress("UNCHECKED_CAST")
+    private fun <ElReg : Region<ElReg>, ResReg : Region<ResReg>> convertRegion(
+        elementInfo: USymbolicCollectionKeyInfo<UExpr<ElemSort>, ElReg>,
+    ): ResReg {
+        val elementRegion = setOfKeys.collectionId.region(
+            setOfKeys,
+            elementInfo
+        )
+        val refRegion = UHeapRefKeyInfo.keyToRegion(dstSetRef)
+        return USymbolicSetKeyInfo.addSetRefRegion(elementRegion, refRegion) as ResReg
+    }
+
+    override fun collectSetElements(elements: USymbolicSetElementsCollector.Elements<USymbolicSetElement<ElemSort>>) {
+        val setElements = USymbolicSetElementsCollector.collect(setOfKeys.updates)
+        if (setElements.isInput) {
+            elements.isInput = true
+        }
+        setElements.elements.mapTo(elements.elements) { dstSetRef to it }
+    }
+
+    override fun <Type> applyTo(
+        memory: UWritableMemory<Type>,
+        srcCollectionId: USymbolicCollectionId<UExpr<ElemSort>, *, *>,
+        dstCollectionId: USymbolicCollectionId<USymbolicSetElement<ElemSort>, *, *>,
+        guard: UBoolExpr,
+        srcKey: UExpr<ElemSort>,
+        composer: UComposer<*, *>,
+    ) {
+        check(srcCollectionId is UNonAliasingSetId<*, ElemSort, *>) { "Unexpected collection: $srcCollectionId" }
+        check(dstCollectionId is USymbolicSetId<*, *, *, *, *, *>) { "Unexpected collection: $dstCollectionId" }
+
+        memory.setUnion(
+            composer.compose(srcSetRef),
+            composer.compose(dstSetRef),
+            srcCollectionId.setType,
+            srcCollectionId.elementSort,
+            srcCollectionId.keyInfo(),
+            guard
+        )
+    }
+}
+
+class UInputToNonAliasingSymbolicSetUnionAdapter<SetType, ElemSort : USort>(
+    private val srcSetRef: UHeapRef,
+    private val dstSetRef: UHeapRef,
+    setOfKeys: USymbolicCollection<UInputSetId<SetType, ElemSort, *>, USymbolicSetElement<ElemSort>, UBoolSort>,
+) : USymbolicSetUnionAdapter<
+    SetType,
+    USymbolicSetElement<ElemSort>,
+    UExpr<ElemSort>,
+    UInputSetId<SetType, ElemSort, *>
+    >(setOfKeys) {
+
+    override fun convert(key: UExpr<ElemSort>, composer: UComposer<*, *>?): USymbolicSetElement<ElemSort> =
+        composer.compose(srcSetRef) to key
+
+    override fun <DstReg : Region<DstReg>> region(): DstReg =
+        convertRegion(setOfKeys.collectionId.elementInfo)
+
+    @Suppress("UNCHECKED_CAST")
+    private fun <ElReg : Region<ElReg>, ResReg : Region<ResReg>> convertRegion(
+        elementInfo: USymbolicCollectionKeyInfo<UExpr<ElemSort>, ElReg>,
+    ): ResReg {
+        val srcKeyInfo = USymbolicSetKeyInfo(elementInfo)
+        val srcKeysRegion = setOfKeys.collectionId.region(
+            setOfKeys,
+            srcKeyInfo
+        )
+        return USymbolicSetKeyInfo.removeSetRefRegion(srcKeysRegion, elementInfo) as ResReg
+    }
+
+    override fun collectSetElements(elements: USymbolicSetElementsCollector.Elements<UExpr<ElemSort>>) {
+        val setElements = USymbolicSetElementsCollector.collect(setOfKeys.updates)
+        elements.isInput = true
+        setElements.elements.mapTo(elements.elements) { it.second }
+    }
+
+    override fun <Type> applyTo(
+        memory: UWritableMemory<Type>,
+        srcCollectionId: USymbolicCollectionId<USymbolicSetElement<ElemSort>, *, *>,
+        dstCollectionId: USymbolicCollectionId<UExpr<ElemSort>, *, *>,
+        guard: UBoolExpr,
+        srcKey: USymbolicSetElement<ElemSort>,
+        composer: UComposer<*, *>,
+    ) {
+        check(srcCollectionId is USymbolicSetId<*, *, *, *, *, *>) { "Unexpected collection: $srcCollectionId" }
+        check(dstCollectionId is UNonAliasingSetId<*, ElemSort, *>) { "Unexpected collection: $dstCollectionId" }
+
+        memory.setUnion(
+            composer.compose(srcSetRef),
+            composer.compose(dstSetRef),
+            dstCollectionId.setType,
+            dstCollectionId.elementSort,
+            dstCollectionId.keyInfo(),
+            guard
+        )
+    }
+}
+
 class UInputToInputSymbolicSetUnionAdapter<SetType, ElemSort : USort>(
     val srcSetRef: UHeapRef,
     val dstSetRef: UHeapRef,
     setOfKeys: USymbolicCollection<UInputSetId<SetType, ElemSort, *>, USymbolicSetElement<ElemSort>, UBoolSort>,
-) : USymbolicSetUnionAdapter<SetType, USymbolicSetElement<ElemSort>, USymbolicSetElement<ElemSort>,
-    UInputSetId<SetType, ElemSort, *>>(setOfKeys) {
+) : USymbolicSetUnionAdapter<
+    SetType,
+    USymbolicSetElement<ElemSort>,
+    USymbolicSetElement<ElemSort>,
+    UInputSetId<SetType, ElemSort, *>
+    >(setOfKeys) {
 
     override fun convert(key: USymbolicSetElement<ElemSort>, composer: UComposer<*, *>?): USymbolicSetElement<ElemSort> =
         composer.compose(srcSetRef) to key.second

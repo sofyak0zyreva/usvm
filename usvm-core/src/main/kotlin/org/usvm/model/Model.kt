@@ -9,6 +9,7 @@ import org.usvm.UContext
 import org.usvm.UExpr
 import org.usvm.UHeapRef
 import org.usvm.UMockEvaluator
+import org.usvm.UNonAliasingHeapRef
 import org.usvm.USort
 import org.usvm.collections.immutable.internal.MutabilityOwnership
 import org.usvm.memory.ULValue
@@ -67,7 +68,7 @@ open class UModelBase<Type>(
 
     override fun <Key, Sort : USort> setRegion(
         regionId: UMemoryRegionId<Key, Sort>,
-        newRegion: UMemoryRegion<Key, Sort>
+        newRegion: UMemoryRegion<Key, Sort>,
     ) {
         error("Illegal operation for a model")
     }
@@ -93,4 +94,12 @@ fun modelEnsureConcreteInputRef(ref: UHeapRef): UConcreteHeapRef {
         "Unexpected ref: $ref"
     }
     return ref
+}
+
+fun modelEnsureRightInputRef(ref: UHeapRef) {
+    require(
+        ((ref is UConcreteHeapRef && (ref.address <= INITIAL_INPUT_ADDRESS || ref.address == NULL_ADDRESS))) || (ref is UNonAliasingHeapRef)
+    ) {
+        "Unexpected ref: $ref"
+    }
 }

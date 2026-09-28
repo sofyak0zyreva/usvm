@@ -9,14 +9,16 @@ import org.usvm.UCollectionReading
 import org.usvm.UContext
 import org.usvm.UExpr
 import org.usvm.UHeapRef
+import org.usvm.UNonAliasingHeapAddress
 import org.usvm.UNullRef
 import org.usvm.USort
 import org.usvm.UTransformer
 import org.usvm.asTypedTransformer
+import org.usvm.collection.array.makeNonAliasingIdForReading
 import org.usvm.collection.map.USymbolicMapKey
 import org.usvm.regions.Region
 
-class UAllocatedMapReading<MapType, KeySort : USort, Sort : USort, Reg: Region<Reg>> internal constructor(
+class UAllocatedMapReading<MapType, KeySort : USort, Sort : USort, Reg : Region<Reg>> internal constructor(
     ctx: UContext<*>,
     collection: UAllocatedMap<MapType, KeySort, Sort, Reg>,
     val key: UExpr<KeySort>,
@@ -44,11 +46,44 @@ class UAllocatedMapReading<MapType, KeySort : USort, Sort : USort, Reg: Region<R
     }
 }
 
-class UInputMapReading<MapType, KeySort : USort, Sort : USort, Reg: Region<Reg>> internal constructor(
+class UNonAliasingMapReading<MapType, KeySort : USort, Sort : USort, Reg : Region<Reg>> internal constructor(
+    ctx: UContext<*>,
+    collection: UNonAliasingMap<MapType, KeySort, Sort, Reg>,
+    val key: UExpr<KeySort>,
+) : UCollectionReading<UNonAliasingMapId<MapType, KeySort, Sort, Reg>, UExpr<KeySort>, Sort>(ctx, collection) {
+
+    override val id: UNonAliasingHeapAddress = makeNonAliasingIdForReading(
+        ctx,
+        Pair(collection.collectionId.id, Pair(key, "map"))
+    )
+
+    override fun accept(transformer: KTransformerBase): KExpr<Sort> {
+        require(transformer is UTransformer<*, *>) { "Expected a UTransformer, but got: $transformer" }
+        return transformer.asTypedTransformer<MapType, USort>().transform(this)
+    }
+
+    override fun internEquals(other: Any): Boolean =
+        structurallyEqual(
+            other,
+            { collection },
+            { key },
+        )
+
+    override fun internHashCode(): Int = hash(collection, key)
+
+    override fun print(printer: ExpressionPrinter) {
+        printer.append(collection.toString())
+        printer.append("[")
+        printer.append(key)
+        printer.append("]")
+    }
+}
+
+class UInputMapReading<MapType, KeySort : USort, Sort : USort, Reg : Region<Reg>> internal constructor(
     ctx: UContext<*>,
     collection: UInputMap<MapType, KeySort, Sort, Reg>,
     val address: UHeapRef,
-    val key: UExpr<KeySort>
+    val key: UExpr<KeySort>,
 ) : UCollectionReading<UInputMapId<MapType, KeySort, Sort, Reg>, USymbolicMapKey<KeySort>, Sort>(ctx, collection) {
     init {
         require(address !is UNullRef)

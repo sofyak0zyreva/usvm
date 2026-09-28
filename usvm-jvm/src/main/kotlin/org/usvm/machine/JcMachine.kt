@@ -66,7 +66,8 @@ class JcMachine(
         val methodsToTrackCoverage =
             when (options.coverageZone) {
                 CoverageZone.METHOD,
-                CoverageZone.TRANSITIVE -> methods.toSet()
+                CoverageZone.TRANSITIVE,
+                -> methods.toSet()
                 // TODO: more adequate method filtering. !it.isConstructor is used to exclude default constructor which is often not covered
                 CoverageZone.CLASS -> methods.flatMap { method ->
                     method.enclosingClass.methods.filter {

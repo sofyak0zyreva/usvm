@@ -28,7 +28,7 @@ data class USymbolicCollection<out CollectionId : USymbolicCollectionId<Key, Sor
     private fun read(
         key: Key,
         updates: USymbolicCollectionUpdates<Key, Sort>,
-        composer: UComposer<*, *>?
+        composer: UComposer<*, *>?,
     ): UExpr<Sort> {
         val lastUpdatedElement = updates.lastUpdatedElementOrNull()
 
@@ -51,7 +51,17 @@ data class USymbolicCollection<out CollectionId : USymbolicCollectionId<Key, Sor
     /**
      * Reads a [key] from this collection with on-the-fly composition, if the [composer] provided.
      */
+    private var readCache: HashMap<Key, UExpr<Sort>>? = null
+
     fun read(key: Key, composer: UComposer<*, *>?): UExpr<Sort> {
+        if (composer != null || sort.uctx.runInAliasingMode) {
+            return readUncached(key, composer)
+        }
+        val cache = readCache ?: HashMap<Key, UExpr<Sort>>().also { readCache = it }
+        return cache.getOrPut(key) { readUncached(key, null) }
+    }
+
+    private fun readUncached(key: Key, composer: UComposer<*, *>?): UExpr<Sort> {
         if (sort == sort.uctx.addressSort) {
             // Here we split concrete heap addresses from symbolic ones to optimize further memory operations.
             return splittingRead(key, composer) { it is UConcreteHeapRef }
@@ -74,7 +84,7 @@ data class USymbolicCollection<out CollectionId : USymbolicCollectionId<Key, Sor
     private fun splittingRead(
         key: Key,
         composer: UComposer<*, *>?,
-        predicate: (UExpr<Sort>) -> Boolean
+        predicate: (UExpr<Sort>) -> Boolean,
     ): UExpr<Sort> {
         val ctx = sort.ctx
         val guardBuilder = GuardBuilder(ctx.trueExpr)
@@ -131,6 +141,9 @@ data class USymbolicCollection<out CollectionId : USymbolicCollectionId<Key, Sor
                 initialGuard = guard,
                 ignoreNullRefs = false,
                 blockOnConcrete = { newUpdates, (valueRef, valueGuard) ->
+                    newUpdates.splitWrite(key, valueRef.asExpr(sort), valueGuard) { it is UConcreteHeapRef }
+                },
+                blockOnNonAliasing = { newUpdates, (valueRef, valueGuard) ->
                     newUpdates.splitWrite(key, valueRef.asExpr(sort), valueGuard) { it is UConcreteHeapRef }
                 },
                 blockOnSymbolic = { newUpdates, (valueRef, valueGuard) ->
@@ -209,7 +222,7 @@ data class USymbolicCollection<out CollectionId : USymbolicCollectionId<Key, Sor
     fun <OtherCollectionId : USymbolicCollectionId<SrcKey, Sort, OtherCollectionId>, SrcKey> copyRange(
         fromCollection: USymbolicCollection<OtherCollectionId, SrcKey, Sort>,
         adapter: USymbolicCollectionAdapter<SrcKey, Key>,
-        guard: UBoolExpr
+        guard: UBoolExpr,
     ): USymbolicCollection<CollectionId, Key, Sort> {
         val updatesCopy = updates.copyRange(fromCollection, adapter, guard)
         return this.copy(updates = updatesCopy)

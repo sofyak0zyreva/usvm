@@ -9,6 +9,7 @@ import org.usvm.UCollectionReading
 import org.usvm.UContext
 import org.usvm.UExpr
 import org.usvm.UHeapRef
+import org.usvm.UNonAliasingHeapAddress
 import org.usvm.UNullRef
 import org.usvm.USort
 import org.usvm.UTransformer
@@ -41,12 +42,54 @@ class UAllocatedArrayReading<ArrayType, Sort : USort, USizeSort : USort> interna
     }
 }
 
+fun makeNonAliasingIdForReading(ctx: UContext<*>, key: Pair<UNonAliasingHeapAddress, *>): UNonAliasingHeapAddress {
+    return ctx.nonAliasingReadingIds.getOrPut(key) { ctx.addressCounter.freshNAAddress() }
+}
+
+class UNonAliasingArrayReading<ArrayType, Sort : USort, USizeSort : USort> internal constructor(
+    ctx: UContext<USizeSort>,
+    collection: UNonAliasingArray<ArrayType, Sort, USizeSort>,
+    val address: UHeapRef,
+    val index: UExpr<USizeSort>,
+) : UCollectionReading<UNonAliasingArrayId<ArrayType, Sort, USizeSort>, UExpr<USizeSort>, Sort>(ctx, collection) {
+
+    override val id: UNonAliasingHeapAddress = makeNonAliasingIdForReading(
+        ctx,
+        Pair(collection.collectionId.id, Pair(index, collection.collectionId.arrayType))
+    )
+
+    override fun accept(transformer: KTransformerBase): KExpr<Sort> {
+        require(transformer is UTransformer<*, *>) { "Expected a UTransformer, but got: $transformer" }
+        return transformer.asTypedTransformer<ArrayType, USizeSort>().transform(this)
+    }
+
+    override fun internEquals(other: Any): Boolean =
+        structurallyEqual(
+            other,
+            { id },
+            { collection },
+            { index },
+        )
+
+    override fun internHashCode(): Int = hash(id, collection, index)
+
+    override fun print(printer: ExpressionPrinter) {
+        printer.append(collection.toString())
+        printer.append("[")
+        printer.append(index)
+        printer.append("]")
+    }
+}
+
 class UInputArrayReading<ArrayType, Sort : USort, USizeSort : USort> internal constructor(
     ctx: UContext<USizeSort>,
     collection: UInputArray<ArrayType, Sort, USizeSort>,
     val address: UHeapRef,
-    val index: UExpr<USizeSort>
-) : UCollectionReading<UInputArrayId<ArrayType, Sort, USizeSort>, USymbolicArrayIndex<USizeSort>, Sort>(ctx, collection) {
+    val index: UExpr<USizeSort>,
+) : UCollectionReading<UInputArrayId<ArrayType, Sort, USizeSort>, USymbolicArrayIndex<USizeSort>, Sort>(
+    ctx,
+    collection
+) {
     init {
         require(address !is UNullRef)
     }
