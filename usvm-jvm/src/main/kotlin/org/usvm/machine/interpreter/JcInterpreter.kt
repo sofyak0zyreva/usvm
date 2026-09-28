@@ -4,7 +4,6 @@ import io.ksmt.utils.asExpr
 import mu.KLogging
 import org.jacodb.api.jvm.JcClassType
 import org.jacodb.api.jvm.JcMethod
-import org.jacodb.api.jvm.JcPrimitiveType
 import org.jacodb.api.jvm.JcRefType
 import org.jacodb.api.jvm.JcType
 import org.jacodb.api.jvm.cfg.JcArgument
@@ -127,25 +126,6 @@ class JcInterpreter(
                     val argumentLValue = URegisterStackLValue(typeToSort(type), method.localIdx(idx))
                     val ref = state.memory.read(argumentLValue).asExpr(addressSort)
                     state.pathConstraints += mkIsSubtypeExpr(ref, type)
-
-                    if (!ctx.runInAliasingMode) {
-                        entrypointArguments.forEach { (prevType, prevRef) ->
-                            if (type == prevType && type !is JcPrimitiveType) {
-                                if (type.nullable == false) {
-                                    state.pathConstraints += mkEq(ref, nullRef).not()
-                                    state.pathConstraints += mkEq(prevRef, nullRef).not()
-                                    state.pathConstraints += mkEq(ref, prevRef).not()
-                                } else {
-                                    val isEitherNotNull = mkOr(
-                                        mkEq(ref, nullRef).not(),
-                                        mkEq(prevRef, nullRef).not()
-                                    )
-                                    val areNotEqual = mkEq(ref, prevRef).not()
-                                    state.pathConstraints += mkImplies(isEitherNotNull, areNotEqual)
-                                }
-                            }
-                        }
-                    }
                     entrypointArguments += type to ref
                 }
             }
