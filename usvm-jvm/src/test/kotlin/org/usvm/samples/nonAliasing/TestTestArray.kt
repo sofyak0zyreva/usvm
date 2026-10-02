@@ -113,4 +113,13 @@ class TestTestArray : JavaMethodTestRunner() {
             { _, a, obj, r -> a[obj.x][obj.y] != a[obj.i][obj.j] && r.getOrNull() == null }
         )
     }
+
+    @Test
+    fun testWritePropagation() {
+        checkDiscoveredPropertiesWithExceptions(
+            TestArray::testWritePropagation,
+            ignoreNumberOfAnalysisResults,
+            { _, a, m, n, r -> a[m] == a[n] && r.getOrNull() == null }
+        )
+    }
 }

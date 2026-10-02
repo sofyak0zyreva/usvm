@@ -131,8 +131,11 @@ public class TestField {
         Container a = f.fieldA;
         Container b = f.fieldB;
 
-        if (a == null && b == null) {
-            throw new IllegalArgumentException("if both are null then they are equal");
+        if (a == null) {
+            throw new NullPointerException();
+        }
+        if (b == null) {
+            throw new NullPointerException();
         }
 
         assert (a != b);

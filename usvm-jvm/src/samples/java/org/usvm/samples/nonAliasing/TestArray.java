@@ -122,4 +122,17 @@ public class TestArray {
             assert (a != b);
         }
     }
+
+    public static class A {
+        public int f;
+    }
+    public void  testWritePropagation(A[] a, int m, int n){
+        A x = a[m];
+        A y = a[n];
+        x.f = 17;
+        int z = y.f;
+        if (m == n && z != 17) {
+            throw new AssertionError();
+        }
+    }
 }
