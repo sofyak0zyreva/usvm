@@ -65,6 +65,8 @@ abstract class USetCollectionDecoder<ElementSort : USort> {
 abstract class UNonAliasingSetCollectionDecoder<ElementSort : USort> {
     abstract val inputFunction: KFuncDecl<KBoolSort>
 
+    protected open val ownerAddress: KExpr<UAddressSort>? get() = null
+
     private val appCollector by lazy {
         FunctionAppCollector(inputFunction.ctx, inputFunction)
     }
@@ -83,12 +85,14 @@ abstract class UNonAliasingSetCollectionDecoder<ElementSort : USort> {
         val usedSetKeys = hashSetOf<KFunctionApp<KBoolSort>>()
         assertions.flatMapTo(usedSetKeys) { appCollector.applyVisitor(it) }
 
+        val owner = ownerAddress?.let { model.eval(it, isComplete = true) }
         var entries = persistentHashMapOf<UExpr<ElementSort>, UBoolExpr>()
         for (key in usedSetKeys) {
             val keyInSet = model.eval(key, isComplete = false)
             if (!keyInSet.isTrue) continue
+            if (owner != null && model.eval(key.args[0], isComplete = true) != owner) continue
 
-            val rawElement = key.args[0]
+            val rawElement = key.args[if (owner == null) 0 else 1]
             val element: UExpr<ElementSort> = rawElement.uncheckedCast()
             val elementModel = model.eval(element, isComplete = true).mapAddress(mapping)
 

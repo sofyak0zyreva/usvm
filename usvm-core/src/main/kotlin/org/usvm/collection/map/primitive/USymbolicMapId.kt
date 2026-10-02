@@ -174,6 +174,20 @@ class UNonAliasingMapId<MapType, KeySort : USort, ValueSort : USort, Reg : Regio
         collection.applyTo(memory, key, composer)
         return memory.read(mkLValue(key))
     }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as UNonAliasingMapId<*, *, *, *>
+
+        return id == other.id && keySort == other.keySort && sort == other.sort &&
+            mapType == other.mapType && keyInfo == other.keyInfo
+    }
+
+    override fun hashCode(): Int = hash(id, keySort, sort, mapType)
+
+    override fun toString(): String = "nonAliasingMap<$mapType>#$id"
 }
 
 class UInputMapId<MapType, KeySort : USort, ValueSort : USort, Reg : Region<Reg>> internal constructor(

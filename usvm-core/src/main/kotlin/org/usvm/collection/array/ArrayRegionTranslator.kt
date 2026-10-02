@@ -118,9 +118,26 @@ private class UNonAliasingArrayRegionTranslator<ArrayType, Sort : USort, USizeSo
         return model.evalAndComplete(exprTranslator.translate(ref))
     }
 
-    private val initialValue = with(exprTranslator.ctx) {
-        mkArraySort(sizeSort, collectionId.sort).mkConst(collectionId.toString())
+    private val location: UNonAliasingHeapAddress = exprTranslator.ctx.nonAliasingLocationOf(collectionId.id)
+
+    private val translatedOwner: KExpr<UAddressSort>? =
+        exprTranslator.ctx.nonAliasingHeapRefs[collectionId.id]
+            ?.takeIf { location != collectionId.id }
+            ?.let { exprTranslator.translate(it) }
+
+    private val rootInitialValue = if (translatedOwner != null) {
+        null
+    } else {
+        with(exprTranslator.ctx) { mkArraySort(sizeSort, collectionId.sort).mkConst(collectionId.toString()) }
     }
+
+    private val initialValue: KExpr<KArraySort<USizeSort, Sort>> = rootInitialValue ?: with(exprTranslator.ctx) {
+        val rowSort = mkArraySort(sizeSort, collectionId.sort)
+        val locationArray = mkArraySort(addressSort, rowSort)
+            .mkConst("nonAliasingArray#$location<${collectionId.arrayType}>")
+        mkArraySelect(locationArray, checkNotNull(translatedOwner))
+    }
+
     private val visitorCache = IdentityHashMap<Any?, KExpr<KArraySort<USizeSort, Sort>>>()
     private val updatesTranslator = UAllocatedArrayUpdatesTranslator(exprTranslator, initialValue)
 
@@ -129,20 +146,27 @@ private class UNonAliasingArrayRegionTranslator<ArrayType, Sort : USort, USizeSo
         key: UExpr<USizeSort>,
     ): KExpr<Sort> {
         val translatedCollection = region.updates.accept(updatesTranslator, visitorCache)
+        val reading = updatesTranslator.visitSelect(translatedCollection, key)
 
         if (collectionId.sort == exprTranslator.ctx.addressSort) {
+            // triggered by the reading as it occurs in queries (a select over the updates, not over the base array)
             exprTranslator.addNonAliasingArrayElementAxiom(
-                collectionId.id,
+                if (translatedOwner == null) collectionId.id else location,
                 initialValue.uncheckedCast(),
                 exprTranslator.translate(key),
+                translatedOwner,
+                trigger = reading,
             )
         }
 
-        return updatesTranslator.visitSelect(translatedCollection, key)
+        return reading
     }
 
     override fun decodeCollection(model: UModelEvaluator<*>): UReadOnlyMemoryRegion<UExpr<USizeSort>, Sort> =
-        model.evalAndCompleteArray1DMemoryRegion(initialValue.decl)
+        rootInitialValue?.let { model.evalAndCompleteArray1DMemoryRegion(it.decl) }
+            ?: object : UReadOnlyMemoryRegion<UExpr<USizeSort>, Sort> {
+                override fun read(key: UExpr<USizeSort>): UExpr<Sort> = evalElement(model, key)
+            }
 }
 
 private class UInputArrayRegionTranslator<ArrayType, Sort : USort, USizeSort : USort>(

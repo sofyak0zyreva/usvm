@@ -12,6 +12,7 @@ import org.usvm.memory.USymbolicCollection
 import org.usvm.memory.USymbolicCollectionId
 import org.usvm.memory.UWritableMemory
 import org.usvm.memory.key.UHeapRefKeyInfo
+import org.usvm.memory.key.UNonAliasingHeapRefKeyInfo
 import org.usvm.uctx
 
 interface USymbolicFieldId<Field, Key, Sort : USort, out FieldId : USymbolicFieldId<Field, Key, Sort, FieldId>> :
@@ -95,7 +96,7 @@ class UNonAliasingFieldId<Field, Sort : USort> internal constructor(
 
     private fun mkLValue(key: UHeapRef) = UFieldLValue(sort, key, field)
 
-    override fun keyInfo() = UHeapRefKeyInfo
+    override fun keyInfo() = UNonAliasingHeapRefKeyInfo
 
     override fun emptyRegion(): USymbolicCollection<UNonAliasingFieldId<Field, Sort>, UHeapRef, Sort> =
         USymbolicCollection(this, UFlatUpdates(keyInfo()))
@@ -108,11 +109,12 @@ class UNonAliasingFieldId<Field, Sort : USort> internal constructor(
 
         if (field != other.field) return false
         if (sort != other.sort) return false
+        if (id != other.id) return false
 
         return true
     }
 
-    override fun hashCode(): Int = hash(field, sort)
+    override fun hashCode(): Int = hash(field, sort, id)
 
     override fun toString(): String = "nonAliasingField<$field>()"
 }

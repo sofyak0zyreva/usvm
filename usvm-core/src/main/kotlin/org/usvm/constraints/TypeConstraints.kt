@@ -12,9 +12,11 @@ import org.usvm.collections.immutable.implementations.immutableMap.UPersistentHa
 import org.usvm.collections.immutable.internal.MutabilityOwnership
 import org.usvm.collections.immutable.persistentHashMapOf
 import org.usvm.collections.immutable.toMutableMap
+import org.usvm.isFalse
 import org.usvm.isStatic
 import org.usvm.isStaticHeapRef
 import org.usvm.memory.mapWithStaticAsConcrete
+import org.usvm.memory.sameObjectPath
 import org.usvm.merging.MutableMergeGuard
 import org.usvm.merging.UOwnedMergeable
 import org.usvm.solver.UExprTranslator
@@ -354,6 +356,9 @@ class UTypeConstraints<Type>(
         }
     }
 
+    private fun haveDifferentPaths(ref: USymbolicHeapRef, other: USymbolicHeapRef): Boolean =
+        !ref.uctx.runInAliasingMode && sameObjectPath(ref, other).isFalse
+
     private inline fun updateRegionCannotBeEqualNull(
         ref: USymbolicHeapRef,
         regionMapper: (UTypeRegion<Type>) -> UTypeRegion<Type>,
@@ -373,7 +378,7 @@ class UTypeConstraints<Type>(
         }
         for ((key, value) in symbolicRefToTypeRegion) {
             // TODO: cache intersections?
-            if (key != ref && value.intersect(newRegion).isEmpty) {
+            if (key != ref && value.intersect(newRegion).isEmpty && !haveDifferentPaths(ref, key)) {
                 // If we have two inputs of incomparable reference types, then they are non equal
                 equalityConstraints.makeNonEqual(ref, key)
             }
@@ -395,7 +400,7 @@ class UTypeConstraints<Type>(
         }
         for ((key, value) in symbolicRefToTypeRegion) {
             // TODO: cache intersections?
-            if (key != ref && value.intersect(newRegion).isEmpty) {
+            if (key != ref && value.intersect(newRegion).isEmpty && !haveDifferentPaths(ref, key)) {
                 // If we have two inputs of incomparable reference types, then they are non equal or both null
                 equalityConstraints.makeNonEqualOrBothNull(ref, key)
             }

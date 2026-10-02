@@ -54,7 +54,13 @@ class UNonAliasingMapReading<MapType, KeySort : USort, Sort : USort, Reg : Regio
 
     override val id: UNonAliasingHeapAddress = makeNonAliasingIdForReading(
         ctx,
-        Pair(collection.collectionId.id, Pair(key, "map"))
+        Pair(collection.collectionId.id, Pair(key, "map")),
+        locationKey = Triple(
+            ctx.nonAliasingLocationOf(collection.collectionId.id),
+            collection.collectionId.mapType,
+            "map"
+        ),
+        collection = collection,
     )
 
     override fun accept(transformer: KTransformerBase): KExpr<Sort> {

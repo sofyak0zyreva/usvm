@@ -14,6 +14,7 @@ import org.usvm.UNullRef
 import org.usvm.USort
 import org.usvm.UTransformer
 import org.usvm.asTypedTransformer
+import org.usvm.memory.USymbolicCollection
 
 class UAllocatedArrayReading<ArrayType, Sort : USort, USizeSort : USort> internal constructor(
     ctx: UContext<USizeSort>,
@@ -42,9 +43,23 @@ class UAllocatedArrayReading<ArrayType, Sort : USort, USizeSort : USort> interna
     }
 }
 
-fun makeNonAliasingIdForReading(ctx: UContext<*>, key: Pair<UNonAliasingHeapAddress, *>): UNonAliasingHeapAddress {
-    return ctx.nonAliasingReadingIds.getOrPut(key) { ctx.addressCounter.freshNAAddress() }
+fun makeNonAliasingIdForReading(
+    ctx: UContext<*>,
+    key: Pair<UNonAliasingHeapAddress, *>,
+    locationKey: Any? = null,
+    collection: USymbolicCollection<*, *, *>? = null,
+): UNonAliasingHeapAddress {
+    val objectKey = if (collection == null || collection.updates.isEmpty()) key else Pair(key, collection)
+    val id = ctx.nonAliasingReadingIds.getOrPut(objectKey) { ctx.addressCounter.freshNAAddress() }
+    if (locationKey != null && id !in ctx.nonAliasingLocations) {
+        ctx.nonAliasingLocations[id] = ctx.nonAliasingReadingIds.getOrPut(NonAliasingLocationKey(locationKey)) {
+            ctx.addressCounter.freshNAAddress()
+        }
+    }
+    return id
 }
+
+private data class NonAliasingLocationKey(val key: Any?)
 
 class UNonAliasingArrayReading<ArrayType, Sort : USort, USizeSort : USort> internal constructor(
     ctx: UContext<USizeSort>,
@@ -55,7 +70,9 @@ class UNonAliasingArrayReading<ArrayType, Sort : USort, USizeSort : USort> inter
 
     override val id: UNonAliasingHeapAddress = makeNonAliasingIdForReading(
         ctx,
-        Pair(collection.collectionId.id, Pair(index, collection.collectionId.arrayType))
+        Pair(collection.collectionId.id, Pair(index, collection.collectionId.arrayType)),
+        locationKey = Pair(ctx.nonAliasingLocationOf(collection.collectionId.id), collection.collectionId.arrayType),
+        collection = collection,
     )
 
     override fun accept(transformer: KTransformerBase): KExpr<Sort> {

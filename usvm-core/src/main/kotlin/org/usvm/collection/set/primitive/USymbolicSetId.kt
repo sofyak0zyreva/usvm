@@ -196,6 +196,20 @@ class UNonAliasingSetId<SetType, ElementSort : USort, Reg : Region<Reg>>(
             regionCache.uncheckedCast()
         )
     }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as UNonAliasingSetId<*, *, *>
+
+        return id == other.id && elementSort == other.elementSort && setType == other.setType &&
+            elementInfo == other.elementInfo
+    }
+
+    override fun hashCode(): Int = hash(id, elementSort, setType)
+
+    override fun toString(): String = "nonAliasingSet<$setType>#$id"
 }
 
 class UInputSetId<SetType, ElementSort : USort, Reg : Region<Reg>>(

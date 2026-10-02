@@ -3,6 +3,7 @@ package org.usvm.collection.set
 import io.ksmt.decl.KFuncDecl
 import io.ksmt.expr.KExpr
 import io.ksmt.sort.KBoolSort
+import org.usvm.UAddressSort
 import org.usvm.UBoolSort
 import org.usvm.UExpr
 import org.usvm.USort
@@ -81,5 +82,16 @@ internal class UInputSetUpdatesTranslator<ElementSort : USort>(
 ) : USetUpdatesTranslator<USymbolicSetElement<ElementSort>>(exprTranslator, selectKey) {
     override fun visitInitialValue(): KExpr<KBoolSort> = with(initialFunction.ctx) {
         mkApp(initialFunction, listOf(selectKey.first, selectKey.second))
+    }
+}
+
+internal class UNonAliasingElementSetUpdatesTranslator<ElementSort : USort>(
+    exprTranslator: UExprTranslator<*, *>,
+    private val initialFunction: KFuncDecl<UBoolSort>,
+    private val owner: KExpr<UAddressSort>,
+    selectKey: UExpr<ElementSort>,
+) : USetUpdatesTranslator<UExpr<ElementSort>>(exprTranslator, selectKey) {
+    override fun visitInitialValue(): KExpr<KBoolSort> = with(initialFunction.ctx) {
+        mkApp(initialFunction, listOf(owner, selectKey))
     }
 }

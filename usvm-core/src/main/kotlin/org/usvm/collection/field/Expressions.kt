@@ -48,7 +48,12 @@ class UNonAliasingFieldReading<Field, Sort : USort> internal constructor(
 ) : UCollectionReading<UNonAliasingFieldId<Field, Sort>, UHeapRef, Sort>(ctx, collection) {
 
     override val id: UNonAliasingHeapAddress =
-        makeNonAliasingIdForReading(ctx, Pair(collection.collectionId.id, collection.collectionId.field))
+        makeNonAliasingIdForReading(
+            ctx,
+            Pair(collection.collectionId.id, Pair(collection.collectionId.field, address)),
+            locationKey = Pair(ctx.nonAliasingLocationOf(collection.collectionId.id), collection.collectionId.field),
+            collection = collection,
+        )
 
     init {
         require(address !is UNullRef)

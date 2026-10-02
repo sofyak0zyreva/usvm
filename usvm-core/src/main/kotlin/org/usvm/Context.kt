@@ -123,6 +123,9 @@ open class UContext<USizeSort : USort>(
 
     val nonAliasingHeapRefs: MutableMap<UNonAliasingHeapAddress, UNonAliasingHeapRef> = mutableMapOf()
     val nonAliasingReadingIds: MutableMap<Any, UNonAliasingHeapAddress> = mutableMapOf()
+    val nonAliasingLocations: MutableMap<UNonAliasingHeapAddress, UNonAliasingHeapAddress> = mutableMapOf()
+
+    fun nonAliasingLocationOf(id: UNonAliasingHeapAddress): UNonAliasingHeapAddress = nonAliasingLocations[id] ?: id
 
     fun castToNAHeapRef(naSymbol: USymbolicHeapRef): UNonAliasingHeapRef {
         if (naSymbol is URegisterReading<*> && nonAliasingHeapRefs[naSymbol.idx] == null) {
@@ -195,6 +198,10 @@ open class UContext<USizeSort : USort>(
             // it's safe to use mkOr here
             mkOr(conjuncts)
         }
+
+    fun mkNonAliasingKeyEq(lhs: UHeapRef, rhs: UHeapRef): UBoolExpr =
+        (if (runInAliasingMode || lhs is UNullRef || rhs is UNullRef) null else mkNonAliasingPathEq(lhs, rhs))
+            ?: mkHeapRefEq(lhs, rhs)
 
     private fun mkNonAliasingRefEq(lhs: UHeapRef, rhs: UHeapRef): UBoolExpr? {
         if (runInAliasingMode) return null

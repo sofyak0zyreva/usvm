@@ -63,7 +63,8 @@ open class USolverBase<Type>(
                 .filterNot(UBoolExpr::isFalse)
                 .toMutableList()
 
-            val assertions = pcAssertions + translator.nonAliasingAxioms
+            val assertions = pcAssertions + translator.nonAliasingAxiomsFor(pcAssertions + translatedSoftConstraints)
+
             smtSolver.assert(assertions)
 
             // DPLL(T)-like solve procedure

@@ -53,7 +53,13 @@ class UAllocatedRefMapWithNonAliasingKeysReading<MapType, Sort : USort> internal
 
     override val id: UNonAliasingHeapAddress = makeNonAliasingIdForReading(
         ctx,
-        Pair(collection.collectionId.mapAddress, collection.collectionId.keyAddress)
+        Pair(collection.collectionId.mapAddress, collection.collectionId.keyAddress),
+        locationKey = Triple(
+            ctx.nonAliasingLocationOf(collection.collectionId.mapAddress),
+            ctx.nonAliasingLocationOf(collection.collectionId.keyAddress),
+            "refMap",
+        ),
+        collection = collection,
     )
 
     override fun accept(transformer: KTransformerBase): KExpr<Sort> {
@@ -114,7 +120,13 @@ class UNonAliasingRefMapWithAllocatedKeysReading<MapType, Sort : USort> internal
 
     override val id: UNonAliasingHeapAddress = makeNonAliasingIdForReading(
         ctx,
-        Pair(collection.collectionId.mapAddress, collection.collectionId.keyAddress)
+        Pair(collection.collectionId.mapAddress, collection.collectionId.keyAddress),
+        locationKey = Triple(
+            ctx.nonAliasingLocationOf(collection.collectionId.mapAddress),
+            ctx.nonAliasingLocationOf(collection.collectionId.keyAddress),
+            "refMap",
+        ),
+        collection = collection,
     )
 
     override fun accept(transformer: KTransformerBase): KExpr<Sort> {
@@ -191,7 +203,13 @@ class UNonAliasingRefMapWithNonAliasingKeysReading<MapType, Sort : USort> intern
 
     override val id: UNonAliasingHeapAddress = makeNonAliasingIdForReading(
         ctx,
-        Pair(collection.collectionId.mapAddress, Pair(collection.collectionId.keyAddress, "map"))
+        Pair(collection.collectionId.mapAddress, Pair(collection.collectionId.keyAddress, "map")),
+        locationKey = Triple(
+            ctx.nonAliasingLocationOf(collection.collectionId.mapAddress),
+            ctx.nonAliasingLocationOf(collection.collectionId.keyAddress),
+            "refMap",
+        ),
+        collection = collection,
     )
 
     override fun accept(transformer: KTransformerBase): KExpr<Sort> {

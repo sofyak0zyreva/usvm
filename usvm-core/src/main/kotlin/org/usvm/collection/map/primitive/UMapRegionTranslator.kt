@@ -113,8 +113,25 @@ private class UNonAliasingMapTranslator<MapType, KeySort : USort, ValueSort : US
         return model.evalAndComplete(exprTranslator.translate(ref))
     }
 
-    private val initialValue = with(collectionId.sort.uctx) {
-        mkArraySort(collectionId.keySort, collectionId.sort).mkConst(collectionId.toString())
+    private val location: UNonAliasingHeapAddress = exprTranslator.ctx.nonAliasingLocationOf(id)
+
+    private val translatedOwner: KExpr<UAddressSort>? =
+        exprTranslator.ctx.nonAliasingHeapRefs[id]
+            ?.takeIf { location != id }
+            ?.let { exprTranslator.translate(it) }
+
+    private val rootInitialValue = if (translatedOwner != null) {
+        null
+    } else {
+        with(collectionId.sort.uctx) {
+            mkArraySort(collectionId.keySort, collectionId.sort).mkConst(collectionId.toString())
+        }
+    }
+
+    private val initialValue: KExpr<KArraySort<KeySort, ValueSort>> = rootInitialValue ?: with(collectionId.sort.uctx) {
+        val rowSort = mkArraySort(collectionId.keySort, collectionId.sort)
+        val locationArray = mkArraySort(addressSort, rowSort).mkConst("nonAliasingMap#$location<${collectionId.mapType}>")
+        mkArraySelect(locationArray, checkNotNull(translatedOwner))
     }
 
     private val visitorCache = IdentityHashMap<Any?, KExpr<KArraySort<KeySort, ValueSort>>>()
@@ -129,7 +146,11 @@ private class UNonAliasingMapTranslator<MapType, KeySort : USort, ValueSort : US
     }
 
     override fun decodeCollection(model: UModelEvaluator<*>): UReadOnlyMemoryRegion<UExpr<KeySort>, ValueSort> =
-        model.evalAndCompleteArray1DMemoryRegion(initialValue.decl)
+        rootInitialValue?.let { model.evalAndCompleteArray1DMemoryRegion(it.decl) }
+            ?: object : UReadOnlyMemoryRegion<UExpr<KeySort>, ValueSort> {
+                override fun read(key: UExpr<KeySort>): UExpr<ValueSort> =
+                    model.evalAndComplete(initialValue.ctx.mkArraySelect(initialValue, key))
+            }
 }
 
 private class UInputMapTranslator<MapType, KeySort : USort, ValueSort : USort, Reg : Region<Reg>>(

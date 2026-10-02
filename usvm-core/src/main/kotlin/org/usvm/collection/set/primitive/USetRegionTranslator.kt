@@ -10,6 +10,7 @@ import org.usvm.UNonAliasingHeapAddress
 import org.usvm.USort
 import org.usvm.collection.set.UAllocatedSetUpdatesTranslator
 import org.usvm.collection.set.UInputSetUpdatesTranslator
+import org.usvm.collection.set.UNonAliasingElementSetUpdatesTranslator
 import org.usvm.collection.set.UNonAliasingSetCollectionDecoder
 import org.usvm.collection.set.UNonAliasingSetUpdatesTranslator
 import org.usvm.collection.set.USetCollectionDecoder
@@ -110,17 +111,37 @@ private class UNonAliasingSetTranslator<SetType, ElementSort : USort, Reg : Regi
         val ref = exprTranslator.ctx.nonAliasingHeapRefs[id] ?: return null
         return model.evalAndComplete(exprTranslator.translate(ref))
     }
+    private val location: UNonAliasingHeapAddress = exprTranslator.ctx.nonAliasingLocationOf(id)
+
+    override val ownerAddress: KExpr<UAddressSort>? =
+        exprTranslator.ctx.nonAliasingHeapRefs[id]
+            ?.takeIf { location != id }
+            ?.let { exprTranslator.translate(it) }
+
     override fun translateReading(
         region: USymbolicCollection<UNonAliasingSetId<SetType, ElementSort, Reg>, UExpr<ElementSort>, UBoolSort>,
         key: UExpr<ElementSort>,
     ): KExpr<UBoolSort> {
-        val updatesTranslator = UNonAliasingSetUpdatesTranslator(exprTranslator, inputFunction, key)
+        val owner = ownerAddress
+        val updatesTranslator = if (owner == null) {
+            UNonAliasingSetUpdatesTranslator(exprTranslator, inputFunction, key)
+        } else {
+            UNonAliasingElementSetUpdatesTranslator(exprTranslator, inputFunction, owner, key)
+        }
         return region.updates.accept(updatesTranslator, IdentityHashMap())
     }
 
     override val inputFunction: KFuncDecl<KBoolSort> =
         with(collectionId.sort.uctx) {
-            mkFuncDecl(collectionId.toString(), boolSort, listOf(collectionId.elementSort))
+            if (ownerAddress == null) {
+                mkFuncDecl(collectionId.toString(), boolSort, listOf(collectionId.elementSort))
+            } else {
+                mkFuncDecl(
+                    "nonAliasingSet#$location<${collectionId.setType}>",
+                    boolSort,
+                    listOf(addressSort, collectionId.elementSort)
+                )
+            }
         }
 }
 

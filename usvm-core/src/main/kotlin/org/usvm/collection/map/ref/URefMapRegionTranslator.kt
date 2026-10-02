@@ -238,8 +238,12 @@ private class UNonAliasingRefMapWithNonAliasingKeysTranslator<MapType, ValueSort
     override val keyAddress: UNonAliasingHeapAddress = collectionId.keyAddress
 
     private var translatedCellKey: USymbolicMapKey<UAddressSort>? = null
+
     private val initialValue = with(collectionId.sort.uctx) {
-        mkArraySort(addressSort, addressSort, collectionId.sort).mkConst(collectionId.toString())
+        val mapLocation = nonAliasingLocationOf(collectionId.mapAddress)
+        val keyLocation = nonAliasingLocationOf(collectionId.keyAddress)
+        mkArraySort(addressSort, addressSort, collectionId.sort)
+            .mkConst("nonAliasingRefMap#$mapLocation#$keyLocation<${collectionId.mapType}>")
     }
 
     private val visitorCache = IdentityHashMap<Any?, KExpr<KArray2Sort<UAddressSort, UAddressSort, ValueSort>>>()

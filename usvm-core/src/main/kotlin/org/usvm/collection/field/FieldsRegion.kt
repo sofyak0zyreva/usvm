@@ -97,7 +97,9 @@ internal class UFieldsMemoryRegion<Field, Sort : USort>(
 
     override fun read(key: UFieldLValue<Field, Sort>): UExpr<Sort> = key.ref.mapWithStaticAsSymbolic(
         concreteMapper = { concreteRef -> allocatedFields[concreteRef.address] ?: sort.sampleUValue() },
-        nonAliasingMapper = { nonAliasingRef -> getNonAliasingFields(key, getId(nonAliasingRef)).read(nonAliasingRef) },
+        nonAliasingMapper = { nonAliasingRef ->
+            getNonAliasingFields(key, getLocationId(nonAliasingRef)).read(nonAliasingRef)
+        },
         symbolicMapper = { symbolicRef -> getInputFields(key).read(symbolicRef) }
     )
 
@@ -117,7 +119,7 @@ internal class UFieldsMemoryRegion<Field, Sort : USort>(
             region.updateAllocated(newRegion)
         },
         blockOnNonAliasing = { region, (nonAliasingRef, innerGuard) ->
-            val id = getId(nonAliasingRef)
+            val id = getLocationId(nonAliasingRef)
             val oldRegion = region.getNonAliasingFields(key, id)
             val newRegion = oldRegion.write(nonAliasingRef, value, innerGuard, ownership)
             val reg = region.updateNonAliasing(nonAliasingFields.put(id, newRegion, ownership))
@@ -136,6 +138,11 @@ internal class UFieldsMemoryRegion<Field, Sort : USort>(
             region.updateInput(newRegion)
         }
     )
+}
+
+private fun getLocationId(ref: UHeapRef): Int = when (ref) {
+    is UNonAliasingHeapRef -> ref.uctx.nonAliasingLocationOf(ref.id)
+    else -> getId(ref)
 }
 
 fun getId(ref: UHeapRef): Int {

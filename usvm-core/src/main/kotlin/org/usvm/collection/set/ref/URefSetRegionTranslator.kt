@@ -150,7 +150,13 @@ private class UNonAliasingRefSetWithNonAliasingElementsTranslator<SetType>(
     USetCollectionDecoder<UAddressSort>() {
 
     override val inputFunction = with(collectionId.sort.uctx) {
-        mkFuncDecl(collectionId.toString(), boolSort, listOf(addressSort, addressSort))
+        val setLocation = nonAliasingLocationOf(collectionId.setId)
+        val elementLocation = nonAliasingLocationOf(collectionId.elementId)
+        mkFuncDecl(
+            "nonAliasingRefSet#$setLocation#$elementLocation<${collectionId.setType}>",
+            boolSort,
+            listOf(addressSort, addressSort)
+        )
     }
 
     override fun translateReading(

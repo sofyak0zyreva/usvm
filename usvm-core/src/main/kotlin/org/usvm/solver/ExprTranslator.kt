@@ -1,6 +1,7 @@
 package org.usvm.solver
 
 import io.ksmt.decl.KDecl
+import io.ksmt.expr.KApp
 import io.ksmt.expr.KExpr
 import io.ksmt.sort.KArraySort
 import io.ksmt.sort.KBoolSort
@@ -69,8 +70,24 @@ open class UExprTranslator<Type, USizeSort : USort>(
 ) : UExprTransformer<Type, USizeSort>(ctx) {
     open fun <Sort : USort> translate(expr: UExpr<Sort>): KExpr<Sort> = apply(expr)
 
-    private val _nonAliasingAxioms = linkedSetOf<UBoolExpr>()
-    val nonAliasingAxioms: Set<UBoolExpr> get() = _nonAliasingAxioms
+    private val nonAliasingAxiomsByTerm = hashMapOf<KExpr<*>, MutableList<UBoolExpr>>()
+
+    fun nonAliasingAxiomsFor(assertions: Collection<KExpr<KBoolSort>>): List<UBoolExpr> {
+        if (nonAliasingAxiomsByTerm.isEmpty()) return emptyList()
+
+        val axioms = linkedSetOf<UBoolExpr>()
+        val visited = hashSetOf<KExpr<*>>()
+        val stack = ArrayDeque<KExpr<*>>(assertions)
+        while (stack.isNotEmpty()) {
+            val expr = stack.removeLast()
+            if (!visited.add(expr)) continue
+            nonAliasingAxiomsByTerm[expr]?.forEach { axiom ->
+                if (axioms.add(axiom)) stack.addLast(axiom)
+            }
+            if (expr is KApp<*, *>) stack.addAll(expr.args)
+        }
+        return axioms.toList()
+    }
 
     private val naOriginIndexDecl by lazy {
         ctx.mkFuncDecl("na_origin_index", ctx.sizeSort, listOf(ctx.addressSort))
@@ -80,16 +97,27 @@ open class UExprTranslator<Type, USizeSort : USort>(
         ctx.mkFuncDecl("na_origin_array", ctx.bv32Sort, listOf(ctx.addressSort))
     }
 
+    private val naOriginOwnerDecl by lazy {
+        ctx.mkFuncDecl("na_origin_owner", ctx.addressSort, listOf(ctx.addressSort))
+    }
+
     fun addNonAliasingArrayElementAxiom(
         arrayId: Int,
         baseArray: KExpr<KArraySort<USizeSort, UAddressSort>>,
         index: KExpr<USizeSort>,
+        owner: KExpr<UAddressSort>? = null,
+        trigger: KExpr<*>? = null,
     ) = with(ctx) {
         val elem = mkArraySelect(baseArray, index)
         val isNull = mkEqNoSimplify(elem, translate(nullRef))
         val sameIndex = mkEq(mkApp(naOriginIndexDecl, listOf(elem)), index)
         val sameArray = mkEq(mkApp(naOriginArrayDecl, listOf(elem)), mkBv(arrayId))
-        _nonAliasingAxioms += mkOr(isNull, mkAnd(sameIndex, sameArray))
+        val sameOwner = owner?.let { mkEq(mkApp(naOriginOwnerDecl, listOf(elem)), it) } ?: trueExpr
+        val axiom = mkOr(isNull, mkAnd(sameIndex, sameArray, sameOwner))
+        nonAliasingAxiomsByTerm.getOrPut(elem) { mutableListOf() }.add(axiom)
+        if (trigger != null && trigger != elem) {
+            nonAliasingAxiomsByTerm.getOrPut(trigger) { mutableListOf() }.add(axiom)
+        }
     }
 
     override fun <Sort : USort> transform(expr: URegisterReading<Sort>): KExpr<Sort> {
