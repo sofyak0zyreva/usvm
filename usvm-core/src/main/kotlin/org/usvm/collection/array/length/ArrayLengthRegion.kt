@@ -4,6 +4,7 @@ import org.usvm.UBoolExpr
 import org.usvm.UConcreteHeapAddress
 import org.usvm.UExpr
 import org.usvm.UHeapRef
+import org.usvm.UNonAliasingHeapAddress
 import org.usvm.USort
 import org.usvm.collections.immutable.implementations.immutableMap.UPersistentHashMap
 import org.usvm.collections.immutable.internal.MutabilityOwnership
@@ -44,23 +45,27 @@ internal class UArrayLengthsMemoryRegion<ArrayType, USizeSort : USort>(
     private val sort: USizeSort,
     private val arrayType: ArrayType,
     private val allocatedLengths: UPersistentHashMap<UConcreteHeapAddress, UExpr<USizeSort>> = persistentHashMapOf(),
-    private var inputLengths: UInputArrayLengths<ArrayType, USizeSort>? = null
+    private val nonAliasingLengths: UPersistentHashMap<UNonAliasingHeapAddress, UExpr<USizeSort>> =
+        persistentHashMapOf(),
+    private var inputLengths: UInputArrayLengths<ArrayType, USizeSort>? = null,
 ) : UArrayLengthsRegion<ArrayType, USizeSort> {
 
     private fun updateAllocated(updated: UPersistentHashMap<UConcreteHeapAddress, UExpr<USizeSort>>) =
-        UArrayLengthsMemoryRegion(sort, arrayType, updated, inputLengths)
+        UArrayLengthsMemoryRegion(sort, arrayType, updated, nonAliasingLengths, inputLengths)
 
     private fun getInputLength(ref: UArrayLengthLValue<ArrayType, USizeSort>): UInputArrayLengths<ArrayType, USizeSort> {
-        if (inputLengths == null)
+        if (inputLengths == null) {
             inputLengths = UInputArrayLengthId(ref.arrayType, ref.sort).emptyRegion()
+        }
         return inputLengths!!
     }
 
     private fun updatedInput(updated: UInputArrayLengths<ArrayType, USizeSort>) =
-        UArrayLengthsMemoryRegion(sort, arrayType, allocatedLengths, updated)
+        UArrayLengthsMemoryRegion(sort, arrayType, allocatedLengths, nonAliasingLengths, updated)
 
     override fun read(key: UArrayLengthLValue<ArrayType, USizeSort>): UExpr<USizeSort> = key.ref.mapWithStaticAsSymbolic(
         concreteMapper = { concreteRef -> allocatedLengths[concreteRef.address] ?: sort.sampleUValue() },
+        nonAliasingMapper = { nonAliasingRef -> getInputLength(key).read(nonAliasingRef) },
         symbolicMapper = { symbolicRef -> getInputLength(key).read(symbolicRef) }
     )
 
@@ -78,6 +83,11 @@ internal class UArrayLengthsMemoryRegion<ArrayType, USizeSort : USort>(
                 sort.sampleUValue()
             }
             region.updateAllocated(newRegion)
+        },
+        blockOnNonAliasing = { region, (nonAliasing, innerGuard) ->
+            val oldRegion = region.getInputLength(key)
+            val newRegion = oldRegion.write(nonAliasing, value, innerGuard, ownership)
+            region.updatedInput(newRegion)
         },
         blockOnSymbolic = { region, (symbolicRef, innerGuard) ->
             val oldRegion = region.getInputLength(key)

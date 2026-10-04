@@ -1,31 +1,18 @@
 package org.usvm.solver
 
 import io.ksmt.decl.KDecl
+import io.ksmt.expr.KApp
 import io.ksmt.expr.KExpr
+import io.ksmt.sort.KArraySort
 import io.ksmt.sort.KBoolSort
 import io.ksmt.utils.mkConst
 import io.ksmt.utils.uncheckedCast
-import org.usvm.UAddressSort
-import org.usvm.UBoolExpr
-import org.usvm.UBoolSort
-import org.usvm.UConcreteHeapRef
-import org.usvm.UContext
-import org.usvm.UExpr
-import org.usvm.UExprTransformer
-import org.usvm.UHeapRef
-import org.usvm.UIndexedMethodReturnValue
-import org.usvm.UIsExpr
-import org.usvm.UIsSubtypeExpr
-import org.usvm.UIsSupertypeExpr
-import org.usvm.UNullRef
-import org.usvm.URegisterReading
-import org.usvm.USort
-import org.usvm.USymbolicHeapRef
-import org.usvm.UTrackedSymbol
+import org.usvm.*
 import org.usvm.collection.array.UAllocatedArrayReading
 import org.usvm.collection.array.UArrayRegionDecoder
 import org.usvm.collection.array.UArrayRegionId
 import org.usvm.collection.array.UInputArrayReading
+import org.usvm.collection.array.UNonAliasingArrayReading
 import org.usvm.collection.array.USymbolicArrayId
 import org.usvm.collection.array.length.UArrayLengthRegionDecoder
 import org.usvm.collection.array.length.UArrayLengthsRegionId
@@ -34,6 +21,7 @@ import org.usvm.collection.array.length.USymbolicArrayLengthId
 import org.usvm.collection.field.UFieldRegionDecoder
 import org.usvm.collection.field.UFieldsRegionId
 import org.usvm.collection.field.UInputFieldReading
+import org.usvm.collection.field.UNonAliasingFieldReading
 import org.usvm.collection.field.USymbolicFieldId
 import org.usvm.collection.map.length.UInputMapLengthReading
 import org.usvm.collection.map.length.UMapLengthRegionDecoder
@@ -43,23 +31,30 @@ import org.usvm.collection.map.primitive.UAllocatedMapReading
 import org.usvm.collection.map.primitive.UInputMapReading
 import org.usvm.collection.map.primitive.UMapRegionDecoder
 import org.usvm.collection.map.primitive.UMapRegionId
+import org.usvm.collection.map.primitive.UNonAliasingMapReading
 import org.usvm.collection.map.primitive.USymbolicMapId
 import org.usvm.collection.map.ref.UAllocatedRefMapWithInputKeysReading
+import org.usvm.collection.map.ref.UAllocatedRefMapWithNonAliasingKeysReading
 import org.usvm.collection.map.ref.UInputRefMapWithAllocatedKeysReading
 import org.usvm.collection.map.ref.UInputRefMapWithInputKeysReading
+import org.usvm.collection.map.ref.UNonAliasingRefMapWithAllocatedKeysReading
+import org.usvm.collection.map.ref.UNonAliasingRefMapWithNonAliasingKeysReading
 import org.usvm.collection.map.ref.URefMapRegionDecoder
 import org.usvm.collection.map.ref.URefMapRegionId
 import org.usvm.collection.map.ref.USymbolicRefMapId
 import org.usvm.collection.set.primitive.UAllocatedSetReading
 import org.usvm.collection.set.primitive.UInputSetReading
+import org.usvm.collection.set.primitive.UNonAliasingSetReading
 import org.usvm.collection.set.primitive.USetRegionDecoder
 import org.usvm.collection.set.primitive.USymbolicSetId
 import org.usvm.collection.set.ref.UAllocatedRefSetWithInputElementsReading
+import org.usvm.collection.set.ref.UAllocatedRefSetWithNonAliasingElementsReading
 import org.usvm.collection.set.ref.UInputRefSetWithAllocatedElementsReading
 import org.usvm.collection.set.ref.UInputRefSetWithInputElementsReading
+import org.usvm.collection.set.ref.UNonAliasingRefSetWithAllocatedElementsReading
+import org.usvm.collection.set.ref.UNonAliasingRefSetWithNonAliasingElementsReading
 import org.usvm.collection.set.ref.URefSetRegionDecoder
 import org.usvm.collection.set.ref.USymbolicRefSetId
-import org.usvm.isStaticHeapRef
 import org.usvm.memory.UMemoryRegionId
 import org.usvm.regions.Region
 import java.util.concurrent.ConcurrentHashMap
@@ -74,6 +69,63 @@ open class UExprTranslator<Type, USizeSort : USort>(
     override val ctx: UContext<USizeSort>,
 ) : UExprTransformer<Type, USizeSort>(ctx) {
     open fun <Sort : USort> translate(expr: UExpr<Sort>): KExpr<Sort> = apply(expr)
+
+    private val nonAliasingAxiomsByTerm = hashMapOf<KExpr<*>, MutableList<UBoolExpr>>()
+
+    fun nonAliasingAxiomsFor(assertions: Collection<KExpr<KBoolSort>>): List<UBoolExpr> {
+        if (nonAliasingAxiomsByTerm.isEmpty()) return emptyList()
+
+        val axioms = linkedSetOf<UBoolExpr>()
+        val visited = hashSetOf<KExpr<*>>()
+        val stack = ArrayDeque<KExpr<*>>(assertions)
+        while (stack.isNotEmpty()) {
+            val expr = stack.removeLast()
+            if (!visited.add(expr)) continue
+            nonAliasingAxiomsByTerm[expr]?.forEach { axiom ->
+                if (axioms.add(axiom)) stack.addLast(axiom)
+            }
+            if (expr is KApp<*, *>) stack.addAll(expr.args)
+        }
+        return axioms.toList()
+    }
+
+    private val naOriginIndexDecl by lazy {
+        ctx.mkFuncDecl("na_origin_index", ctx.sizeSort, listOf(ctx.addressSort))
+    }
+
+    private val naOriginArrayDecl by lazy {
+        ctx.mkFuncDecl("na_origin_array", ctx.bv32Sort, listOf(ctx.addressSort))
+    }
+
+    private val naOriginOwnerDecl by lazy {
+        ctx.mkFuncDecl("na_origin_owner", ctx.addressSort, listOf(ctx.addressSort))
+    }
+
+    fun addNonAliasingArrayElementAxiom(
+        location: Int,
+        baseArray: KExpr<KArraySort<USizeSort, UAddressSort>>,
+        index: KExpr<USizeSort>,
+        owner: KExpr<UAddressSort>? = null,
+        trigger: KExpr<*>? = null,
+    ) = addNonAliasingRefAxiom(ctx.mkArraySelect(baseArray, index), location, index, owner, trigger)
+
+    fun addNonAliasingRefAxiom(
+        elem: KExpr<UAddressSort>,
+        location: Int,
+        index: KExpr<USizeSort>? = null,
+        owner: KExpr<UAddressSort>?,
+        trigger: KExpr<*>?,
+    ) = with(ctx) {
+        val isNull = mkEqNoSimplify(elem, translate(nullRef))
+        val sameIndex = index?.let { mkEq(mkApp(naOriginIndexDecl, listOf(elem)), it) } ?: trueExpr
+        val sameLocation = mkEq(mkApp(naOriginArrayDecl, listOf(elem)), mkBv(location))
+        val sameOwner = owner?.let { mkEq(mkApp(naOriginOwnerDecl, listOf(elem)), it) } ?: trueExpr
+        val axiom = mkOr(isNull, mkAnd(sameIndex, sameLocation, sameOwner))
+        nonAliasingAxiomsByTerm.getOrPut(elem) { mutableListOf() }.add(axiom)
+        if (trigger != null && trigger != elem) {
+            nonAliasingAxiomsByTerm.getOrPut(trigger) { mutableListOf() }.add(axiom)
+        }
+    }
 
     override fun <Sort : USort> transform(expr: URegisterReading<Sort>): KExpr<Sort> {
         val registerConst = expr.sort.mkConst("r${expr.idx}_${expr.sort}")
@@ -98,6 +150,12 @@ open class UExprTranslator<Type, USizeSort : USort>(
         require(isStaticHeapRef(expr)) { "Unexpected ref: $expr" }
 
         return ctx.mkUninterpretedSortValue(ctx.addressSort, expr.address)
+    }
+
+    override fun transform(expr: UNonAliasingHeapRef): UExpr<UAddressSort> {
+        val symbol = checkNotNull(expr.symbol) { "Non-aliasing ref ${expr.id} has no symbol" }
+
+        return transformExprAfterTransformed(expr, symbol) { it }
     }
 
     private val _declToIsExpr = mutableMapOf<KDecl<UBoolSort>, UIsExpr<Type>>()
@@ -149,8 +207,22 @@ open class UExprTranslator<Type, USizeSort : USort>(
             translator.translateReading(expr.collection, address)
         }
 
+    override fun <Field, Sort : USort> transform(expr: UNonAliasingFieldReading<Field, Sort>): KExpr<Sort> =
+        transformExprAfterTransformed(expr, expr.address) { address ->
+            val translator = fieldsRegionDecoder(expr.collection.collectionId)
+                .nonAliasingFieldRegionTranslator(expr.collection.collectionId)
+            translator.translateReading(expr.collection, address)
+        }
+
+    override fun <Sort : USort> transform(expr: UNonAliasingArrayReading<Type, Sort, USizeSort>): KExpr<Sort> =
+        transformExprAfterTransformed(expr, expr.index) { index ->
+            val translator = arrayRegionDecoder(expr.collection.collectionId)
+                .nonAliasingArrayRegionTranslator(expr.id, expr.collection.collectionId)
+            translator.translateReading(expr.collection, index)
+        }
+
     override fun <KeySort : USort, Sort : USort, Reg : Region<Reg>> transform(
-        expr: UAllocatedMapReading<Type, KeySort, Sort, Reg>
+        expr: UAllocatedMapReading<Type, KeySort, Sort, Reg>,
     ): KExpr<Sort> = transformExprAfterTransformed(expr, expr.key) { key ->
         val translator = mapRegionDecoder(expr.collection.collectionId)
             .allocatedMapTranslator(expr.collection.collectionId)
@@ -158,7 +230,15 @@ open class UExprTranslator<Type, USizeSort : USort>(
     }
 
     override fun <KeySort : USort, Sort : USort, Reg : Region<Reg>> transform(
-        expr: UInputMapReading<Type, KeySort, Sort, Reg>
+        expr: UNonAliasingMapReading<Type, KeySort, Sort, Reg>,
+    ): KExpr<Sort> = transformExprAfterTransformed(expr, expr.key) { key ->
+        val translator = mapRegionDecoder(expr.collection.collectionId)
+            .nonAliasingMapTranslator(expr.collection.collectionId)
+        translator.translateReading(expr.collection, key)
+    }
+
+    override fun <KeySort : USort, Sort : USort, Reg : Region<Reg>> transform(
+        expr: UInputMapReading<Type, KeySort, Sort, Reg>,
     ): KExpr<Sort> = transformExprAfterTransformed(expr, expr.address, expr.key) { address, key ->
         val translator = mapRegionDecoder(expr.collection.collectionId)
             .inputMapTranslator(expr.collection.collectionId)
@@ -166,7 +246,7 @@ open class UExprTranslator<Type, USizeSort : USort>(
     }
 
     override fun <Sort : USort> transform(
-        expr: UAllocatedRefMapWithInputKeysReading<Type, Sort>
+        expr: UAllocatedRefMapWithInputKeysReading<Type, Sort>,
     ): UExpr<Sort> = transformExprAfterTransformed(expr, expr.keyRef) { keyRef ->
         val translator = refMapRegionDecoder(expr.collection.collectionId)
             .allocatedRefMapWithInputKeysTranslator(expr.collection.collectionId)
@@ -174,7 +254,15 @@ open class UExprTranslator<Type, USizeSort : USort>(
     }
 
     override fun <Sort : USort> transform(
-        expr: UInputRefMapWithAllocatedKeysReading<Type, Sort>
+        expr: UAllocatedRefMapWithNonAliasingKeysReading<Type, Sort>,
+    ): UExpr<Sort> = transformExprAfterTransformed(expr, expr.keyRef) { keyRef ->
+        val translator = refMapRegionDecoder(expr.collection.collectionId)
+            .allocatedRefMapWithNonAliasingKeysTranslator(expr.collection.collectionId)
+        translator.translateReading(expr.collection, keyRef)
+    }
+
+    override fun <Sort : USort> transform(
+        expr: UInputRefMapWithAllocatedKeysReading<Type, Sort>,
     ): UExpr<Sort> = transformExprAfterTransformed(expr, expr.mapRef) { mapRef ->
         val translator = refMapRegionDecoder(expr.collection.collectionId)
             .inputRefMapWithAllocatedKeysTranslator(expr.collection.collectionId)
@@ -182,10 +270,26 @@ open class UExprTranslator<Type, USizeSort : USort>(
     }
 
     override fun <Sort : USort> transform(
-        expr: UInputRefMapWithInputKeysReading<Type, Sort>
+        expr: UNonAliasingRefMapWithAllocatedKeysReading<Type, Sort>,
+    ): UExpr<Sort> = transformExprAfterTransformed(expr, expr.mapRef) { mapRef ->
+        val translator = refMapRegionDecoder(expr.collection.collectionId)
+            .nonAliasingRefMapWithAllocatedKeysTranslator(expr.collection.collectionId)
+        translator.translateReading(expr.collection, mapRef)
+    }
+
+    override fun <Sort : USort> transform(
+        expr: UInputRefMapWithInputKeysReading<Type, Sort>,
     ): UExpr<Sort> = transformExprAfterTransformed(expr, expr.mapRef, expr.keyRef) { mapRef, keyRef ->
         val translator = refMapRegionDecoder(expr.collection.collectionId)
             .inputRefMapTranslator(expr.collection.collectionId)
+        translator.translateReading(expr.collection, mapRef to keyRef)
+    }
+
+    override fun <Sort : USort> transform(
+        expr: UNonAliasingRefMapWithNonAliasingKeysReading<Type, Sort>,
+    ): UExpr<Sort> = transformExprAfterTransformed(expr, expr.mapRef, expr.keyRef) { mapRef, keyRef ->
+        val translator = refMapRegionDecoder(expr.collection.collectionId)
+            .nonAliasingRefMapWithNonAliasingKeysTranslator(expr.collection.collectionId)
         translator.translateReading(expr.collection, mapRef to keyRef)
     }
 
@@ -197,7 +301,7 @@ open class UExprTranslator<Type, USizeSort : USort>(
         }
 
     override fun <ElemSort : USort, Reg : Region<Reg>> transform(
-        expr: UAllocatedSetReading<Type, ElemSort, Reg>
+        expr: UAllocatedSetReading<Type, ElemSort, Reg>,
     ): UBoolExpr = transformExprAfterTransformed(expr, expr.element) { element ->
         val translator = setRegionDecoder(expr.collection.collectionId)
             .allocatedSetTranslator(expr.collection.collectionId)
@@ -205,7 +309,16 @@ open class UExprTranslator<Type, USizeSort : USort>(
     }
 
     override fun <ElemSort : USort, Reg : Region<Reg>> transform(
-        expr: UInputSetReading<Type, ElemSort, Reg>
+        expr: UNonAliasingSetReading<Type, ElemSort, Reg>,
+    ): UBoolExpr = transformExprAfterTransformed(expr, expr.element) { element ->
+        val translator = setRegionDecoder(expr.collection.collectionId)
+            .nonAliasingSetTranslator(expr.collection.collectionId)
+        translator.translateReading(expr.collection, element)
+    }
+
+
+    override fun <ElemSort : USort, Reg : Region<Reg>> transform(
+        expr: UInputSetReading<Type, ElemSort, Reg>,
     ): UBoolExpr = transformExprAfterTransformed(expr, expr.address, expr.element) { address, element ->
         val translator = setRegionDecoder(expr.collection.collectionId)
             .inputSetTranslator(expr.collection.collectionId)
@@ -233,8 +346,32 @@ open class UExprTranslator<Type, USizeSort : USort>(
             translator.translateReading(expr.collection, setRef to element)
         }
 
+    override fun transform(expr: UNonAliasingRefSetWithAllocatedElementsReading<Type>): UBoolExpr =
+        transformExprAfterTransformed(expr, expr.setAddress) { setRef ->
+            val translator = refSetRegionDecoder(expr.collection.collectionId)
+                .nonAliasingRefSetWithAllocatedElementsTranslator(expr.collection.collectionId)
+            translator.translateReading(expr.collection, setRef)
+        }
+
+    override fun transform(expr: UAllocatedRefSetWithNonAliasingElementsReading<Type>): UBoolExpr =
+        transformExprAfterTransformed(expr, expr.elementAddress) { element ->
+            val translator = refSetRegionDecoder(expr.collection.collectionId)
+                .allocatedRefSetWithNonAliasingElementsTranslator(expr.collection.collectionId)
+            translator.translateReading(expr.collection, element)
+        }
+
+    override fun transform(expr: UNonAliasingRefSetWithNonAliasingElementsReading<Type>): UBoolExpr =
+        transformExprAfterTransformed(expr, expr.setRef, expr.elementRef) { setRef, elemRef ->
+            val translator = refSetRegionDecoder(expr.collection.collectionId)
+                .nonAliasingRefSetWithNonAliasingElementsTranslator(expr.collection.collectionId)
+            translator.translateReading(expr.collection, setRef to elemRef)
+        }
+
+
+
+
     fun <Field, Sort : USort, FieldId : USymbolicFieldId<Field, *, Sort, FieldId>> fieldsRegionDecoder(
-        fieldId: FieldId
+        fieldId: FieldId,
     ): UFieldRegionDecoder<Field, Sort> {
         val fieldRegionId = UFieldsRegionId(fieldId.field, fieldId.sort)
         return getOrPutRegionDecoder(fieldRegionId) {
@@ -243,7 +380,7 @@ open class UExprTranslator<Type, USizeSort : USort>(
     }
 
     fun <ArrayType, Sort : USort, ArrayId : USymbolicArrayId<ArrayType, *, Sort, ArrayId>> arrayRegionDecoder(
-        arrayId: ArrayId
+        arrayId: ArrayId,
     ): UArrayRegionDecoder<ArrayType, Sort, USizeSort> {
         val arrayRegionId = UArrayRegionId<ArrayType, Sort, USizeSort>(arrayId.arrayType, arrayId.sort)
         return getOrPutRegionDecoder(arrayRegionId) {
@@ -252,7 +389,7 @@ open class UExprTranslator<Type, USizeSort : USort>(
     }
 
     fun <ArrayType, ArrayLenId : USymbolicArrayLengthId<*, ArrayType, ArrayLenId, USizeSort>> arrayLengthRegionDecoder(
-        arrayLengthId: ArrayLenId
+        arrayLengthId: ArrayLenId,
     ): UArrayLengthRegionDecoder<ArrayType, USizeSort> {
         val arrayRegionId = UArrayLengthsRegionId(arrayLengthId.sort, arrayLengthId.arrayType)
         return getOrPutRegionDecoder(arrayRegionId) {
@@ -261,7 +398,7 @@ open class UExprTranslator<Type, USizeSort : USort>(
     }
 
     fun <MapType, Sort : USort, MapId : USymbolicRefMapId<MapType, *, Sort, *, MapId>> refMapRegionDecoder(
-        refMapId: MapId
+        refMapId: MapId,
     ): URefMapRegionDecoder<MapType, Sort> {
         val symbolicRefMapRegionId = URefMapRegionId(refMapId.sort, refMapId.mapType)
         return getOrPutRegionDecoder(symbolicRefMapRegionId) {
@@ -269,9 +406,14 @@ open class UExprTranslator<Type, USizeSort : USort>(
         }
     }
 
-    fun <MapType, KeySort : USort, ValueSort : USort, Reg : Region<Reg>,
-            MapId : USymbolicMapId<MapType, *, KeySort, ValueSort, Reg, *, MapId>> mapRegionDecoder(
-        mapId: MapId
+    fun <
+        MapType,
+        KeySort : USort,
+        ValueSort : USort,
+        Reg : Region<Reg>,
+        MapId : USymbolicMapId<MapType, *, KeySort, ValueSort, Reg, *, MapId>,
+        > mapRegionDecoder(
+        mapId: MapId,
     ): UMapRegionDecoder<MapType, KeySort, ValueSort, Reg> {
         val symbolicMapRegionId = UMapRegionId(mapId.keySort, mapId.sort, mapId.mapType, mapId.keyInfo)
         return getOrPutRegionDecoder(symbolicMapRegionId) {
@@ -280,7 +422,7 @@ open class UExprTranslator<Type, USizeSort : USort>(
     }
 
     fun <MapType, MapLengthId : USymbolicMapLengthId<UHeapRef, MapType, MapLengthId, USizeSort>> mapLengthRegionDecoder(
-        mapLengthId: MapLengthId
+        mapLengthId: MapLengthId,
     ): UMapLengthRegionDecoder<MapType, USizeSort> {
         val symbolicMapLengthRegionId = UMapLengthRegionId(mapLengthId.sort, mapLengthId.mapType)
         return getOrPutRegionDecoder(symbolicMapLengthRegionId) {
@@ -289,7 +431,7 @@ open class UExprTranslator<Type, USizeSort : USort>(
     }
 
     fun <SetType, SetId : USymbolicRefSetId<SetType, *, *, SetId>> refSetRegionDecoder(
-        refSetId: SetId
+        refSetId: SetId,
     ): URefSetRegionDecoder<SetType> {
         val symbolicRefSetRegionId = refSetId.setRegionId()
         return getOrPutRegionDecoder(symbolicRefSetRegionId) {
@@ -297,9 +439,13 @@ open class UExprTranslator<Type, USizeSort : USort>(
         }
     }
 
-    fun <SetType, KeySort : USort, Reg : Region<Reg>,
-            SetId : USymbolicSetId<SetType, KeySort, *, Reg, *, SetId>> setRegionDecoder(
-        setId: SetId
+    fun <
+        SetType,
+        KeySort : USort,
+        Reg : Region<Reg>,
+        SetId : USymbolicSetId<SetType, KeySort, *, Reg, *, SetId>,
+        > setRegionDecoder(
+        setId: SetId,
     ): USetRegionDecoder<SetType, KeySort, Reg> {
         val symbolicSetRegionId = setId.setRegionId()
         return getOrPutRegionDecoder(symbolicSetRegionId) {
@@ -311,7 +457,7 @@ open class UExprTranslator<Type, USizeSort : USort>(
 
     inline fun <reified D : URegionDecoder<*, *>> getOrPutRegionDecoder(
         regionId: UMemoryRegionId<*, *>,
-        buildDecoder: () -> D
+        buildDecoder: () -> D,
     ): D = regionIdToDecoder.getOrPut(regionId) {
         buildDecoder()
     }.uncheckedCast()

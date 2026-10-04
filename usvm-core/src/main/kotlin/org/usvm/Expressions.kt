@@ -49,7 +49,7 @@ typealias UAddressSort = KUninterpretedSort
 
 //endregion
 
-abstract class USymbol<Sort : USort>(ctx: UContext<*>) : UExpr<Sort>(ctx)
+abstract class USymbol<Sort : USort>(ctx: UContext<*>, open val id: Int = -2) : UExpr<Sort>(ctx)
 
 //region Object References
 
@@ -67,6 +67,8 @@ typealias UHeapRef = UExpr<UAddressSort>
 typealias USymbolicHeapRef = USymbol<UAddressSort>
 typealias UConcreteHeapAddress = Int
 
+typealias UNonAliasingHeapAddress = Int
+
 val UConcreteHeapAddress.isAllocated: Boolean get() = this >= INITIAL_CONCRETE_ADDRESS
 val UConcreteHeapAddress.isStatic: Boolean get() = this <= INITIAL_STATIC_ADDRESS
 
@@ -76,7 +78,7 @@ fun isSymbolicHeapRef(expr: UExpr<*>): Boolean {
         returns(true) implies (expr is USymbol<*>)
     }
 
-    return expr.sort == expr.uctx.addressSort && expr is USymbol<*>
+    return expr.sort == expr.uctx.addressSort && expr is USymbol<*> && expr.id == -2
 }
 
 @OptIn(ExperimentalContracts::class)
@@ -110,6 +112,7 @@ class UConcreteHeapRefDecl internal constructor(
 class UConcreteHeapRef internal constructor(
     ctx: UContext<*>,
     val address: UConcreteHeapAddress,
+    val id: Int = address,
 ) : UIntepretedValue<UAddressSort>(ctx) {
 
     override val decl: UConcreteHeapRefDecl get() = uctx.mkConcreteHeapRefDecl(address)
@@ -130,9 +133,38 @@ class UConcreteHeapRef internal constructor(
     override fun internHashCode(): Int = hash(address)
 }
 
+class UNonAliasingHeapRef(
+    ctx: UContext<*>,
+    id: UNonAliasingHeapAddress,
+    originalSymbol: USymbol<UAddressSort>? = null,
+) : USymbol<UAddressSort>(ctx, id) {
+
+    val symbol = originalSymbol
+
+    override val sort: UAddressSort
+        get() = uctx.addressSort
+
+    override fun accept(transformer: KTransformerBase): KExpr<UAddressSort> {
+        require(transformer is UTransformer<*, *>) {
+            "Expected a UTransformer, but got: $transformer"
+        }
+        return transformer.transform(this)
+    }
+
+    override fun internEquals(other: Any): Boolean =
+        structurallyEqual(other) { id }
+
+    override fun internHashCode(): Int = hash(id)
+
+    override fun print(printer: ExpressionPrinter) {
+        if (id == -1) printer.append("null") else printer.append("%$id")
+    }
+}
+
 class UNullRef internal constructor(
     ctx: UContext<*>,
-) : USymbolicHeapRef(ctx) {
+    override val id: Int = -1,
+) : USymbolicHeapRef(ctx, id) {
     override val sort: UAddressSort
         get() = uctx.addressSort
 
@@ -179,6 +211,7 @@ const val INITIAL_CONCRETE_ADDRESS = NULL_ADDRESS + 1
  */
 const val INITIAL_STATIC_ADDRESS = -(1 shl 20) // Use value not less than UNINTERPRETED_SORT_MIN_ALLOWED_VALUE in ksmt
 
+const val INITIAL_NA_ADDRESS = NULL_ADDRESS - 3
 
 //endregion
 
@@ -188,7 +221,8 @@ class URegisterReading<Sort : USort> internal constructor(
     ctx: UContext<*>,
     val idx: Int,
     override val sort: Sort,
-) : USymbol<Sort>(ctx) {
+    override val id: Int = idx,
+) : USymbol<Sort>(ctx, id) {
     override fun accept(transformer: KTransformerBase): KExpr<Sort> {
         require(transformer is UTransformer<*, *>) { "Expected a UTransformer, but got: $transformer" }
         return transformer.transform(this)
@@ -205,7 +239,7 @@ class URegisterReading<Sort : USort> internal constructor(
 
 abstract class UCollectionReading<CollectionId : USymbolicCollectionId<Key, Sort, CollectionId>, Key, Sort : USort>(
     ctx: UContext<*>,
-    val collection: USymbolicCollection<CollectionId, Key, Sort>
+    val collection: USymbolicCollection<CollectionId, Key, Sort>,
 ) : USymbol<Sort>(ctx) {
     override val sort: Sort get() = collection.sort
 }
@@ -214,7 +248,10 @@ abstract class UCollectionReading<CollectionId : USymbolicCollectionId<Key, Sort
 
 //region Mocked Expressions
 
-abstract class UMockSymbol<Sort : USort>(ctx: UContext<*>, override val sort: Sort) : USymbol<Sort>(ctx)
+abstract class UMockSymbol<Sort : USort>(ctx: UContext<*>, override val sort: Sort, override val id: Int) : USymbol<Sort>(
+    ctx,
+    id
+)
 
 // TODO: make indices compositional!
 class UIndexedMethodReturnValue<Method, Sort : USort> internal constructor(
@@ -222,7 +259,8 @@ class UIndexedMethodReturnValue<Method, Sort : USort> internal constructor(
     val method: Method,
     val callIndex: Int,
     override val sort: Sort,
-) : UMockSymbol<Sort>(ctx, sort) {
+    override val id: Int = ctx.addressCounter.freshNAAddress(),
+) : UMockSymbol<Sort>(ctx, sort, id) {
     override fun accept(transformer: KTransformerBase): KExpr<Sort> {
         require(transformer is UTransformer<*, *>) { "Expected a UTransformer, but got: $transformer" }
         return transformer.transform(this)
@@ -240,8 +278,9 @@ class UIndexedMethodReturnValue<Method, Sort : USort> internal constructor(
 class UTrackedSymbol<Sort : USort> internal constructor(
     ctx: UContext<*>,
     val name: String,
-    override val sort: Sort
-): UMockSymbol<Sort>(ctx, sort) {
+    override val sort: Sort,
+    override val id: Int = ctx.addressCounter.freshNAAddress(),
+) : UMockSymbol<Sort>(ctx, sort, id) {
     override fun accept(transformer: KTransformerBase): KExpr<Sort> {
         require(transformer is UTransformer<*, *>) { "Expected a UTransformer, but got: $transformer" }
         return transformer.transform(this)

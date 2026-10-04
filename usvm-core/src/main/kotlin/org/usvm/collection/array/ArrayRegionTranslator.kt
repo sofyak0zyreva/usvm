@@ -6,9 +6,11 @@ import io.ksmt.sort.KArray2Sort
 import io.ksmt.sort.KArraySort
 import io.ksmt.sort.KBoolSort
 import io.ksmt.utils.mkConst
+import io.ksmt.utils.uncheckedCast
 import org.usvm.UAddressSort
 import org.usvm.UConcreteHeapAddress
 import org.usvm.UExpr
+import org.usvm.UNonAliasingHeapAddress
 import org.usvm.USort
 import org.usvm.memory.URangedUpdateNode
 import org.usvm.memory.UReadOnlyMemoryRegion
@@ -32,17 +34,28 @@ class UArrayRegionDecoder<ArrayType, Sort : USort, USizeSort : USort>(
     private val allocatedRegions =
         mutableMapOf<UConcreteHeapAddress, UAllocatedArrayRegionTranslator<ArrayType, Sort, USizeSort>>()
 
+    private val nonAliasingRegions =
+        mutableMapOf<UNonAliasingHeapAddress, UNonAliasingArrayRegionTranslator<ArrayType, Sort, USizeSort>>()
+
     private var inputRegionTranslator: UInputArrayRegionTranslator<ArrayType, Sort, USizeSort>? = null
 
     fun allocatedArrayRegionTranslator(
-        collectionId: UAllocatedArrayId<ArrayType, Sort, USizeSort>
+        collectionId: UAllocatedArrayId<ArrayType, Sort, USizeSort>,
     ): URegionTranslator<UAllocatedArrayId<ArrayType, Sort, USizeSort>, UExpr<USizeSort>, Sort> =
         allocatedRegions.getOrPut(collectionId.address) {
             UAllocatedArrayRegionTranslator(collectionId, exprTranslator)
         }
 
+    fun nonAliasingArrayRegionTranslator(
+        id: UNonAliasingHeapAddress,
+        collectionId: UNonAliasingArrayId<ArrayType, Sort, USizeSort>,
+    ): URegionTranslator<UNonAliasingArrayId<ArrayType, Sort, USizeSort>, UExpr<USizeSort>, Sort> =
+        nonAliasingRegions.getOrPut(collectionId.id) {
+            UNonAliasingArrayRegionTranslator(collectionId, exprTranslator)
+        }
+
     fun inputArrayRegionTranslator(
-        collectionId: UInputArrayId<ArrayType, Sort, USizeSort>
+        collectionId: UInputArrayId<ArrayType, Sort, USizeSort>,
     ): URegionTranslator<UInputArrayId<ArrayType, Sort, USizeSort>, USymbolicArrayIndex<USizeSort>, Sort> {
         if (inputRegionTranslator == null) {
             inputRegionTranslator = UInputArrayRegionTranslator(collectionId, exprTranslator)
@@ -52,13 +65,16 @@ class UArrayRegionDecoder<ArrayType, Sort : USort, USizeSort : USort>(
 
     override fun decodeLazyRegion(
         model: UModelEvaluator<*>,
-        assertions: List<KExpr<KBoolSort>>
-    ) = inputRegionTranslator?.let { UArrayLazyModelRegion(regionId, model, it) }
+        assertions: List<KExpr<KBoolSort>>,
+    ) = inputRegionTranslator?.let {
+        UArrayLazyModelRegion(regionId, model, it)
+    }
+        ?: if (nonAliasingRegions.isNotEmpty()) { UNonAliasingArrayModelRegion(regionId, model, nonAliasingRegions) } else null
 }
 
 private class UAllocatedArrayRegionTranslator<ArrayType, Sort : USort, USizeSort : USort>(
     private val collectionId: UAllocatedArrayId<ArrayType, Sort, USizeSort>,
-    exprTranslator: UExprTranslator<*, USizeSort>
+    exprTranslator: UExprTranslator<*, USizeSort>,
 ) : URegionTranslator<UAllocatedArrayId<ArrayType, Sort, USizeSort>, UExpr<USizeSort>, Sort> {
     private val initialValue = with(exprTranslator.ctx) {
         val sort = mkArraySort(sizeSort, collectionId.sort)
@@ -71,11 +87,86 @@ private class UAllocatedArrayRegionTranslator<ArrayType, Sort : USort, USizeSort
 
     override fun translateReading(
         region: USymbolicCollection<UAllocatedArrayId<ArrayType, Sort, USizeSort>, UExpr<USizeSort>, Sort>,
-        key: UExpr<USizeSort>
+        key: UExpr<USizeSort>,
     ): KExpr<Sort> {
         val translatedCollection = region.updates.accept(updatesTranslator, visitorCache)
         return updatesTranslator.visitSelect(translatedCollection, key)
     }
+}
+
+internal interface UNonAliasingArrayCell<USizeSort : USort, Sort : USort> {
+    val id: UNonAliasingHeapAddress
+
+    fun evalElement(model: UModelEvaluator<*>, index: UExpr<USizeSort>): UExpr<Sort>
+
+    fun evalArrayRef(model: UModelEvaluator<*>): UExpr<UAddressSort>?
+}
+
+private class UNonAliasingArrayRegionTranslator<ArrayType, Sort : USort, USizeSort : USort>(
+    private val collectionId: UNonAliasingArrayId<ArrayType, Sort, USizeSort>,
+    private val exprTranslator: UExprTranslator<*, USizeSort>,
+) : URegionTranslator<UNonAliasingArrayId<ArrayType, Sort, USizeSort>, UExpr<USizeSort>, Sort>,
+    UCollectionDecoder<UExpr<USizeSort>, Sort>,
+    UNonAliasingArrayCell<USizeSort, Sort> {
+    override val id: UNonAliasingHeapAddress get() = collectionId.id
+
+    override fun evalElement(model: UModelEvaluator<*>, index: UExpr<USizeSort>): UExpr<Sort> =
+        model.evalAndComplete(initialValue.ctx.mkArraySelect(initialValue, index))
+
+    override fun evalArrayRef(model: UModelEvaluator<*>): UExpr<UAddressSort>? {
+        val ref = exprTranslator.ctx.nonAliasingHeapRefs[collectionId.id] ?: return null
+        return model.evalAndComplete(exprTranslator.translate(ref))
+    }
+
+    private val location: UNonAliasingHeapAddress = exprTranslator.ctx.nonAliasingLocationOf(collectionId.id)
+
+    private val translatedOwner: KExpr<UAddressSort>? =
+        exprTranslator.ctx.nonAliasingHeapRefs[collectionId.id]
+            ?.takeIf { location != collectionId.id }
+            ?.let { exprTranslator.translate(it) }
+
+    private val rootInitialValue = if (translatedOwner != null) {
+        null
+    } else {
+        with(exprTranslator.ctx) { mkArraySort(sizeSort, collectionId.sort).mkConst(collectionId.toString()) }
+    }
+
+    private val initialValue: KExpr<KArraySort<USizeSort, Sort>> = rootInitialValue ?: with(exprTranslator.ctx) {
+        val rowSort = mkArraySort(sizeSort, collectionId.sort)
+        val locationArray = mkArraySort(addressSort, rowSort)
+            .mkConst("nonAliasingArray#$location<${collectionId.arrayType}>")
+        mkArraySelect(locationArray, checkNotNull(translatedOwner))
+    }
+
+    private val visitorCache = IdentityHashMap<Any?, KExpr<KArraySort<USizeSort, Sort>>>()
+    private val updatesTranslator = UAllocatedArrayUpdatesTranslator(exprTranslator, initialValue)
+
+    override fun translateReading(
+        region: USymbolicCollection<UNonAliasingArrayId<ArrayType, Sort, USizeSort>, UExpr<USizeSort>, Sort>,
+        key: UExpr<USizeSort>,
+    ): KExpr<Sort> {
+        val translatedCollection = region.updates.accept(updatesTranslator, visitorCache)
+        val reading = updatesTranslator.visitSelect(translatedCollection, key)
+
+        if (collectionId.sort == exprTranslator.ctx.addressSort) {
+            // triggered by the reading as it occurs in queries (a select over the updates, not over the base array)
+            exprTranslator.addNonAliasingArrayElementAxiom(
+                nonAliasingLocationIdFor(exprTranslator.ctx, Pair(location, collectionId.arrayType)),
+                initialValue.uncheckedCast(),
+                exprTranslator.translate(key),
+                translatedOwner,
+                trigger = reading,
+            )
+        }
+
+        return reading
+    }
+
+    override fun decodeCollection(model: UModelEvaluator<*>): UReadOnlyMemoryRegion<UExpr<USizeSort>, Sort> =
+        rootInitialValue?.let { model.evalAndCompleteArray1DMemoryRegion(it.decl) }
+            ?: object : UReadOnlyMemoryRegion<UExpr<USizeSort>, Sort> {
+                override fun read(key: UExpr<USizeSort>): UExpr<Sort> = evalElement(model, key)
+            }
 }
 
 private class UInputArrayRegionTranslator<ArrayType, Sort : USort, USizeSort : USort>(
@@ -92,25 +183,25 @@ private class UInputArrayRegionTranslator<ArrayType, Sort : USort, USizeSort : U
 
     override fun translateReading(
         region: USymbolicCollection<UInputArrayId<ArrayType, Sort, USizeSort>, USymbolicArrayIndex<USizeSort>, Sort>,
-        key: USymbolicArrayIndex<USizeSort>
+        key: USymbolicArrayIndex<USizeSort>,
     ): KExpr<Sort> {
         val translatedCollection = region.updates.accept(updatesTranslator, visitorCache)
         return updatesTranslator.visitSelect(translatedCollection, key)
     }
 
     override fun decodeCollection(
-        model: UModelEvaluator<*>
+        model: UModelEvaluator<*>,
     ): UReadOnlyMemoryRegion<USymbolicArrayIndex<USizeSort>, Sort> =
         model.evalAndCompleteArray2DMemoryRegion(initialValue.decl)
 }
 
 private class UAllocatedArrayUpdatesTranslator<Sort : USort, USizeSort : USort>(
     exprTranslator: UExprTranslator<*, USizeSort>,
-    initialValue: KExpr<KArraySort<USizeSort, Sort>>
+    initialValue: KExpr<KArraySort<USizeSort, Sort>>,
 ) : U1DUpdatesTranslator<USizeSort, Sort>(exprTranslator, initialValue) {
     override fun KContext.translateRangedUpdate(
         previous: KExpr<KArraySort<USizeSort, Sort>>,
-        update: URangedUpdateNode<*, *, UExpr<USizeSort>, Sort>
+        update: URangedUpdateNode<*, *, UExpr<USizeSort>, Sort>,
     ): KExpr<KArraySort<USizeSort, Sort>> {
         check(update.adapter is USymbolicArrayCopyAdapter<*, *, *>) {
             "Unexpected array ranged operation: ${update.adapter}"
@@ -129,7 +220,7 @@ private class UAllocatedArrayUpdatesTranslator<Sort : USort, USizeSort : USort>(
         previous: KExpr<KArraySort<USizeSort, Sort>>,
         update: URangedUpdateNode<*, *, UExpr<USizeSort>, Sort>,
         sourceCollection: USymbolicCollection<CollectionId, SrcKey, Sort>,
-        adapter: USymbolicArrayCopyAdapter<SrcKey, UExpr<USizeSort>, USizeSort>
+        adapter: USymbolicArrayCopyAdapter<SrcKey, UExpr<USizeSort>, USizeSort>,
     ): KExpr<KArraySort<USizeSort, Sort>> {
         val key = mkFreshConst("k", previous.sort.domain)
 
@@ -139,7 +230,9 @@ private class UAllocatedArrayUpdatesTranslator<Sort : USort, USizeSort : USort>(
         val isInside = update.includesSymbolically(key, composer = null).translated // already includes guard
 
         val result = sourceCollection.collectionId.instantiate(
-            sourceCollection, convertedKey, composer = null
+            sourceCollection,
+            convertedKey,
+            composer = null
         ).translated
 
         val ite = mkIte(isInside, result, previous.select(key))
@@ -149,11 +242,11 @@ private class UAllocatedArrayUpdatesTranslator<Sort : USort, USizeSort : USort>(
 
 private class UInputArrayUpdatesTranslator<Sort : USort, USizeSort : USort>(
     exprTranslator: UExprTranslator<*, USizeSort>,
-    initialValue: KExpr<KArray2Sort<UAddressSort, USizeSort, Sort>>
+    initialValue: KExpr<KArray2Sort<UAddressSort, USizeSort, Sort>>,
 ) : U2DUpdatesTranslator<UAddressSort, USizeSort, Sort>(exprTranslator, initialValue) {
     override fun KContext.translateRangedUpdate(
         previous: KExpr<KArray2Sort<UAddressSort, USizeSort, Sort>>,
-        update: URangedUpdateNode<*, *, USymbolicArrayIndex<USizeSort>, Sort>
+        update: URangedUpdateNode<*, *, USymbolicArrayIndex<USizeSort>, Sort>,
     ): KExpr<KArray2Sort<UAddressSort, USizeSort, Sort>> {
         check(update.adapter is USymbolicArrayCopyAdapter<*, *, *>) {
             "Unexpected array ranged operation: ${update.adapter}"
@@ -172,7 +265,7 @@ private class UInputArrayUpdatesTranslator<Sort : USort, USizeSort : USort>(
         previous: KExpr<KArray2Sort<UAddressSort, USizeSort, Sort>>,
         update: URangedUpdateNode<*, *, USymbolicArrayIndex<USizeSort>, Sort>,
         sourceCollection: USymbolicCollection<CollectionId, SrcKey, Sort>,
-        adapter: USymbolicArrayCopyAdapter<SrcKey, USymbolicArrayIndex<USizeSort>, USizeSort>
+        adapter: USymbolicArrayCopyAdapter<SrcKey, USymbolicArrayIndex<USizeSort>, USizeSort>,
     ): KExpr<KArray2Sort<UAddressSort, USizeSort, Sort>> {
         val key1 = mkFreshConst("k1", previous.sort.domain0)
         val key2 = mkFreshConst("k2", previous.sort.domain1)
@@ -183,7 +276,9 @@ private class UInputArrayUpdatesTranslator<Sort : USort, USizeSort : USort>(
         val isInside = update.includesSymbolically(key1 to key2, composer = null).translated // already includes guard
 
         val result = sourceCollection.collectionId.instantiate(
-            sourceCollection, convertedKey, composer = null
+            sourceCollection,
+            convertedKey,
+            composer = null
         ).translated
 
         val ite = mkIte(isInside, result, previous.select(key1, key2))

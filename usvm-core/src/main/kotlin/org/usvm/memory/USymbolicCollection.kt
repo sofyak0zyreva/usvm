@@ -28,7 +28,7 @@ data class USymbolicCollection<out CollectionId : USymbolicCollectionId<Key, Sor
     private fun read(
         key: Key,
         updates: USymbolicCollectionUpdates<Key, Sort>,
-        composer: UComposer<*, *>?
+        composer: UComposer<*, *>?,
     ): UExpr<Sort> {
         val lastUpdatedElement = updates.lastUpdatedElementOrNull()
 
@@ -74,7 +74,7 @@ data class USymbolicCollection<out CollectionId : USymbolicCollectionId<Key, Sor
     private fun splittingRead(
         key: Key,
         composer: UComposer<*, *>?,
-        predicate: (UExpr<Sort>) -> Boolean
+        predicate: (UExpr<Sort>) -> Boolean,
     ): UExpr<Sort> {
         val ctx = sort.ctx
         val guardBuilder = GuardBuilder(ctx.trueExpr)
@@ -131,6 +131,9 @@ data class USymbolicCollection<out CollectionId : USymbolicCollectionId<Key, Sor
                 initialGuard = guard,
                 ignoreNullRefs = false,
                 blockOnConcrete = { newUpdates, (valueRef, valueGuard) ->
+                    newUpdates.splitWrite(key, valueRef.asExpr(sort), valueGuard) { it is UConcreteHeapRef }
+                },
+                blockOnNonAliasing = { newUpdates, (valueRef, valueGuard) ->
                     newUpdates.splitWrite(key, valueRef.asExpr(sort), valueGuard) { it is UConcreteHeapRef }
                 },
                 blockOnSymbolic = { newUpdates, (valueRef, valueGuard) ->
@@ -209,7 +212,7 @@ data class USymbolicCollection<out CollectionId : USymbolicCollectionId<Key, Sor
     fun <OtherCollectionId : USymbolicCollectionId<SrcKey, Sort, OtherCollectionId>, SrcKey> copyRange(
         fromCollection: USymbolicCollection<OtherCollectionId, SrcKey, Sort>,
         adapter: USymbolicCollectionAdapter<SrcKey, Key>,
-        guard: UBoolExpr
+        guard: UBoolExpr,
     ): USymbolicCollection<CollectionId, Key, Sort> {
         val updatesCopy = updates.copyRange(fromCollection, adapter, guard)
         return this.copy(updates = updatesCopy)

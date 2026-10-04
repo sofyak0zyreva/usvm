@@ -1,20 +1,31 @@
 package org.usvm
 
+import io.ksmt.utils.uncheckedCast
 import org.usvm.collection.array.UAllocatedArrayReading
 import org.usvm.collection.array.UInputArrayReading
+import org.usvm.collection.array.UNonAliasingArrayReading
 import org.usvm.collection.array.length.UInputArrayLengthReading
 import org.usvm.collection.field.UInputFieldReading
+import org.usvm.collection.field.UNonAliasingFieldReading
 import org.usvm.collection.map.length.UInputMapLengthReading
 import org.usvm.collection.map.primitive.UAllocatedMapReading
 import org.usvm.collection.map.primitive.UInputMapReading
+import org.usvm.collection.map.primitive.UNonAliasingMapReading
 import org.usvm.collection.map.ref.UAllocatedRefMapWithInputKeysReading
+import org.usvm.collection.map.ref.UAllocatedRefMapWithNonAliasingKeysReading
 import org.usvm.collection.map.ref.UInputRefMapWithAllocatedKeysReading
 import org.usvm.collection.map.ref.UInputRefMapWithInputKeysReading
+import org.usvm.collection.map.ref.UNonAliasingRefMapWithAllocatedKeysReading
+import org.usvm.collection.map.ref.UNonAliasingRefMapWithNonAliasingKeysReading
 import org.usvm.collection.set.primitive.UAllocatedSetReading
 import org.usvm.collection.set.primitive.UInputSetReading
+import org.usvm.collection.set.primitive.UNonAliasingSetReading
 import org.usvm.collection.set.ref.UAllocatedRefSetWithInputElementsReading
+import org.usvm.collection.set.ref.UAllocatedRefSetWithNonAliasingElementsReading
 import org.usvm.collection.set.ref.UInputRefSetWithAllocatedElementsReading
 import org.usvm.collection.set.ref.UInputRefSetWithInputElementsReading
+import org.usvm.collection.set.ref.UNonAliasingRefSetWithAllocatedElementsReading
+import org.usvm.collection.set.ref.UNonAliasingRefSetWithNonAliasingElementsReading
 import org.usvm.collections.immutable.internal.MutabilityOwnership
 import org.usvm.memory.UReadOnlyMemory
 import org.usvm.memory.USymbolicCollectionId
@@ -24,7 +35,7 @@ import org.usvm.regions.Region
 open class UComposer<Type, USizeSort : USort>(
     ctx: UContext<USizeSort>,
     val memory: UReadOnlyMemory<Type>,
-    val ownership: MutabilityOwnership
+    val ownership: MutabilityOwnership,
 ) : UExprTransformer<Type, USizeSort>(ctx) {
     open fun <Sort : USort> compose(expr: UExpr<Sort>): UExpr<Sort> = apply(expr)
 
@@ -46,7 +57,7 @@ open class UComposer<Type, USizeSort : USort>(
     ): UExpr<Sort> = memory.mocker.eval(expr)
 
     override fun <Sort : USort> transform(
-        expr: UTrackedSymbol<Sort>
+        expr: UTrackedSymbol<Sort>,
     ): UExpr<Sort> = memory.mocker.eval(expr)
 
     override fun transform(expr: UIsSubtypeExpr<Type>): UBoolExpr =
@@ -63,8 +74,19 @@ open class UComposer<Type, USizeSort : USort>(
         expr: UCollectionReading<CollectionId, Key, Sort>,
         key: Key,
     ): UExpr<Sort> = with(expr) {
-        val mappedKey = collection.collectionId.keyInfo().mapKey(key, this@UComposer)
-        return collection.read(mappedKey, this@UComposer)
+        val sym = if (key is UNonAliasingHeapRef && key.symbol != null) {
+            (key.symbol).uncheckedCast<Any?, Key>()
+        } else if (key is Pair<*, *>) {
+            val first = key.first
+            val second = key.second
+            val f = if (first is UNonAliasingHeapRef && first.symbol != null) first.symbol else first
+            val s = if (second is UNonAliasingHeapRef && second.symbol != null) second.symbol else second
+            Pair(f, s).uncheckedCast<Any?, Key>()
+        } else {
+            key
+        }
+        val mappedKey = collection.collectionId.keyInfo().mapKey(sym, this@UComposer)
+        collection.read(mappedKey, this@UComposer)
     }
 
     override fun transform(expr: UInputArrayLengthReading<Type, USizeSort>): UExpr<USizeSort> =
@@ -76,38 +98,64 @@ open class UComposer<Type, USizeSort : USort>(
     override fun <Sort : USort> transform(expr: UAllocatedArrayReading<Type, Sort, USizeSort>): UExpr<Sort> =
         transformCollectionReading(expr, expr.index)
 
+    override fun <Sort : USort> transform(expr: UNonAliasingArrayReading<Type, Sort, USizeSort>): UExpr<Sort> =
+        transformCollectionReading(expr, expr.index)
+
     override fun <Field, Sort : USort> transform(expr: UInputFieldReading<Field, Sort>): UExpr<Sort> =
         transformCollectionReading(expr, expr.address)
 
+    override fun <Field, Sort : USort> transform(expr: UNonAliasingFieldReading<Field, Sort>): UExpr<Sort> =
+        transformCollectionReading(expr, expr.address)
+
     override fun <KeySort : USort, Sort : USort, Reg : Region<Reg>> transform(
-        expr: UAllocatedMapReading<Type, KeySort, Sort, Reg>
+        expr: UAllocatedMapReading<Type, KeySort, Sort, Reg>,
     ): UExpr<Sort> = transformCollectionReading(expr, expr.key)
 
     override fun <KeySort : USort, Sort : USort, Reg : Region<Reg>> transform(
-        expr: UInputMapReading<Type, KeySort, Sort, Reg>
+        expr: UNonAliasingMapReading<Type, KeySort, Sort, Reg>,
+    ): UExpr<Sort> = transformCollectionReading(expr, expr.key)
+
+    override fun <KeySort : USort, Sort : USort, Reg : Region<Reg>> transform(
+        expr: UInputMapReading<Type, KeySort, Sort, Reg>,
     ): UExpr<Sort> = transformCollectionReading(expr, expr.address to expr.key)
 
     override fun <Sort : USort> transform(
-        expr: UAllocatedRefMapWithInputKeysReading<Type, Sort>
+        expr: UAllocatedRefMapWithInputKeysReading<Type, Sort>,
     ): UExpr<Sort> = transformCollectionReading(expr, expr.keyRef)
 
     override fun <Sort : USort> transform(
-        expr: UInputRefMapWithAllocatedKeysReading<Type, Sort>
+        expr: UAllocatedRefMapWithNonAliasingKeysReading<Type, Sort>,
+    ): UExpr<Sort> = transformCollectionReading(expr, expr.keyRef)
+
+    override fun <Sort : USort> transform(
+        expr: UInputRefMapWithAllocatedKeysReading<Type, Sort>,
     ): UExpr<Sort> = transformCollectionReading(expr, expr.mapRef)
 
     override fun <Sort : USort> transform(
-        expr: UInputRefMapWithInputKeysReading<Type, Sort>
+        expr: UNonAliasingRefMapWithAllocatedKeysReading<Type, Sort>,
+    ): UExpr<Sort> = transformCollectionReading(expr, expr.mapRef)
+
+    override fun <Sort : USort> transform(
+        expr: UInputRefMapWithInputKeysReading<Type, Sort>,
+    ): UExpr<Sort> = transformCollectionReading(expr, expr.mapRef to expr.keyRef)
+
+    override fun <Sort : USort> transform(
+        expr: UNonAliasingRefMapWithNonAliasingKeysReading<Type, Sort>,
     ): UExpr<Sort> = transformCollectionReading(expr, expr.mapRef to expr.keyRef)
 
     override fun transform(expr: UInputMapLengthReading<Type, USizeSort>): UExpr<USizeSort> =
         transformCollectionReading(expr, expr.address)
 
     override fun <ElemSort : USort, Reg : Region<Reg>> transform(
-        expr: UAllocatedSetReading<Type, ElemSort, Reg>
+        expr: UAllocatedSetReading<Type, ElemSort, Reg>,
     ): UBoolExpr = transformCollectionReading(expr, expr.element)
 
     override fun <ElemSort : USort, Reg : Region<Reg>> transform(
-        expr: UInputSetReading<Type, ElemSort, Reg>
+        expr: UNonAliasingSetReading<Type, ElemSort, Reg>,
+    ): UBoolExpr = transformCollectionReading(expr, expr.element)
+
+    override fun <ElemSort : USort, Reg : Region<Reg>> transform(
+        expr: UInputSetReading<Type, ElemSort, Reg>,
     ): UBoolExpr = transformCollectionReading(expr, expr.address to expr.element)
 
     override fun transform(expr: UAllocatedRefSetWithInputElementsReading<Type>): UBoolExpr =
@@ -119,7 +167,21 @@ open class UComposer<Type, USizeSort : USort>(
     override fun transform(expr: UInputRefSetWithInputElementsReading<Type>): UBoolExpr =
         transformCollectionReading(expr, expr.setRef to expr.elementRef)
 
+    override fun transform(expr: UNonAliasingRefSetWithAllocatedElementsReading<Type>): UBoolExpr =
+        transformCollectionReading(expr, expr.setAddress)
+
+    override fun transform(expr: UAllocatedRefSetWithNonAliasingElementsReading<Type>): UBoolExpr =
+        transformCollectionReading(expr, expr.elementAddress)
+
+    override fun transform(expr: UNonAliasingRefSetWithNonAliasingElementsReading<Type>): UBoolExpr =
+        transformCollectionReading(expr, expr.setRef to expr.elementRef)
+
     override fun transform(expr: UConcreteHeapRef): UExpr<UAddressSort> = expr
+
+    override fun transform(expr: UNonAliasingHeapRef): UExpr<UAddressSort> {
+        val symbol = checkNotNull(expr.symbol) { "Non-aliasing ref ${expr.id} has no symbol" }
+        return transformExprAfterTransformed(expr, symbol) { it }
+    }
 
     override fun transform(expr: UNullRef): UExpr<UAddressSort> = memory.nullRef()
 }

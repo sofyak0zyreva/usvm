@@ -298,7 +298,15 @@ open class JavaMethodTestRunner : TestRunner<JcTest, KFunction<*>, KClass<*>?, J
             paramsMutationsMatchers,
             invariants = invariants,
             extractValuesToCheck = { test: JcTest -> test.takeAllParametersBeforeAndAfterWithResult(method) },
-            expectedTypesForExtractedValues = arrayOf(T::class, A0::class, A1::class, T::class, A0::class, A1::class, R::class),
+            expectedTypesForExtractedValues = arrayOf(
+                T::class,
+                A0::class,
+                A1::class,
+                T::class,
+                A0::class,
+                A1::class,
+                R::class
+            ),
             checkMode = checkMode,
             coverageChecker
         )
@@ -815,7 +823,7 @@ open class JavaMethodTestRunner : TestRunner<JcTest, KFunction<*>, KClass<*>?, J
     open fun createMachine(
         cp: JcClasspath,
         options: UMachineOptions,
-        interpreterObserver: JcInterpreterObserver?
+        interpreterObserver: JcInterpreterObserver?,
     ): JcMachine {
         return JcMachine(cp, options, interpreterObserver = interpreterObserver)
     }

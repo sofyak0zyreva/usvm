@@ -3,6 +3,7 @@ package org.usvm.collection.set
 import io.ksmt.decl.KFuncDecl
 import io.ksmt.expr.KExpr
 import io.ksmt.sort.KBoolSort
+import org.usvm.UAddressSort
 import org.usvm.UBoolSort
 import org.usvm.UExpr
 import org.usvm.USort
@@ -23,7 +24,7 @@ internal abstract class USetUpdatesTranslator<Element>(
 
     override fun visitUpdate(
         previous: KExpr<KBoolSort>,
-        update: UUpdateNode<Element, UBoolSort>
+        update: UUpdateNode<Element, UBoolSort>,
     ): KExpr<KBoolSort> = with(exprTranslator.ctx) {
         if (update.guard.isFalse) return previous
 
@@ -45,7 +46,8 @@ internal abstract class USetUpdatesTranslator<Element>(
 
             is URangedUpdateNode<*, *, Element, UBoolSort> -> {
                 val otherSetContains = update.includesSymbolically(
-                    key = selectKey, composer = null
+                    key = selectKey,
+                    composer = null
                 ).translated // already includes guard
 
                 mkOr(otherSetContains, previous, flat = false)
@@ -58,17 +60,38 @@ internal abstract class USetUpdatesTranslator<Element>(
 
 internal class UAllocatedSetUpdatesTranslator<ElementSort : USort>(
     exprTranslator: UExprTranslator<*, *>,
-    selectKey: UExpr<ElementSort>
+    selectKey: UExpr<ElementSort>,
 ) : USetUpdatesTranslator<UExpr<ElementSort>>(exprTranslator, selectKey) {
     override fun visitInitialValue(): KExpr<KBoolSort> = selectKey.ctx.falseExpr
+}
+
+internal class UNonAliasingSetUpdatesTranslator<ElementSort : USort>(
+    exprTranslator: UExprTranslator<*, *>,
+    private val initialFunction: KFuncDecl<UBoolSort>,
+    selectKey: UExpr<ElementSort>,
+) : USetUpdatesTranslator<UExpr<ElementSort>>(exprTranslator, selectKey) {
+    override fun visitInitialValue(): KExpr<KBoolSort> = with(initialFunction.ctx) {
+        mkApp(initialFunction, listOf(selectKey))
+    }
 }
 
 internal class UInputSetUpdatesTranslator<ElementSort : USort>(
     exprTranslator: UExprTranslator<*, *>,
     private val initialFunction: KFuncDecl<UBoolSort>,
-    selectKey: USymbolicSetElement<ElementSort>
+    selectKey: USymbolicSetElement<ElementSort>,
 ) : USetUpdatesTranslator<USymbolicSetElement<ElementSort>>(exprTranslator, selectKey) {
     override fun visitInitialValue(): KExpr<KBoolSort> = with(initialFunction.ctx) {
         mkApp(initialFunction, listOf(selectKey.first, selectKey.second))
+    }
+}
+
+internal class UNonAliasingElementSetUpdatesTranslator<ElementSort : USort>(
+    exprTranslator: UExprTranslator<*, *>,
+    private val initialFunction: KFuncDecl<UBoolSort>,
+    private val owner: KExpr<UAddressSort>,
+    selectKey: UExpr<ElementSort>,
+) : USetUpdatesTranslator<UExpr<ElementSort>>(exprTranslator, selectKey) {
+    override fun visitInitialValue(): KExpr<KBoolSort> = with(initialFunction.ctx) {
+        mkApp(initialFunction, listOf(owner, selectKey))
     }
 }

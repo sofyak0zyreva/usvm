@@ -15,8 +15,8 @@ import org.usvm.memory.UUpdateNode
 import org.usvm.memory.UWritableMemory
 import org.usvm.mkSizeAddExpr
 import org.usvm.mkSizeSubExpr
-import org.usvm.uctx
 import org.usvm.regions.Region
+import org.usvm.uctx
 import org.usvm.withSizeSort
 
 /**
@@ -33,7 +33,7 @@ abstract class USymbolicArrayCopyAdapter<SrcKey, DstKey, USizeSort : USort>(
     val srcFrom: SrcKey,
     val dstFrom: DstKey,
     val dstTo: DstKey,
-    private val keyInfo: USymbolicCollectionKeyInfo<DstKey, *>
+    private val keyInfo: USymbolicCollectionKeyInfo<DstKey, *>,
 ) : USymbolicCollectionAdapter<SrcKey, DstKey> {
 
     abstract val ctx: UContext<USizeSort>
@@ -50,7 +50,7 @@ abstract class USymbolicArrayCopyAdapter<SrcKey, DstKey, USizeSort : USort>(
     protected fun convertIndex(
         idx: UExpr<USizeSort>,
         dstFromIdx: UExpr<USizeSort>,
-        srcFromIdx: UExpr<USizeSort>
+        srcFromIdx: UExpr<USizeSort>,
     ): UExpr<USizeSort> = with(ctx) {
         mkSizeAddExpr(mkSizeSubExpr(idx, dstFromIdx), srcFromIdx)
     }
@@ -78,7 +78,7 @@ abstract class USymbolicArrayCopyAdapter<SrcKey, DstKey, USizeSort : USort>(
         dstCollectionId: USymbolicCollectionId<DstKey, *, *>,
         guard: UBoolExpr,
         srcKey: SrcKey,
-        composer: UComposer<*, *>
+        composer: UComposer<*, *>,
     )
 
     private fun <Key> keyToString(key: Key) =
@@ -106,7 +106,7 @@ abstract class USymbolicArrayCopyAdapter<SrcKey, DstKey, USizeSort : USort>(
         private inline fun <Key, T> mapKeyType(
             key: Key,
             concrete: (UExpr<*>) -> T,
-            symbolic: (USymbolicArrayIndex<*>) -> T
+            symbolic: (USymbolicArrayIndex<*>) -> T,
         ): T = when (key) {
             is UExpr<*> -> concrete(key)
             is Pair<*, *> -> symbolic(key.uncheckedCast())
@@ -116,10 +116,15 @@ abstract class USymbolicArrayCopyAdapter<SrcKey, DstKey, USizeSort : USort>(
 }
 
 class USymbolicArrayAllocatedToAllocatedCopyAdapter<USizeSort : USort>(
-    srcFrom: UExpr<USizeSort>, dstFrom: UExpr<USizeSort>, dstTo: UExpr<USizeSort>,
-    keyInfo: USymbolicCollectionKeyInfo<UExpr<USizeSort>, *>
+    srcFrom: UExpr<USizeSort>,
+    dstFrom: UExpr<USizeSort>,
+    dstTo: UExpr<USizeSort>,
+    keyInfo: USymbolicCollectionKeyInfo<UExpr<USizeSort>, *>,
 ) : USymbolicArrayCopyAdapter<UExpr<USizeSort>, UExpr<USizeSort>, USizeSort>(
-    srcFrom, dstFrom, dstTo, keyInfo
+    srcFrom,
+    dstFrom,
+    dstTo,
+    keyInfo
 ) {
     override val ctx: UContext<USizeSort>
         get() = srcFrom.uctx.withSizeSort()
@@ -133,7 +138,7 @@ class USymbolicArrayAllocatedToAllocatedCopyAdapter<USizeSort : USort>(
         dstCollectionId: USymbolicCollectionId<UExpr<USizeSort>, *, *>,
         guard: UBoolExpr,
         srcKey: UExpr<USizeSort>,
-        composer: UComposer<*, *>
+        composer: UComposer<*, *>,
     ) = with(ctx) {
         check(dstCollectionId is UAllocatedArrayId<*, *, *>) { "Unexpected collection: $dstCollectionId" }
         check(srcCollectionId is UAllocatedArrayId<*, *, *>) { "Unexpected collection: $srcCollectionId" }
@@ -151,12 +156,57 @@ class USymbolicArrayAllocatedToAllocatedCopyAdapter<USizeSort : USort>(
     }
 }
 
+class USymbolicArrayAllocatedToNonAliasingCopyAdapter<USizeSort : USort>(
+    srcFrom: UExpr<USizeSort>,
+    dstFrom: UExpr<USizeSort>,
+    dstTo: UExpr<USizeSort>,
+    keyInfo: USymbolicCollectionKeyInfo<UExpr<USizeSort>, *>,
+) : USymbolicArrayCopyAdapter<UExpr<USizeSort>, UExpr<USizeSort>, USizeSort>(
+    srcFrom,
+    dstFrom,
+    dstTo,
+    keyInfo
+) {
+    override val ctx: UContext<USizeSort>
+        get() = srcFrom.uctx.withSizeSort()
+
+    override fun convert(key: UExpr<USizeSort>, composer: UComposer<*, *>?): UExpr<USizeSort> =
+        convertIndex(key, composer.compose(dstFrom), composer.compose(srcFrom))
+
+    override fun <Type> applyTo(
+        memory: UWritableMemory<Type>,
+        srcCollectionId: USymbolicCollectionId<UExpr<USizeSort>, *, *>,
+        dstCollectionId: USymbolicCollectionId<UExpr<USizeSort>, *, *>,
+        guard: UBoolExpr,
+        srcKey: UExpr<USizeSort>,
+        composer: UComposer<*, *>,
+    ) = with(ctx) {
+        check(dstCollectionId is UNonAliasingArrayId<*, *, *>) { "Unexpected collection: $dstCollectionId" }
+        check(srcCollectionId is UAllocatedArrayId<*, *, *>) { "Unexpected collection: $srcCollectionId" }
+
+        memory.memcpy(
+            srcRef = mkConcreteHeapRef(srcCollectionId.address),
+            dstRef = mkConcreteHeapRef(dstCollectionId.id),
+            type = dstCollectionId.arrayType,
+            elementSort = dstCollectionId.sort,
+            fromSrcIdx = composer.compose(srcFrom),
+            fromDstIdx = composer.compose(dstFrom),
+            toDstIdx = composer.compose(dstTo),
+            guard = guard
+        )
+    }
+}
+
 class USymbolicArrayAllocatedToInputCopyAdapter<USizeSort : USort>(
     srcFrom: UExpr<USizeSort>,
-    dstFrom: USymbolicArrayIndex<USizeSort>, dstTo: USymbolicArrayIndex<USizeSort>,
-    keyInfo: USymbolicCollectionKeyInfo<USymbolicArrayIndex<USizeSort>, *>
+    dstFrom: USymbolicArrayIndex<USizeSort>,
+    dstTo: USymbolicArrayIndex<USizeSort>,
+    keyInfo: USymbolicCollectionKeyInfo<USymbolicArrayIndex<USizeSort>, *>,
 ) : USymbolicArrayCopyAdapter<UExpr<USizeSort>, USymbolicArrayIndex<USizeSort>, USizeSort>(
-    srcFrom, dstFrom, dstTo, keyInfo
+    srcFrom,
+    dstFrom,
+    dstTo,
+    keyInfo
 ) {
     override val ctx: UContext<USizeSort>
         get() = srcFrom.uctx.withSizeSort()
@@ -170,7 +220,7 @@ class USymbolicArrayAllocatedToInputCopyAdapter<USizeSort : USort>(
         dstCollectionId: USymbolicCollectionId<USymbolicArrayIndex<USizeSort>, *, *>,
         guard: UBoolExpr,
         srcKey: UExpr<USizeSort>,
-        composer: UComposer<*, *>
+        composer: UComposer<*, *>,
     ) = with(ctx) {
         check(dstCollectionId is USymbolicArrayId<*, *, *, *>) { "Unexpected collection: $dstCollectionId" }
         check(srcCollectionId is UAllocatedArrayId<*, *, *>) { "Unexpected collection: $srcCollectionId" }
@@ -188,18 +238,146 @@ class USymbolicArrayAllocatedToInputCopyAdapter<USizeSort : USort>(
     }
 }
 
+class USymbolicArrayNonAliasingToAllocatedCopyAdapter<USizeSort : USort>(
+    srcFrom: UExpr<USizeSort>,
+    dstFrom: UExpr<USizeSort>,
+    dstTo: UExpr<USizeSort>,
+    keyInfo: USymbolicCollectionKeyInfo<UExpr<USizeSort>, *>,
+) : USymbolicArrayCopyAdapter<UExpr<USizeSort>, UExpr<USizeSort>, USizeSort>(
+    srcFrom,
+    dstFrom,
+    dstTo,
+    keyInfo
+) {
+    override val ctx: UContext<USizeSort>
+        get() = srcFrom.uctx.withSizeSort()
+
+    override fun convert(key: UExpr<USizeSort>, composer: UComposer<*, *>?): UExpr<USizeSort> =
+        convertIndex(key, composer.compose(dstFrom), composer.compose(srcFrom))
+
+    override fun <Type> applyTo(
+        memory: UWritableMemory<Type>,
+        srcCollectionId: USymbolicCollectionId<UExpr<USizeSort>, *, *>,
+        dstCollectionId: USymbolicCollectionId<UExpr<USizeSort>, *, *>,
+        guard: UBoolExpr,
+        srcKey: UExpr<USizeSort>,
+        composer: UComposer<*, *>,
+    ) = with(ctx) {
+        check(dstCollectionId is UAllocatedArrayId<*, *, *>) { "Unexpected collection: $dstCollectionId" }
+        check(srcCollectionId is UNonAliasingArrayId<*, *, *>) { "Unexpected collection: $srcCollectionId" }
+
+        memory.memcpy(
+            srcRef = mkConcreteHeapRef(srcCollectionId.id),
+            dstRef = mkConcreteHeapRef(dstCollectionId.address),
+            type = dstCollectionId.arrayType,
+            elementSort = dstCollectionId.sort,
+            fromSrcIdx = composer.compose(srcFrom),
+            fromDstIdx = composer.compose(dstFrom),
+            toDstIdx = composer.compose(dstTo),
+            guard = guard
+        )
+    }
+}
+
+class USymbolicArrayNonAliasingToNonAliasingCopyAdapter<USizeSort : USort>(
+    srcFrom: UExpr<USizeSort>,
+    dstFrom: UExpr<USizeSort>,
+    dstTo: UExpr<USizeSort>,
+    keyInfo: USymbolicCollectionKeyInfo<UExpr<USizeSort>, *>,
+) : USymbolicArrayCopyAdapter<UExpr<USizeSort>, UExpr<USizeSort>, USizeSort>(
+    srcFrom,
+    dstFrom,
+    dstTo,
+    keyInfo
+) {
+    override val ctx: UContext<USizeSort>
+        get() = srcFrom.uctx.withSizeSort()
+
+    override fun convert(key: UExpr<USizeSort>, composer: UComposer<*, *>?): UExpr<USizeSort> =
+        convertIndex(key, composer.compose(dstFrom), composer.compose(srcFrom))
+
+    override fun <Type> applyTo(
+        memory: UWritableMemory<Type>,
+        srcCollectionId: USymbolicCollectionId<UExpr<USizeSort>, *, *>,
+        dstCollectionId: USymbolicCollectionId<UExpr<USizeSort>, *, *>,
+        guard: UBoolExpr,
+        srcKey: UExpr<USizeSort>,
+        composer: UComposer<*, *>,
+    ) = with(ctx) {
+        check(dstCollectionId is UNonAliasingArrayId<*, *, *>) { "Unexpected collection: $dstCollectionId" }
+        check(srcCollectionId is UNonAliasingArrayId<*, *, *>) { "Unexpected collection: $srcCollectionId" }
+
+        memory.memcpy(
+            srcRef = mkConcreteHeapRef(srcCollectionId.id),
+            dstRef = mkConcreteHeapRef(dstCollectionId.id),
+            type = dstCollectionId.arrayType,
+            elementSort = dstCollectionId.sort,
+            fromSrcIdx = composer.compose(srcFrom),
+            fromDstIdx = composer.compose(dstFrom),
+            toDstIdx = composer.compose(dstTo),
+            guard = guard
+        )
+    }
+}
+
+class USymbolicArrayNonAliasingToInputCopyAdapter<USizeSort : USort>(
+    srcFrom: UExpr<USizeSort>,
+    dstFrom: USymbolicArrayIndex<USizeSort>,
+    dstTo: USymbolicArrayIndex<USizeSort>,
+    keyInfo: USymbolicCollectionKeyInfo<USymbolicArrayIndex<USizeSort>, *>,
+) : USymbolicArrayCopyAdapter<UExpr<USizeSort>, USymbolicArrayIndex<USizeSort>, USizeSort>(
+    srcFrom,
+    dstFrom,
+    dstTo,
+    keyInfo
+) {
+    override val ctx: UContext<USizeSort>
+        get() = srcFrom.uctx.withSizeSort()
+
+    override fun convert(key: USymbolicArrayIndex<USizeSort>, composer: UComposer<*, *>?): UExpr<USizeSort> =
+        convertIndex(key.second, composer.compose(dstFrom.second), composer.compose(srcFrom))
+
+    override fun <Type> applyTo(
+        memory: UWritableMemory<Type>,
+        srcCollectionId: USymbolicCollectionId<UExpr<USizeSort>, *, *>,
+        dstCollectionId: USymbolicCollectionId<USymbolicArrayIndex<USizeSort>, *, *>,
+        guard: UBoolExpr,
+        srcKey: UExpr<USizeSort>,
+        composer: UComposer<*, *>,
+    ) = with(ctx) {
+        check(dstCollectionId is USymbolicArrayId<*, *, *, *>) { "Unexpected collection: $dstCollectionId" }
+        check(srcCollectionId is UNonAliasingArrayId<*, *, *>) { "Unexpected collection: $srcCollectionId" }
+
+        memory.memcpy(
+            srcRef = mkConcreteHeapRef(srcCollectionId.id),
+            dstRef = composer.compose(dstFrom.first),
+            type = dstCollectionId.arrayType,
+            elementSort = dstCollectionId.sort,
+            fromSrcIdx = composer.compose(srcFrom),
+            fromDstIdx = composer.compose(dstFrom.second),
+            toDstIdx = composer.compose(dstTo.second),
+            guard = guard
+        )
+    }
+}
+
 class USymbolicArrayInputToAllocatedCopyAdapter<USizeSort : USort>(
-    srcFrom: USymbolicArrayIndex<USizeSort>, dstFrom: UExpr<USizeSort>, dstTo: UExpr<USizeSort>,
-    keyInfo: USymbolicCollectionKeyInfo<UExpr<USizeSort>, *>
+    srcFrom: USymbolicArrayIndex<USizeSort>,
+    dstFrom: UExpr<USizeSort>,
+    dstTo: UExpr<USizeSort>,
+    keyInfo: USymbolicCollectionKeyInfo<UExpr<USizeSort>, *>,
 ) : USymbolicArrayCopyAdapter<USymbolicArrayIndex<USizeSort>, UExpr<USizeSort>, USizeSort>(
-    srcFrom, dstFrom, dstTo, keyInfo
+    srcFrom,
+    dstFrom,
+    dstTo,
+    keyInfo
 ) {
     override val ctx: UContext<USizeSort>
         get() = dstFrom.uctx.withSizeSort()
 
     override fun convert(key: UExpr<USizeSort>, composer: UComposer<*, *>?): USymbolicArrayIndex<USizeSort> =
         composer.compose(srcFrom.first) to
-                convertIndex(key, composer.compose(dstFrom), composer.compose(srcFrom.second))
+            convertIndex(key, composer.compose(dstFrom), composer.compose(srcFrom.second))
 
     override fun <Type> applyTo(
         memory: UWritableMemory<Type>,
@@ -207,7 +385,7 @@ class USymbolicArrayInputToAllocatedCopyAdapter<USizeSort : USort>(
         dstCollectionId: USymbolicCollectionId<UExpr<USizeSort>, *, *>,
         guard: UBoolExpr,
         srcKey: USymbolicArrayIndex<USizeSort>,
-        composer: UComposer<*, *>
+        composer: UComposer<*, *>,
     ) = with(ctx) {
         check(dstCollectionId is UAllocatedArrayId<*, *, *>) { "Unexpected collection: $dstCollectionId" }
         check(srcCollectionId is USymbolicArrayId<*, *, *, *>) { "Unexpected collection: $srcCollectionId" }
@@ -225,19 +403,65 @@ class USymbolicArrayInputToAllocatedCopyAdapter<USizeSort : USort>(
     }
 }
 
+class USymbolicArrayInputToNonAliasingCopyAdapter<USizeSort : USort>(
+    srcFrom: USymbolicArrayIndex<USizeSort>,
+    dstFrom: UExpr<USizeSort>,
+    dstTo: UExpr<USizeSort>,
+    keyInfo: USymbolicCollectionKeyInfo<UExpr<USizeSort>, *>,
+) : USymbolicArrayCopyAdapter<USymbolicArrayIndex<USizeSort>, UExpr<USizeSort>, USizeSort>(
+    srcFrom,
+    dstFrom,
+    dstTo,
+    keyInfo
+) {
+    override val ctx: UContext<USizeSort>
+        get() = dstFrom.uctx.withSizeSort()
+
+    override fun convert(key: UExpr<USizeSort>, composer: UComposer<*, *>?): USymbolicArrayIndex<USizeSort> =
+        composer.compose(srcFrom.first) to
+            convertIndex(key, composer.compose(dstFrom), composer.compose(srcFrom.second))
+
+    override fun <Type> applyTo(
+        memory: UWritableMemory<Type>,
+        srcCollectionId: USymbolicCollectionId<USymbolicArrayIndex<USizeSort>, *, *>,
+        dstCollectionId: USymbolicCollectionId<UExpr<USizeSort>, *, *>,
+        guard: UBoolExpr,
+        srcKey: USymbolicArrayIndex<USizeSort>,
+        composer: UComposer<*, *>,
+    ) = with(ctx) {
+        check(dstCollectionId is UNonAliasingArrayId<*, *, *>) { "Unexpected collection: $dstCollectionId" }
+        check(srcCollectionId is USymbolicArrayId<*, *, *, *>) { "Unexpected collection: $srcCollectionId" }
+
+        memory.memcpy(
+            srcRef = composer.compose(srcFrom.first),
+            dstRef = mkConcreteHeapRef(dstCollectionId.id),
+            type = dstCollectionId.arrayType,
+            elementSort = dstCollectionId.sort,
+            fromSrcIdx = composer.compose(srcFrom.second),
+            fromDstIdx = composer.compose(dstFrom),
+            toDstIdx = composer.compose(dstTo),
+            guard = guard
+        )
+    }
+}
+
 class USymbolicArrayInputToInputCopyAdapter<USizeSort : USort>(
     srcFrom: USymbolicArrayIndex<USizeSort>,
-    dstFrom: USymbolicArrayIndex<USizeSort>, dstTo: USymbolicArrayIndex<USizeSort>,
-    keyInfo: USymbolicCollectionKeyInfo<USymbolicArrayIndex<USizeSort>, *>
+    dstFrom: USymbolicArrayIndex<USizeSort>,
+    dstTo: USymbolicArrayIndex<USizeSort>,
+    keyInfo: USymbolicCollectionKeyInfo<USymbolicArrayIndex<USizeSort>, *>,
 ) : USymbolicArrayCopyAdapter<USymbolicArrayIndex<USizeSort>, USymbolicArrayIndex<USizeSort>, USizeSort>(
-    srcFrom, dstFrom, dstTo, keyInfo
+    srcFrom,
+    dstFrom,
+    dstTo,
+    keyInfo
 ) {
     override val ctx: UContext<USizeSort>
         get() = srcFrom.second.uctx.withSizeSort()
 
     override fun convert(key: USymbolicArrayIndex<USizeSort>, composer: UComposer<*, *>?): USymbolicArrayIndex<USizeSort> =
         composer.compose(srcFrom.first) to
-                convertIndex(key.second, composer.compose(dstFrom.second), composer.compose(srcFrom.second))
+            convertIndex(key.second, composer.compose(dstFrom.second), composer.compose(srcFrom.second))
 
     override fun <Type> applyTo(
         memory: UWritableMemory<Type>,
@@ -245,7 +469,7 @@ class USymbolicArrayInputToInputCopyAdapter<USizeSort : USort>(
         dstCollectionId: USymbolicCollectionId<USymbolicArrayIndex<USizeSort>, *, *>,
         guard: UBoolExpr,
         srcKey: USymbolicArrayIndex<USizeSort>,
-        composer: UComposer<*, *>
+        composer: UComposer<*, *>,
     ) {
         check(dstCollectionId is USymbolicArrayId<*, *, *, *>) { "Unexpected collection: $dstCollectionId" }
         check(srcCollectionId is USymbolicArrayId<*, *, *, *>) { "Unexpected collection: $srcCollectionId" }

@@ -11,6 +11,7 @@ import org.usvm.collection.map.USymbolicMapKey
 import org.usvm.collection.set.USymbolicSetKeyInfo
 import org.usvm.collection.set.primitive.UAllocatedSetId
 import org.usvm.collection.set.primitive.UInputSetId
+import org.usvm.collection.set.primitive.UNonAliasingSetId
 import org.usvm.collection.set.primitive.USymbolicSetId
 import org.usvm.compose
 import org.usvm.isTrue
@@ -21,8 +22,8 @@ import org.usvm.memory.USymbolicCollectionKeyInfo
 import org.usvm.memory.UUpdateNode
 import org.usvm.memory.UWritableMemory
 import org.usvm.memory.key.UHeapRefKeyInfo
-import org.usvm.uctx
 import org.usvm.regions.Region
+import org.usvm.uctx
 
 sealed class USymbolicMapMergeAdapter<MapType, SrcKey, DstKey, out SetId : USymbolicSetId<MapType, *, SrcKey, *, *, SetId>>(
     val setOfKeys: USymbolicCollection<SetId, SrcKey, UBoolSort>,
@@ -49,8 +50,12 @@ sealed class USymbolicMapMergeAdapter<MapType, SrcKey, DstKey, out SetId : USymb
 
 class UAllocatedToAllocatedSymbolicMapMergeAdapter<MapType, KeySort : USort>(
     setOfKeys: USymbolicCollection<UAllocatedSetId<MapType, KeySort, *>, UExpr<KeySort>, UBoolSort>,
-) : USymbolicMapMergeAdapter<MapType, UExpr<KeySort>, UExpr<KeySort>,
-    UAllocatedSetId<MapType, KeySort, *>>(setOfKeys) {
+) : USymbolicMapMergeAdapter<
+    MapType,
+    UExpr<KeySort>,
+    UExpr<KeySort>,
+    UAllocatedSetId<MapType, KeySort, *>
+    >(setOfKeys) {
     override fun convert(key: UExpr<KeySort>, composer: UComposer<*, *>?): UExpr<KeySort> = key
 
     @Suppress("UNCHECKED_CAST")
@@ -85,11 +90,58 @@ class UAllocatedToAllocatedSymbolicMapMergeAdapter<MapType, KeySort : USort>(
     }
 }
 
-class UAllocatedToInputSymbolicMapMergeAdapter<MapType, KeySort : USort>(
-    val dstMapRef: UHeapRef,
+class UAllocatedToNonAliasingSymbolicMapMergeAdapter<MapType, KeySort : USort>(
+    private val dstMapRef: UHeapRef,
     setOfKeys: USymbolicCollection<UAllocatedSetId<MapType, KeySort, *>, UExpr<KeySort>, UBoolSort>,
-) : USymbolicMapMergeAdapter<MapType, UExpr<KeySort>, USymbolicMapKey<KeySort>,
-    UAllocatedSetId<MapType, KeySort, *>>(setOfKeys) {
+) : USymbolicMapMergeAdapter<
+    MapType,
+    UExpr<KeySort>,
+    UExpr<KeySort>,
+    UAllocatedSetId<MapType, KeySort, *>
+    >(setOfKeys) {
+    override fun convert(key: UExpr<KeySort>, composer: UComposer<*, *>?): UExpr<KeySort> = key
+
+    @Suppress("UNCHECKED_CAST")
+    override fun <DstReg : Region<DstReg>> region(): DstReg =
+        setOfKeys.collectionId.region(setOfKeys, setOfKeys.collectionId.keyInfo()) as DstReg
+
+    override fun <Type> applyTo(
+        memory: UWritableMemory<Type>,
+        srcCollectionId: USymbolicCollectionId<UExpr<KeySort>, *, *>,
+        dstCollectionId: USymbolicCollectionId<UExpr<KeySort>, *, *>,
+        guard: UBoolExpr,
+        srcKey: UExpr<KeySort>,
+        composer: UComposer<*, *>,
+    ) {
+        check(srcCollectionId is UAllocatedMapId<*, KeySort, *, *>) { "Unexpected collection: $srcCollectionId" }
+        check(dstCollectionId is UNonAliasingMapId<*, KeySort, *, *>) { "Unexpected collection: $dstCollectionId" }
+
+        setOfKeys.applyTo(memory, srcKey, composer)
+
+        with(guard.uctx) {
+            memory.mapMerge(
+                mkConcreteHeapRef(srcCollectionId.address),
+                composer.compose(dstMapRef),
+                srcCollectionId.mapType,
+                srcCollectionId.keySort,
+                srcCollectionId.sort,
+                srcCollectionId.keyInfo,
+                setOfKeys.collectionId.setRegionId().uncheckedCast(),
+                guard
+            )
+        }
+    }
+}
+
+class UAllocatedToInputSymbolicMapMergeAdapter<MapType, KeySort : USort>(
+    private val dstMapRef: UHeapRef,
+    setOfKeys: USymbolicCollection<UAllocatedSetId<MapType, KeySort, *>, UExpr<KeySort>, UBoolSort>,
+) : USymbolicMapMergeAdapter<
+    MapType,
+    UExpr<KeySort>,
+    USymbolicMapKey<KeySort>,
+    UAllocatedSetId<MapType, KeySort, *>
+    >(setOfKeys) {
 
     override fun convert(key: USymbolicMapKey<KeySort>, composer: UComposer<*, *>?): UExpr<KeySort> = key.second
 
@@ -136,11 +188,102 @@ class UAllocatedToInputSymbolicMapMergeAdapter<MapType, KeySort : USort>(
     }
 }
 
+class UNonAliasingToAllocatedSymbolicMapMergeAdapter<MapType, KeySort : USort>(
+    private val srcMapRef: UHeapRef,
+    setOfKeys: USymbolicCollection<UNonAliasingSetId<MapType, KeySort, *>, UExpr<KeySort>, UBoolSort>,
+) : USymbolicMapMergeAdapter<
+    MapType,
+    UExpr<KeySort>,
+    UExpr<KeySort>,
+    UNonAliasingSetId<MapType, KeySort, *>
+    >(setOfKeys) {
+    override fun convert(key: UExpr<KeySort>, composer: UComposer<*, *>?): UExpr<KeySort> = key
+
+    @Suppress("UNCHECKED_CAST")
+    override fun <DstReg : Region<DstReg>> region(): DstReg =
+        setOfKeys.collectionId.region(setOfKeys, setOfKeys.collectionId.keyInfo()) as DstReg
+
+    override fun <Type> applyTo(
+        memory: UWritableMemory<Type>,
+        srcCollectionId: USymbolicCollectionId<UExpr<KeySort>, *, *>,
+        dstCollectionId: USymbolicCollectionId<UExpr<KeySort>, *, *>,
+        guard: UBoolExpr,
+        srcKey: UExpr<KeySort>,
+        composer: UComposer<*, *>,
+    ) {
+        check(srcCollectionId is UNonAliasingMapId<*, KeySort, *, *>) { "Unexpected collection: $srcCollectionId" }
+        check(dstCollectionId is UAllocatedMapId<*, KeySort, *, *>) { "Unexpected collection: $dstCollectionId" }
+
+        setOfKeys.applyTo(memory, srcKey, composer)
+
+        with(guard.uctx) {
+            memory.mapMerge(
+                composer.compose(srcMapRef),
+                mkConcreteHeapRef(dstCollectionId.address),
+                srcCollectionId.mapType,
+                srcCollectionId.keySort,
+                srcCollectionId.sort,
+                srcCollectionId.keyInfo,
+                setOfKeys.collectionId.setRegionId().uncheckedCast(),
+                guard
+            )
+        }
+    }
+}
+
+class UNonAliasingToNonAliasingSymbolicMapMergeAdapter<MapType, KeySort : USort>(
+    private val srcMapRef: UHeapRef,
+    private val dstMapRef: UHeapRef,
+    setOfKeys: USymbolicCollection<UNonAliasingSetId<MapType, KeySort, *>, UExpr<KeySort>, UBoolSort>,
+) : USymbolicMapMergeAdapter<
+    MapType,
+    UExpr<KeySort>,
+    UExpr<KeySort>,
+    UNonAliasingSetId<MapType, KeySort, *>
+    >(setOfKeys) {
+    override fun convert(key: UExpr<KeySort>, composer: UComposer<*, *>?): UExpr<KeySort> = key
+
+    @Suppress("UNCHECKED_CAST")
+    override fun <DstReg : Region<DstReg>> region(): DstReg =
+        setOfKeys.collectionId.region(setOfKeys, setOfKeys.collectionId.keyInfo()) as DstReg
+
+    override fun <Type> applyTo(
+        memory: UWritableMemory<Type>,
+        srcCollectionId: USymbolicCollectionId<UExpr<KeySort>, *, *>,
+        dstCollectionId: USymbolicCollectionId<UExpr<KeySort>, *, *>,
+        guard: UBoolExpr,
+        srcKey: UExpr<KeySort>,
+        composer: UComposer<*, *>,
+    ) {
+        check(srcCollectionId is UNonAliasingMapId<*, KeySort, *, *>) { "Unexpected collection: $srcCollectionId" }
+        check(dstCollectionId is UNonAliasingMapId<*, KeySort, *, *>) { "Unexpected collection: $dstCollectionId" }
+
+        setOfKeys.applyTo(memory, srcKey, composer)
+
+        with(guard.uctx) {
+            memory.mapMerge(
+                composer.compose(srcMapRef),
+                composer.compose(dstMapRef),
+                srcCollectionId.mapType,
+                srcCollectionId.keySort,
+                srcCollectionId.sort,
+                srcCollectionId.keyInfo,
+                setOfKeys.collectionId.setRegionId().uncheckedCast(),
+                guard
+            )
+        }
+    }
+}
+
 class UInputToAllocatedSymbolicMapMergeAdapter<MapType, KeySort : USort>(
-    val srcMapRef: UHeapRef,
+    private val srcMapRef: UHeapRef,
     setOfKeys: USymbolicCollection<UInputSetId<MapType, KeySort, *>, USymbolicMapKey<KeySort>, UBoolSort>,
-) : USymbolicMapMergeAdapter<MapType, USymbolicMapKey<KeySort>, UExpr<KeySort>,
-    UInputSetId<MapType, KeySort, *>>(setOfKeys) {
+) : USymbolicMapMergeAdapter<
+    MapType,
+    USymbolicMapKey<KeySort>,
+    UExpr<KeySort>,
+    UInputSetId<MapType, KeySort, *>
+    >(setOfKeys) {
 
     override fun convert(key: UExpr<KeySort>, composer: UComposer<*, *>?): USymbolicMapKey<KeySort> =
         composer.compose(srcMapRef) to key
@@ -192,8 +335,12 @@ class UInputToInputSymbolicMapMergeAdapter<MapType, KeySort : USort>(
     val srcMapRef: UHeapRef,
     val dstMapRef: UHeapRef,
     setOfKeys: USymbolicCollection<UInputSetId<MapType, KeySort, *>, USymbolicMapKey<KeySort>, UBoolSort>,
-) : USymbolicMapMergeAdapter<MapType, USymbolicMapKey<KeySort>, USymbolicMapKey<KeySort>,
-    UInputSetId<MapType, KeySort, *>>(setOfKeys) {
+) : USymbolicMapMergeAdapter<
+    MapType,
+    USymbolicMapKey<KeySort>,
+    USymbolicMapKey<KeySort>,
+    UInputSetId<MapType, KeySort, *>
+    >(setOfKeys) {
 
     override fun convert(key: USymbolicMapKey<KeySort>, composer: UComposer<*, *>?): USymbolicMapKey<KeySort> =
         composer.compose(srcMapRef) to key.second

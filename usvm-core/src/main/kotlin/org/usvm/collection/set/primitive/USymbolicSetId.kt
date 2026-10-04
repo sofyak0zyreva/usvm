@@ -7,6 +7,7 @@ import org.usvm.UBoolSort
 import org.usvm.UComposer
 import org.usvm.UConcreteHeapAddress
 import org.usvm.UExpr
+import org.usvm.UNonAliasingHeapAddress
 import org.usvm.USort
 import org.usvm.collection.set.USetRegionBuilder
 import org.usvm.collection.set.USymbolicSetElement
@@ -23,8 +24,14 @@ import org.usvm.regions.emptyRegionTree
 import org.usvm.uctx
 import java.util.IdentityHashMap
 
-abstract class USymbolicSetId<SetType, ElementSort : USort, Element, ElementReg : Region<ElementReg>, Reg : Region<Reg>,
-        out SetId : USymbolicSetId<SetType, ElementSort, Element, ElementReg, Reg, SetId>>(
+abstract class USymbolicSetId<
+    SetType,
+    ElementSort : USort,
+    Element,
+    ElementReg : Region<ElementReg>,
+    Reg : Region<Reg>,
+    out SetId : USymbolicSetId<SetType, ElementSort, Element, ElementReg, Reg, SetId>,
+    >(
     val elementSort: ElementSort,
     val setType: SetType,
     val elementInfo: USymbolicCollectionKeyInfo<UExpr<ElementSort>, ElementReg>,
@@ -41,8 +48,14 @@ class UAllocatedSetId<SetType, ElementSort : USort, Reg : Region<Reg>>(
     elementSort: ElementSort,
     setType: SetType,
     elementInfo: USymbolicCollectionKeyInfo<UExpr<ElementSort>, Reg>,
-) : USymbolicSetId<SetType, ElementSort, UExpr<ElementSort>, Reg, Reg,
-    UAllocatedSetId<SetType, ElementSort, Reg>>(elementSort, setType, elementInfo) {
+) : USymbolicSetId<
+    SetType,
+    ElementSort,
+    UExpr<ElementSort>,
+    Reg,
+    Reg,
+    UAllocatedSetId<SetType, ElementSort, Reg>
+    >(elementSort, setType, elementInfo) {
 
     override fun instantiate(
         collection: USymbolicCollection<UAllocatedSetId<SetType, ElementSort, Reg>, UExpr<ElementSort>, UBoolSort>,
@@ -117,15 +130,104 @@ class UAllocatedSetId<SetType, ElementSort : USort, Reg : Region<Reg>>(
     override fun hashCode(): Int = hash(setAddress, setType, elementSort)
 }
 
+class UNonAliasingSetId<SetType, ElementSort : USort, Reg : Region<Reg>>(
+    elementSort: ElementSort,
+    setType: SetType,
+    elementInfo: USymbolicCollectionKeyInfo<UExpr<ElementSort>, Reg>,
+    val id: UNonAliasingHeapAddress,
+) : USymbolicSetId<
+    SetType,
+    ElementSort,
+    UExpr<ElementSort>,
+    Reg,
+    Reg,
+    UNonAliasingSetId<SetType, ElementSort, Reg>
+    >(elementSort, setType, elementInfo) {
+
+    override fun instantiate(
+        collection: USymbolicCollection<UNonAliasingSetId<SetType, ElementSort, Reg>, UExpr<ElementSort>, UBoolSort>,
+        key: UExpr<ElementSort>,
+        composer: UComposer<*, *>?,
+    ): UExpr<UBoolSort> {
+        if (composer == null) {
+            return sort.uctx.mkNonAliasingSetReading(collection, key)
+        }
+
+        val memory = composer.memory.toWritableMemory(composer.ownership)
+        collection.applyTo(memory, key, composer)
+        return memory.read(mkLValue(key))
+    }
+
+    private fun mkLValue(key: UExpr<ElementSort>): ULValue<*, UBoolSort> =
+        USetEntryLValue(elementSort, sort.uctx.mkNonAliasingHeapRef(id), key, setType, elementInfo)
+
+    override fun <Type> write(
+        memory: UWritableMemory<Type>,
+        key: UExpr<ElementSort>,
+        value: UExpr<UBoolSort>,
+        guard: UBoolExpr,
+    ) {
+        memory.write(mkLValue(key), value, guard)
+    }
+
+    override fun keyInfo() = elementInfo
+
+    override fun emptyRegion(): USymbolicCollection<UNonAliasingSetId<SetType, ElementSort, Reg>, UExpr<ElementSort>, UBoolSort> {
+        val updates = UTreeUpdates<UExpr<ElementSort>, Reg, UBoolSort>(
+            updates = emptyRegionTree(),
+            keyInfo()
+        )
+        return USymbolicCollection(this, updates)
+    }
+
+    private val regionCache = IdentityHashMap<Any?, Any>()
+
+    fun <R : Region<R>> region(
+        collection: USymbolicCollection<UNonAliasingSetId<SetType, ElementSort, *>, UExpr<ElementSort>, UBoolSort>,
+        keyInfo: USymbolicCollectionKeyInfo<UExpr<ElementSort>, R>,
+    ): R {
+        val regionBuilder = USetRegionBuilder(
+            baseRegion = keyInfo.bottomRegion(),
+            keyInfo = keyInfo,
+            topRegion = keyInfo.topRegion()
+        )
+        return collection.updates.accept(
+            regionBuilder,
+            regionCache.uncheckedCast()
+        )
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as UNonAliasingSetId<*, *, *>
+
+        return id == other.id && elementSort == other.elementSort && setType == other.setType &&
+            elementInfo == other.elementInfo
+    }
+
+    override fun hashCode(): Int = hash(id, elementSort, setType)
+
+    override fun toString(): String = "nonAliasingSet<$setType>#$id"
+}
+
 class UInputSetId<SetType, ElementSort : USort, Reg : Region<Reg>>(
     elementSort: ElementSort,
     setType: SetType,
     elementInfo: USymbolicCollectionKeyInfo<UExpr<ElementSort>, Reg>,
-) : USymbolicSetId<SetType, ElementSort, USymbolicSetElement<ElementSort>, Reg, USymbolicSetElementRegion<Reg>,
-    UInputSetId<SetType, ElementSort, Reg>>(elementSort, setType, elementInfo) {
+) : USymbolicSetId<
+    SetType,
+    ElementSort,
+    USymbolicSetElement<ElementSort>,
+    Reg,
+    USymbolicSetElementRegion<Reg>,
+    UInputSetId<SetType, ElementSort, Reg>
+    >(elementSort, setType, elementInfo) {
 
     override fun instantiate(
-        collection: USymbolicCollection<UInputSetId<SetType, ElementSort, Reg>, USymbolicSetElement<ElementSort>, UBoolSort>,
+        collection:
+        USymbolicCollection<UInputSetId<SetType, ElementSort, Reg>, USymbolicSetElement<ElementSort>, UBoolSort>,
         key: USymbolicSetElement<ElementSort>,
         composer: UComposer<*, *>?,
     ): UExpr<UBoolSort> {
@@ -162,7 +264,8 @@ class UInputSetId<SetType, ElementSort : USort, Reg : Region<Reg>>(
 
     @Suppress("UNUSED_PARAMETER")
     fun <R : Region<R>> region(
-        collection: USymbolicCollection<UInputSetId<SetType, ElementSort, *>, USymbolicSetElement<ElementSort>, UBoolSort>,
+        collection:
+        USymbolicCollection<UInputSetId<SetType, ElementSort, *>, USymbolicSetElement<ElementSort>, UBoolSort>,
         keyInfo: USymbolicCollectionKeyInfo<USymbolicSetElement<ElementSort>, R>,
     ): R = keyInfo.topRegion()
 
