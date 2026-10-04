@@ -5,10 +5,12 @@ import io.ksmt.expr.KExpr
 import io.ksmt.sort.KArraySort
 import io.ksmt.sort.KBoolSort
 import io.ksmt.utils.mkConst
+import io.ksmt.utils.uncheckedCast
 import org.usvm.UAddressSort
 import org.usvm.UHeapRef
 import org.usvm.UNonAliasingHeapAddress
 import org.usvm.USort
+import org.usvm.collection.array.nonAliasingLocationIdFor
 import org.usvm.memory.URangedUpdateNode
 import org.usvm.memory.UReadOnlyMemoryRegion
 import org.usvm.memory.USymbolicCollection
@@ -83,7 +85,7 @@ private class UInputFieldRegionTranslator<Field, Sort : USort>(
 
 private class UNonAliasingFieldRegionTranslator<Field, Sort : USort>(
     private val collectionId: UNonAliasingFieldId<Field, Sort>,
-    exprTranslator: UExprTranslator<*, *>,
+    private val exprTranslator: UExprTranslator<*, *>,
 ) : URegionTranslator<UNonAliasingFieldId<Field, Sort>, UHeapRef, Sort>, UCollectionDecoder<UHeapRef, Sort> {
 
     private val initialValue = with(collectionId.sort.uctx) {
@@ -98,7 +100,22 @@ private class UNonAliasingFieldRegionTranslator<Field, Sort : USort>(
         key: UHeapRef,
     ): KExpr<Sort> {
         val translatedCollection = region.updates.accept(updatesTranslator, visitorCache)
-        return updatesTranslator.visitSelect(translatedCollection, key)
+        val reading = updatesTranslator.visitSelect(translatedCollection, key)
+
+        if (collectionId.sort == exprTranslator.ctx.addressSort) {
+            val owner = exprTranslator.translate(key)
+            exprTranslator.addNonAliasingRefAxiom(
+                elem = initialValue.ctx.mkArraySelect(initialValue, owner).uncheckedCast(),
+                location = nonAliasingLocationIdFor(
+                    exprTranslator.ctx,
+                    Pair(exprTranslator.ctx.nonAliasingLocationOf(collectionId.id), collectionId.field)
+                ),
+                owner = owner,
+                trigger = reading,
+            )
+        }
+
+        return reading
     }
 
     override fun decodeCollection(

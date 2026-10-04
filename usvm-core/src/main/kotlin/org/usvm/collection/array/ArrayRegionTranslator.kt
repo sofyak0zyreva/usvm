@@ -151,7 +151,7 @@ private class UNonAliasingArrayRegionTranslator<ArrayType, Sort : USort, USizeSo
         if (collectionId.sort == exprTranslator.ctx.addressSort) {
             // triggered by the reading as it occurs in queries (a select over the updates, not over the base array)
             exprTranslator.addNonAliasingArrayElementAxiom(
-                if (translatedOwner == null) collectionId.id else location,
+                nonAliasingLocationIdFor(exprTranslator.ctx, Pair(location, collectionId.arrayType)),
                 initialValue.uncheckedCast(),
                 exprTranslator.translate(key),
                 translatedOwner,

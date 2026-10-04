@@ -52,12 +52,13 @@ fun makeNonAliasingIdForReading(
     val objectKey = if (collection == null || collection.updates.isEmpty()) key else Pair(key, collection)
     val id = ctx.nonAliasingReadingIds.getOrPut(objectKey) { ctx.addressCounter.freshNAAddress() }
     if (locationKey != null && id !in ctx.nonAliasingLocations) {
-        ctx.nonAliasingLocations[id] = ctx.nonAliasingReadingIds.getOrPut(NonAliasingLocationKey(locationKey)) {
-            ctx.addressCounter.freshNAAddress()
-        }
+        ctx.nonAliasingLocations[id] = nonAliasingLocationIdFor(ctx, locationKey)
     }
     return id
 }
+
+fun nonAliasingLocationIdFor(ctx: UContext<*>, locationKey: Any): UNonAliasingHeapAddress =
+    ctx.nonAliasingReadingIds.getOrPut(NonAliasingLocationKey(locationKey)) { ctx.addressCounter.freshNAAddress() }
 
 private data class NonAliasingLocationKey(val key: Any?)
 

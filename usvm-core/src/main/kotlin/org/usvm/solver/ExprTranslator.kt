@@ -102,18 +102,25 @@ open class UExprTranslator<Type, USizeSort : USort>(
     }
 
     fun addNonAliasingArrayElementAxiom(
-        arrayId: Int,
+        location: Int,
         baseArray: KExpr<KArraySort<USizeSort, UAddressSort>>,
         index: KExpr<USizeSort>,
         owner: KExpr<UAddressSort>? = null,
         trigger: KExpr<*>? = null,
+    ) = addNonAliasingRefAxiom(ctx.mkArraySelect(baseArray, index), location, index, owner, trigger)
+
+    fun addNonAliasingRefAxiom(
+        elem: KExpr<UAddressSort>,
+        location: Int,
+        index: KExpr<USizeSort>? = null,
+        owner: KExpr<UAddressSort>?,
+        trigger: KExpr<*>?,
     ) = with(ctx) {
-        val elem = mkArraySelect(baseArray, index)
         val isNull = mkEqNoSimplify(elem, translate(nullRef))
-        val sameIndex = mkEq(mkApp(naOriginIndexDecl, listOf(elem)), index)
-        val sameArray = mkEq(mkApp(naOriginArrayDecl, listOf(elem)), mkBv(arrayId))
+        val sameIndex = index?.let { mkEq(mkApp(naOriginIndexDecl, listOf(elem)), it) } ?: trueExpr
+        val sameLocation = mkEq(mkApp(naOriginArrayDecl, listOf(elem)), mkBv(location))
         val sameOwner = owner?.let { mkEq(mkApp(naOriginOwnerDecl, listOf(elem)), it) } ?: trueExpr
-        val axiom = mkOr(isNull, mkAnd(sameIndex, sameArray, sameOwner))
+        val axiom = mkOr(isNull, mkAnd(sameIndex, sameLocation, sameOwner))
         nonAliasingAxiomsByTerm.getOrPut(elem) { mutableListOf() }.add(axiom)
         if (trigger != null && trigger != elem) {
             nonAliasingAxiomsByTerm.getOrPut(trigger) { mutableListOf() }.add(axiom)
